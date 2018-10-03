@@ -6,36 +6,33 @@ use super::types::DataPoint;
 #[derive(Clone)]
 pub struct Row(Vec<DataPoint>);
 
+impl Row {
+    pub fn new(data: &Vec<DataPoint>) -> Self {
+        Row(data.to_owned())
+    }
 
-pub trait RowContainer: Clone {
-
-}
-clone_trait_object!(RowContainer);
-
-
-#[derive(Clone)]
-struct RowContainerImpl {
-
-}
-impl RowContainerImpl {
-    pub fn new() -> Self {
-        RowContainerImpl {}
+    pub fn y(&self, i: usize) -> Option<DataPoint> {
+        let Row(vector) = self;
+        match vector.get(i) {
+            Some(out) => Some(out.to_owned()),
+            None => None,
+        }
     }
 }
 
-pub trait RowInsertion: Clone {
+#[derive(Clone)]
+pub struct Rows(Vec<Row>);
 
+impl Rows {
+    pub fn new(rows: &Vec<Row>) -> Self {
+        Rows(rows.to_owned())
+    }
+
+    pub fn x(&self, i: usize) -> Option<Row> {
+        let Rows(vector) = self;
+        match vector.get(i) {
+            Some(out) => Some(out.to_owned()),
+            None => None,
+        }
+    }
 }
-clone_trait_object!(RowInsertion);
-
-
-pub trait RowDeletion: Clone {
-
-}
-clone_trait_object!(RowDeletion);
-
-
-pub trait RowUpdate: Clone {
-
-}
-clone_trait_object!(RowUpdate);

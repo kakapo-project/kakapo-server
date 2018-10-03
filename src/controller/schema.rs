@@ -1,10 +1,10 @@
 
 use objekt::Clone;
 
-use super::types::{Column, DataType, DataPoint, Identifier};
+use super::types::{DataType, DataPoint, Identifier};
 
 
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub enum Reference {
     Table(Identifier),
     TableOnColumn {
@@ -38,7 +38,7 @@ impl Reference {
 }
 
 
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub enum Constraint {
     Unique { column_name: Identifier },
     PrimaryKey { column_name: Identifier },
@@ -100,8 +100,28 @@ impl Constraint {
     }
 }
 
+#[derive(Deserialize, Serialize, Clone)]
+pub struct Column {
+    name: Identifier,
+    data_type: DataType,
+}
+
+impl Column {
+    pub fn new(name: &str, data_type: &DataType) -> Self {
+        Column {
+            name: Identifier::new(name),
+            data_type: data_type.to_owned()
+        }
+    }
+
+    pub fn get_name(&self) -> String {
+        self.name.get_name()
+    }
+}
+
+
 /// Schema
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Schema {
     table_id: Identifier,
     columns: Vec<Column>,
@@ -115,6 +135,11 @@ impl Schema {
             columns: vec![],
             constraints: vec![],
         }
+    }
+
+    pub fn get_columns(&self) -> Vec<Column> {
+        let Schema { columns, .. } = self;
+        columns.to_owned()
     }
 
     pub fn inherited_by(&self, children: &Vec<&str>) -> Self {
@@ -161,8 +186,6 @@ impl Schema {
     }
 
     pub fn reference(&self, reference: &Reference) -> Self {
-
-        let Schema { table_id, .. } = self;
 
         match reference {
             Reference::Table(table_id) => {

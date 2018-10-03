@@ -1,12 +1,15 @@
 
+pub mod tables;
+pub mod users;
+
 use super::schema::{Schema, Reference, Constraint};
 use super::types::DataType::*;
 use super::repository::{Error, Repository, Transaction};
 
-fn initialize_meta_tables(repository: &Repository) -> () {
+pub fn initialize_management_tables(repository: &Repository) -> Result<(), String> {
 
-     repository.transaction()
-        .and_then::<&str, _>(|tr| {
+    repository.transaction()
+        .and_then::<(), _>(|tr| {
             //TODO: check if already created.
 
             let user_account = Schema::new("user_account")
@@ -150,15 +153,15 @@ fn initialize_meta_tables(repository: &Repository) -> () {
 
             tr.commit()?;
 
-            Ok("commited")
-        }).or_else::<Error, _>(|err| {
+            Ok(())
+        }).or_else::<String, _>(|err| {
             match err {
                 Error::TransactionError(transaction, msg) => {
                     transaction.rollback();
-                    Ok("rolled back")
+                    Err(msg)
                 },
-                Error::UsageError(msg) => Ok("rolled back"),
-                Error::SystemError(msg) => Ok("rolled back"),
+                Error::UsageError(msg) => Err(msg),
+                Error::SystemError(msg) => Err(msg),
             }
-        });
+        })
 }

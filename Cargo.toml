@@ -17,4 +17,6 @@ json = "*"
 actix = "0.7"
 actix-web = "^0.7"
 
+postgres = "0.15"
+
 objekt = "0.1.1"

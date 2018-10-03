@@ -74,9 +74,7 @@ fn index_manual(req: &HttpRequest) -> Box<Future<Item = HttpResponse, Error = Er
 }
 
 /// This handler manually load request payload and parse json-rust
-fn index_mjsonrust(
-    req: &HttpRequest,
-) -> Box<Future<Item = HttpResponse, Error = Error>> {
+fn index_mjsonrust(req: &HttpRequest) -> Box<Future<Item = HttpResponse, Error = Error>> {
     req.payload()
         .concat2()
         .from_err()

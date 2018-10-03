@@ -9,6 +9,7 @@ trait UserManagement {
 trait TableManagement {
     fn create_table() -> ();
     fn delete_table() -> ();
+    fn modify_table() -> ();
 }
 
 

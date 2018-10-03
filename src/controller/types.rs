@@ -1,6 +1,8 @@
 
-#[derive(Clone)]
-pub struct Identifier(String);
+use serde_json;
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct Identifier(pub String);
 
 /// Identifier
 impl Identifier {
@@ -14,16 +16,17 @@ impl Identifier {
     }
 }
 
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub enum DataPoint {
     Integer(i64),
     UnsignedInteger(u64),
     FloatingPoint(f64),
     String(String),
+    Json(serde_json::Value),
     Null,
 }
 
-#[derive(Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub enum DataType {
     DecimalType {
         precision: u8,
@@ -35,21 +38,6 @@ pub enum DataType {
     IntegerType,
     StringType,
     JsonType,
-}
-
-#[derive(Clone)]
-pub struct Column {
-    name: Identifier,
-    data_type: DataType,
-}
-
-impl Column {
-    pub fn new(name: &str, data_type: &DataType) -> Self {
-        Column {
-            name: Identifier::new(name),
-            data_type: data_type.to_owned()
-        }
-    }
 }
 
 pub trait DataTypeChecker {

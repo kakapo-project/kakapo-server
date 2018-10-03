@@ -1,10 +1,9 @@
 
-pub mod actions;
 pub mod management;
-pub mod meta;
 
 pub mod types;
 pub mod rows;
+pub mod query;
 pub mod table;
 pub mod schema;
 pub mod repository;
