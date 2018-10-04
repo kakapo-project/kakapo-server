@@ -2,21 +2,6 @@
 use serde_json;
 
 #[derive(Deserialize, Serialize, Clone)]
-pub struct Identifier(pub String);
-
-/// Identifier
-impl Identifier {
-    pub fn new(name: &str) -> Self {
-        Identifier(name.to_owned())
-    }
-
-    pub fn get_name(&self) -> String {
-        let Identifier(name) = self;
-        name.to_owned()
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone)]
 pub enum DataPoint {
     Integer(i64),
     UnsignedInteger(u64),

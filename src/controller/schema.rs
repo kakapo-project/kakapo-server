@@ -1,38 +1,38 @@
 
 use objekt::Clone;
 
-use super::types::{DataType, DataPoint, Identifier};
+use super::types::{DataType, DataPoint};
 
 
 #[derive(Deserialize, Serialize, Clone)]
 pub enum Reference {
-    Table(Identifier),
+    Table(String),
     TableOnColumn {
-        table: Identifier,
-        from_column: Identifier,
+        table: String,
+        from_column: String,
     },
     TableWithAnotherColumn {
-        table: Identifier,
-        link: Identifier,
+        table: String,
+        link: String,
     }
 }
 
 impl Reference {
     pub fn table(table_name: &str) -> Self {
-        Reference::Table(Identifier::new(table_name))
+        Reference::Table(table_name.to_owned())
     }
 
     pub fn table_on_column(table_name: &str, from_column: &str) -> Self {
         Reference::TableOnColumn {
-            table: Identifier::new(table_name),
-            from_column: Identifier::new(from_column),
+            table: table_name.to_owned(),
+            from_column: from_column.to_owned(),
         }
     }
 
     pub fn table_with_another_column(table_name: &str, from_column: &str) -> Self {
         Reference::TableWithAnotherColumn {
-            table: Identifier::new(table_name),
-            link: Identifier::new(from_column),
+            table: table_name.to_owned(),
+            link: from_column.to_owned(),
         }
     }
 }
@@ -40,32 +40,32 @@ impl Reference {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub enum Constraint {
-    Unique { column_name: Identifier },
-    PrimaryKey { column_name: Identifier },
-    ForeignKeyDefault { table: Identifier, column_name: Identifier },
-    ForeignKey { table: Identifier, links: Vec<(Identifier, Identifier)>},
-    OneOf { column_name: Identifier, accepted_values: Vec<DataPoint> },
-    Equals { column_name: Identifier, accepted_value: DataPoint },
+    Unique { column_name: String },
+    PrimaryKey { column_name: String },
+    ForeignKeyDefault { table: String, column_name: String },
+    ForeignKey { table: String, links: Vec<(String, String)>},
+    OneOf { column_name: String, accepted_values: Vec<DataPoint> },
+    Equals { column_name: String, accepted_value: DataPoint },
 
 }
 
 impl Constraint {
     pub fn unique(column_name: &str) -> Self {
         Constraint::Unique {
-            column_name:  Identifier::new(column_name),
+            column_name:  column_name.to_owned(),
         }
     }
 
     pub fn primary_key(column_name: &str) -> Self {
         Constraint::PrimaryKey {
-            column_name:  Identifier::new(column_name),
+            column_name:  column_name.to_owned(),
         }
     }
 
     pub fn foreign_key_default(table: &str, column_name: &str) -> Self {
         Constraint::ForeignKeyDefault {
-            table: Identifier::new(table),
-            column_name: Identifier::new(column_name)
+            table: table.to_owned(),
+            column_name: column_name.to_owned(),
         }
     }
 
@@ -75,26 +75,26 @@ impl Constraint {
             .iter()
             .map(|&x| {
                 let (x1, x2) = x;
-                (Identifier::new(x1), Identifier::new(x2))
+                (x1.to_owned(), x2.to_owned())
             })
             .collect::<Vec<_>>();
 
         Constraint::ForeignKey {
-            table: Identifier::new(table),
+            table: table.to_owned(),
             links: link_ids
         }
     }
 
     pub fn one_of(column_name: &str, accepted_values: &Vec<DataPoint> ) -> Self {
         Constraint::OneOf {
-            column_name:  Identifier::new(column_name),
+            column_name:  column_name.to_owned(),
             accepted_values: accepted_values.to_owned(),
         }
     }
 
     pub fn equals(column_name: &str, accepted_value: &DataPoint ) -> Self {
         Constraint::Equals {
-            column_name:  Identifier::new(column_name),
+            column_name:  column_name.to_owned(),
             accepted_value: accepted_value.to_owned(),
         }
     }
@@ -102,20 +102,20 @@ impl Constraint {
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Column {
-    name: Identifier,
+    name: String,
     data_type: DataType,
 }
 
 impl Column {
     pub fn new(name: &str, data_type: &DataType) -> Self {
         Column {
-            name: Identifier::new(name),
+            name: name.to_owned(),
             data_type: data_type.to_owned()
         }
     }
 
     pub fn get_name(&self) -> String {
-        self.name.get_name()
+        self.name.to_owned()
     }
 }
 
@@ -123,7 +123,7 @@ impl Column {
 /// Schema
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Schema {
-    table_id: Identifier,
+    table_id: String,
     columns: Vec<Column>,
     constraints: Vec<Constraint>,
 }
@@ -131,15 +131,28 @@ pub struct Schema {
 impl Schema {
     pub fn new(table_name: &str) -> Self {
         Schema {
-            table_id: Identifier::new(table_name),
+            table_id: table_name.to_owned(),
             columns: vec![],
             constraints: vec![],
         }
     }
 
+    pub fn get_name(&self) -> String {
+        let Schema { table_id, .. } = self;
+        table_id.to_owned()
+    }
+
     pub fn get_columns(&self) -> Vec<Column> {
         let Schema { columns, .. } = self;
         columns.to_owned()
+    }
+
+    pub fn get_column_index(&self, column_name: &str) -> Option<usize> {
+        let column_info = self.get_columns();
+        let column_index = column_info
+            .iter()
+            .position(|column| column.get_name() == column_name.to_owned());
+        column_index
     }
 
     pub fn inherited_by(&self, children: &Vec<&str>) -> Self {
@@ -151,7 +164,7 @@ impl Schema {
             )
             .collect::<Vec<_>>();
 
-        let table_name = self.table_id.get_name();
+        let table_name = self.table_id.to_owned();
         let type_name = format!("{}_type", table_name);
         let type_name_str = &type_name[..];
         self.column(type_name_str, &DataType::StringType)
@@ -159,7 +172,7 @@ impl Schema {
     }
 
     pub fn inherits(&self, parent: &str) -> Self {
-        let table_name = self.table_id.get_name();
+        let table_name = self.table_id.to_owned();
         let table_name_str = &table_name[..];
 
         let type_name = format!("{}_type", parent);
@@ -178,7 +191,7 @@ impl Schema {
     }
 
     pub fn id_column(&self) -> Self {
-        let table_name = self.table_id.get_name();
+        let table_name = self.table_id.to_owned();
         let id_name = format!("{}_id", table_name);
         let id_name_str = &id_name[..];
         self.column(id_name_str, &DataType::SerialType)
@@ -189,23 +202,23 @@ impl Schema {
 
         match reference {
             Reference::Table(table_id) => {
-                let table_name = table_id.get_name();
+                let table_name = table_id.to_owned();
                 let column_name = format!("{}_id", table_name);
 
                 self.column(&column_name, &DataType::IntegerType)
                     .constraint(&Constraint::foreign_key_default(&table_name[..], &column_name[..]))
             },
             Reference::TableOnColumn { table, from_column } => {
-                let table_name = table.get_name();
-                let column_name = from_column.get_name();
+                let table_name = table.to_owned();
+                let column_name = from_column.to_owned();
                 self.column(&column_name, &DataType::IntegerType)
                     .constraint(&Constraint::foreign_key_default(&table_name[..], &column_name[..]))
             },
             Reference::TableWithAnotherColumn { table, link } => {
-                let table_name = table.get_name();
+                let table_name = table.to_owned();
 
                 let column_a_name = format!("{}_id", table_name); //TODO: check if table_id is valid
-                let column_b_name = link.get_name();
+                let column_b_name = link.to_owned();
 
                 self.column(&column_a_name, &DataType::IntegerType)
                     .column(&column_b_name, &DataType::IntegerType)

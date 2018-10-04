@@ -1,9 +1,9 @@
 
 
 use controller::repository::Repository;
-use controller::types::{Identifier, DataPoint};
+use controller::types::DataPoint;
 use controller::schema::Schema;
-use controller::management::tables;
+use controller::crud;
 use controller::rows::Rows;
 
 /*
@@ -58,12 +58,12 @@ trait Actions<MyType> {
 #[derive(Clone)]
 struct TableActions {
     repository: Box<Repository>,
-    table_id: Identifier,
+    table_id: String,
     user: i8,
 }
 
 impl TableActions {
-    fn new(repository: Box<Repository>, table_id: &Identifier) -> Self {
+    fn new(repository: Box<Repository>, table_id: &String) -> Self {
         TableActions {
             repository,
             table_id: table_id.to_owned(),
@@ -90,7 +90,7 @@ impl Actions<TableActions> for TableActions {
     fn retrieve(&self, selector: &Selector) -> Result<Rows, Error> {
         let TableActions { repository, table_id, .. } = self;
         let repository_ref = Box::leak(repository.to_owned());
-        let schema = tables::get_table_schema(repository_ref, &table_id);
+        let schema = crud::get_table_schema(repository_ref, &table_id);
 
 
         Ok(Rows::new(&vec![]))
