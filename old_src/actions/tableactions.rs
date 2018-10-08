@@ -5,6 +5,7 @@ use controller::types::DataPoint;
 use controller::schema::Schema;
 use controller::crud;
 use controller::rows::Rows;
+use controller::query::GetQuery;
 
 /*
 
@@ -24,10 +25,21 @@ TODO: screen actions:
 
 enum Selector {
     GetAll,
-    GetOne { key: DataPoint },
     GetSection { start: u64, end: u64 },
     GetRest { start: u64 },
+    // TODO: get one item by key,
 }
+
+impl Selector {
+    pub fn get_query(&self) -> GetQuery {
+        match self {
+            Selector::GetAll => GetQuery::all(),
+            Selector::GetSection { start, end } => GetQuery::new().offset(start).limit(end - start),
+            Selector::GetRest { start } => GetQuery::new().offset(start),
+        }
+    }
+}
+
 
 trait Modifications {
 
@@ -91,6 +103,8 @@ impl Actions<TableActions> for TableActions {
         let TableActions { repository, table_id, .. } = self;
         let repository_ref = Box::leak(repository.to_owned());
         let schema = crud::get_table_schema(repository_ref, &table_id);
+
+        let table = crud::get_table_rows(repository_ref, &table_id, null);
 
 
         Ok(Rows::new(&vec![]))
