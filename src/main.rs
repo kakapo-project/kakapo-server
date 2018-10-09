@@ -8,12 +8,13 @@ extern crate dotenv;
 #[macro_use]
 extern crate diesel;
 extern crate env_logger;
-extern crate failure;
 extern crate futures;
 #[macro_use]
 extern crate json;
 extern crate log;
 extern crate num_cpus;
+extern crate serde;
+#[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
@@ -23,6 +24,7 @@ extern crate objekt;
 /// Mods
 mod view;
 mod model;
+mod auth;
 
 
 /// Extenal dependencies

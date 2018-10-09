@@ -2,22 +2,26 @@
 use chrono::prelude::*;
 use chrono::DateTime;
 
+#[derive(Debug, Deserialize, Serialize)]
 pub enum DataType {
     String,
     Integer,
     Json,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 pub enum Value {
 
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Column {
     name: String,
     data_type: DataType,
     default: Value,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
 pub enum Constraint {
     /*
     Unique(...),
@@ -27,11 +31,14 @@ pub enum Constraint {
     */
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum SchemaAction {
-    Add {
+    Create {
         columns: Vec<Column>,
         constraint: Vec<Constraint>,
     },
+    Nop,
     /*Remove {
         column: Vec<String>,
         constraint: Vec<Constraint>,
@@ -43,49 +50,32 @@ pub enum SchemaAction {
         up: String,
         down: String,
     },
+
     Revert,
     */
 }
-
-pub struct SchemaModification {
-    date: DateTime<Local>,
-    commit: String,
-    action: SchemaAction,
-
-}
-
-pub struct Table {
-    name: String,
-    description: String,
-    schema: Vec<SchemaModification>,
-}
-
-impl Table {
-    pub fn new() -> Self {
-        Table {
-            name: "test_name".to_string(),
-            description: "description".to_string(),
-            schema: vec![],
-        }
+impl Default for SchemaAction {
+    fn default() -> Self {
+        SchemaAction::Nop
     }
 }
 
-/*
-pub struct TableSimplified {
-    name: String,
-    description: String,
-
-}
-*/
-
-
-pub enum ManagerQuery {
-    All,
-    Name(String),
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SchemaModification {
+    pub date: NaiveDateTime,
+    pub action: SchemaAction,
 }
 
-pub enum OnDuplicate {
-    Fail,
-    Ignore,
-    Update,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DetailedTable {
+    pub name: String,
+    pub description: String,
+    pub schema: Vec<SchemaModification>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Table {
+    pub name: String,
+    pub description: String,
+    pub schema: Vec<SchemaModification>,
 }

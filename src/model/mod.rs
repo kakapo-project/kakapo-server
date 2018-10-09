@@ -2,6 +2,7 @@
 pub mod connection;
 pub mod schema;
 
-pub mod table;
+pub mod actions;
+
 pub mod data;
-pub mod handlers;
+pub mod api;

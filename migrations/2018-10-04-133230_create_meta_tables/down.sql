@@ -1,7 +1,7 @@
 
-DELETE FROM version WHERE version_update = '0.1.0';
+TRUNCATE version CASCADE;
 
-DROP TABLE spread_sheet_transaction;
+DROP TABLE table_schema_transaction;
 
 DROP TABLE role_permission;
 
@@ -23,9 +23,9 @@ DROP TABLE query_history;
 
 DROP TABLE query;
 
-DROP TABLE spread_sheet_history;
+DROP TABLE table_schema_history;
 
-DROP TABLE spread_sheet;
+DROP TABLE table_schema;
 
 DROP TABLE entity;
 

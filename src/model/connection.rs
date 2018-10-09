@@ -5,12 +5,19 @@ use dotenv::dotenv;
 use std::env;
 
 use actix::prelude::*;
-use diesel::{prelude::*, r2d2::ConnectionManager};
+use diesel::{prelude::*, r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
 use actix::sync::SyncArbiter;
 use num_cpus;
 
 pub struct DatabaseExecutor(pub Pool<ConnectionManager<PgConnection>>);
+
+impl DatabaseExecutor {
+    pub fn get_connection(&self) -> PooledConnection<ConnectionManager<PgConnection>> {
+        self.0.get()
+            .expect("Could not get connection")
+    }
+}
 
 impl Actor for DatabaseExecutor {
     type Context = SyncContext<Self>;

@@ -1,128 +1,121 @@
 -- Initialize the meta tables
 
 CREATE TABLE user_account (
-    user_account_id        SERIAL PRIMARY KEY,
-    username               VARCHAR NOT NULL,
-    password               VARCHAR NOT NULL,
-    email                  VARCHAR NOT NULL
+    user_account_id         BIGSERIAL PRIMARY KEY,
+    username                VARCHAR NOT NULL UNIQUE,
+    password                VARCHAR NOT NULL,
+    email                   VARCHAR NOT NULL UNIQUE
 );
 
 CREATE TABLE scope (
-    scope_id               SERIAL PRIMARY KEY,
-    name                   VARCHAR NOT NULL,
-    description            VARCHAR NOT NULL DEFAULT '',
-    scope_info             JSON NOT NULL DEFAULT '{}'
-);
-
-CREATE TABLE entity (
-    entity_id              SERIAL PRIMARY KEY,
-    entity_type            VARCHAR CHECK (entity_type IN ('spread_sheet', 'query', 'script')),
-    scope_id               INTEGER REFERENCES scope,
-    created_at             TIMESTAMP NOT NULL DEFAULT NOW(),
-    create_by              INTEGER REFERENCES user_account,
-    UNIQUE (entity_id, entity_type)
-);
-
-CREATE TABLE spread_sheet (
-    spread_sheet_id        SERIAL PRIMARY KEY,
-    entity_id              INTEGER REFERENCES entity,
-    entity_type            VARCHAR CHECK (entity_type = 'spread_sheet') DEFAULT 'spread_sheet',
-    FOREIGN KEY (entity_id, entity_type) REFERENCES entity (entity_id, entity_type)
-);
-
-CREATE TABLE spread_sheet_history (
-    spread_sheet_history_id SERIAL PRIMARY KEY,
-    spread_sheet_id         INTEGER REFERENCES spread_sheet,
-    name                    VARCHAR NOT NULL,
+    scope_id                BIGSERIAL PRIMARY KEY,
+    name                    VARCHAR NOT NULL UNIQUE,
     description             VARCHAR NOT NULL DEFAULT '',
-    spread_sheet_info       JSON NOT NULL DEFAULT '{}',
+    scope_info              JSON NOT NULL DEFAULT '{}'
+);
+
+-- TODO: entity should be unique across `table_schema` and `query` and `script`
+CREATE TABLE entity (
+    entity_id               BIGSERIAL PRIMARY KEY,
+    scope_id                BIGINT REFERENCES scope NOT NULL,
+    created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_by              BIGINT REFERENCES user_account NOT NULL
+);
+
+CREATE TABLE table_schema (
+    table_schema_id         BIGSERIAL PRIMARY KEY,
+    entity_id               BIGINT REFERENCES entity REFERENCES entity NOT NULL UNIQUE,
+    name                    VARCHAR NOT NULL UNIQUE
+);
+
+CREATE TABLE table_schema_history (
+    table_schema_history_id BIGSERIAL PRIMARY KEY,
+    table_schema_id         BIGINT REFERENCES table_schema NOT NULL,
+    description             VARCHAR NOT NULL DEFAULT '',
+    modification            JSON NOT NULL DEFAULT '{}',
     modified_at             TIMESTAMP NOT NULL DEFAULT NOW(),
-    modified_by             INTEGER REFERENCES user_account
+    modified_by             BIGINT REFERENCES user_account NOT NULL
 );
 
 CREATE TABLE query (
-    query_id                SERIAL PRIMARY KEY,
-    entity_id               INTEGER REFERENCES entity,
-    entity_type             VARCHAR CHECK (entity_type = 'query') DEFAULT 'query',
-    FOREIGN KEY (entity_id, entity_type) REFERENCES entity (entity_id, entity_type)
+    query_id                BIGSERIAL PRIMARY KEY,
+    entity_id               BIGINT REFERENCES entity REFERENCES entity NOT NULL UNIQUE,
+    name                    VARCHAR NOT NULL UNIQUE
 );
 
 CREATE TABLE query_history (
-    query_history_id        SERIAL PRIMARY KEY,
-    query_id                INTEGER REFERENCES query,
-    name                    VARCHAR NOT NULL,
+    query_history_id        BIGSERIAL PRIMARY KEY,
+    query_id                BIGINT REFERENCES query NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
     statement               VARCHAR NOT NULL,
     query_info              JSON NOT NULL DEFAULT '{}',
     modified_at             TIMESTAMP NOT NULL DEFAULT NOW(),
-    modified_by             INTEGER REFERENCES user_account
+    modified_by             BIGINT REFERENCES user_account NOT NULL
 );
 
 CREATE TABLE script (
-    script_id               SERIAL PRIMARY KEY,
-    entity_id               INTEGER REFERENCES entity,
-    entity_type             VARCHAR CHECK (entity_type = 'script') DEFAULT 'script',
-    FOREIGN KEY (entity_id, entity_type) REFERENCES entity (entity_id, entity_type)
+    script_id               BIGSERIAL PRIMARY KEY,
+    entity_id               BIGINT REFERENCES entity REFERENCES entity NOT NULL UNIQUE,
+    name                    VARCHAR NOT NULL UNIQUE
 );
 
 CREATE TABLE script_history (
-    script_history_id       SERIAL PRIMARY KEY,
-    script_id               INTEGER REFERENCES script,
-    name                    VARCHAR NOT NULL,
+    script_history_id       BIGSERIAL PRIMARY KEY,
+    script_id               BIGINT REFERENCES script NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
     script_language         VARCHAR NOT NULL,
     script_text             VARCHAR NOT NULL,
     script_info             JSON NOT NULL DEFAULT '{}',
     modified_at             TIMESTAMP NOT NULL DEFAULT NOW(),
-    modified_by             INTEGER REFERENCES user_account
+    modified_by             BIGINT REFERENCES user_account NOT NULL
 );
 
 CREATE TABLE tag (
-    tag_id                  SERIAL PRIMARY KEY,
+    tag_id                  BIGSERIAL PRIMARY KEY,
     name                    VARCHAR NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
     tag_info                JSON NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE entity_tag (
-    entity_tag_id           SERIAL PRIMARY KEY,
-    entity_id               INTEGER REFERENCES entity,
-    tag_id                  INTEGER REFERENCES tag
+    entity_tag_id           BIGSERIAL PRIMARY KEY,
+    entity_id               BIGINT REFERENCES entity NOT NULL,
+    tag_id                  BIGINT REFERENCES tag NOT NULL
 );
 
 CREATE TABLE role (
-    role_id                 SERIAL PRIMARY KEY,
+    role_id                 BIGSERIAL PRIMARY KEY,
     name                    VARCHAR NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
     role_info               JSON NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE user_account_role (
-    user_account_role_id   SERIAL PRIMARY KEY,
-    user_account_id        INTEGER REFERENCES user_account,
-    role_id                INTEGER REFERENCES role
+    user_account_role_id   BIGSERIAL PRIMARY KEY,
+    user_account_id        BIGINT REFERENCES user_account NOT NULL,
+    role_id                BIGINT REFERENCES role NOT NULL
 );
 
 CREATE TABLE permission (
-    permission_id          SERIAL PRIMARY KEY,
+    permission_id          BIGSERIAL PRIMARY KEY,
     name                   VARCHAR NOT NULL,
     description            VARCHAR NOT NULL DEFAULT '',
     permission_info        JSON NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE role_permission (
-    role_permission_id     SERIAL PRIMARY KEY,
-    role_id                INTEGER REFERENCES role,
-    permission_id          INTEGER REFERENCES permission
+    role_permission_id     BIGSERIAL PRIMARY KEY,
+    role_id                BIGINT REFERENCES role NOT NULL,
+    permission_id          BIGINT REFERENCES permission NOT NULL
 );
 
-CREATE TABLE spread_sheet_transaction (
-    transaction_id         SERIAL PRIMARY KEY,
+CREATE TABLE table_schema_transaction (
+    transaction_id         BIGSERIAL PRIMARY KEY,
     version                VARCHAR NOT NULL DEFAULT '0.1.0',
     action_data            JSON NOT NULL,
-    spread_sheet_id        INTEGER REFERENCES spread_sheet,
+    table_schema_id        BIGINT REFERENCES table_schema NOT NULL,
     made_at                TIMESTAMP NOT NULL DEFAULT NOW(),
-    made_by                INTEGER REFERENCES user_account
+    made_by                BIGINT REFERENCES user_account NOT NULL
 );
 
 INSERT INTO version (version_update) VALUES ('0.1.0');

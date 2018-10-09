@@ -1,16 +1,17 @@
 
 use log::LevelFilter;
 use env_logger::{Builder, Target};
+use actix_web::Error as ActixError;
 use actix_web::{
-    error, http, middleware, server, App, AsyncResponder, Error, HttpMessage,
-    HttpRequest, HttpResponse, Json,
+    error, http, middleware, server, App, AsyncResponder, HttpMessage,
+    HttpRequest, HttpResponse, Json, ResponseError,
 };
 use bytes::BytesMut;
 use json::JsonValue;
+use serde;
 use serde_derive;
 use serde_json;
 use json;
-use std;
 
 /*
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,11 +75,10 @@ fn index_manual(req: &HttpRequest) -> Box<Future<Item = HttpResponse, Error = Er
 }
 */
 
-type AsyncResponse = Box<Future<Item=HttpResponse, Error=Error>>;
+type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
 
 use actix::prelude::*;
-use std::sync::Arc;
 
 use model::connection;
 use model::connection::DatabaseExecutor;
@@ -89,10 +89,9 @@ use futures::stream::once;
 use futures::future::{Future, result};
 use actix_web::{http::NormalizePath};
 
-use model::table;
-use model::data;
-use model::handlers;
-use model::table::TableManager;
+use model::api;
+use std::error::Error;
+use super::handlers;
 
 pub struct AppState {
     db_connection: Addr<DatabaseExecutor>,
@@ -108,55 +107,72 @@ impl AppState {
     }
 }
 
-/*
-fn get_tables(req: &HttpRequest<AppState>) -> AsyncResponse {
-    let state = State::<AppState>::extract(req);
-    let body = once(Ok(Bytes::from_static(b"test")));
 
-    result(Ok(
-        HttpResponse::Ok()
+//TODO: implement for own Response Type
+impl ResponseError for api::Error {
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::InternalServerError()
             .content_type("application/json")
-            .body(Body::Streaming(Box::new(body)))
-    )).responder()
+            .body(serde_json::to_string(&json!({ "error": self.description().to_string() })).unwrap())
+    }
 }
-*/
+
+
 
 
 // getting
-
-fn get_tables(state: State<AppState>) -> AsyncResponse {
-    let body = once(Ok(Bytes::from_static(b"test")));
-
-    let table = TableManager::get(&state.db_connection, data::ManagerQuery::All);
-
-    result(
-        Ok(
-            HttpResponse::Ok()
-                .content_type("application/json")
-                .body(Body::Streaming(Box::new(body)))
-        )
-    ).responder()
+#[derive(Deserialize, Debug)]
+struct GetTables {
+    #[serde(default)]
+    pub detailed: bool,
+    #[serde(default)]
+    pub show_deleted: bool,
 }
 
-fn create_table((state, json): (State<AppState>, Json<u32>)) -> AsyncResponse {
-    let body = once(Ok(Bytes::from_static(b"test")));
+fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncResponse {
     let conn = &state.db_connection;
 
-    println!("trying to send data");
-    println!("is connected: {}", conn.connected());
-    let res = conn
-        .send(handlers::CreateTable("table_name".to_string()))
+    println!("received message: {:?}", &query);
+    conn.send(handlers::GetTables {
+        detailed: query.detailed,
+        show_deleted: query.show_deleted,
+    })
         .from_err()
-        .and_then(|result| {
-            println!("user account: {:?}", result.unwrap());
+        .and_then(|resl| {
+            let unwrapped_result = resl?;
+            println!("final result: {:?}", &unwrapped_result);
+            let ok_result = match unwrapped_result {
+                api::GetTablesResult::Tables(tables) => serde_json::to_string(&tables).unwrap(),
+                api::GetTablesResult::DetailedTables(tables) => serde_json::to_string(&tables).unwrap(),
+            };
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
-                    .body(Body::Streaming(Box::new(body)))
+                    .body(ok_result)
             )
-        });
+        })
 
-    res.responder()
+        .responder()
+}
+
+
+
+fn create_table((state, reqdata): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
+    let conn = &state.db_connection;
+
+    println!("received message: {:?}", &reqdata);
+    conn.send(handlers::CreateTable {
+        reqdata: reqdata.into_inner()
+    })
+        .from_err()
+        .and_then(|resl| {
+            Ok(
+                HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(serde_json::to_string(&json!({"success": true})).unwrap())
+            )
+        })
+        .responder()
 }
 
 fn get_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
