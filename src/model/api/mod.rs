@@ -23,6 +23,13 @@ pub enum GetTablesResult {
 }
 
 #[derive(Debug)]
+pub enum GetTableResult {
+    Table(data::Table),
+    DetailedTable(data::DetailedTable),
+}
+
+
+#[derive(Debug)]
 pub enum Error {
     DatabaseError(diesel::result::Error),
     UnknownError,

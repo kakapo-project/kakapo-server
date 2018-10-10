@@ -130,17 +130,24 @@ struct GetTables {
     pub show_deleted: bool,
 }
 
+#[derive(Deserialize, Debug)]
+struct GetTable {
+    #[serde(default)]
+    pub detailed: bool,
+}
+
+
 fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncResponse {
     let conn = &state.db_connection;
 
     println!("received message: {:?}", &query);
     conn.send(handlers::GetTables {
-        detailed: query.detailed,
-        show_deleted: query.show_deleted,
-    })
+            detailed: query.detailed,
+            show_deleted: query.show_deleted,
+        })
         .from_err()
-        .and_then(|resl| {
-            let unwrapped_result = resl?;
+        .and_then(|res| {
+            let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
             let ok_result = match unwrapped_result {
                 api::GetTablesResult::Tables(tables) => serde_json::to_string(&tables)?,
@@ -152,21 +159,20 @@ fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncRespo
                     .body(ok_result)
             )
         })
-
         .responder()
 }
 
 
 
-fn create_table((state, reqdata): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
+fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
     let conn = &state.db_connection;
 
-    println!("received message: {:?}", &reqdata);
+    println!("received message: {:?}", &json);
     conn.send(handlers::CreateTable {
-        reqdata: reqdata.into_inner()
-    })
+            reqdata: json.into_inner()
+        })
         .from_err()
-        .and_then(|resl| {
+        .and_then(|res| {
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
@@ -176,33 +182,46 @@ fn create_table((state, reqdata): (State<AppState>, Json<api::PostTable>)) -> As
         .responder()
 }
 
-fn get_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
-    let body = once(Ok(Bytes::from_static(b"test")));
+fn get_table((state, path, query): (State<AppState>, Path<String>, Query<GetTable>)) -> AsyncResponse {
+    let conn = &state.db_connection;
 
-    result(Ok(
-        HttpResponse::Ok()
-            .content_type("application/json")
-            .body(Body::Streaming(Box::new(body)))
-    )).responder()
+    println!("received message: {:?}", &query);
+    conn.send(handlers::GetTable {
+            name: path.to_string(),
+            detailed: query.detailed,
+        })
+        .from_err()
+        .and_then(|res| {
+            let unwrapped_result = res?;
+            println!("final result: {:?}", &unwrapped_result);
+            let ok_result = match unwrapped_result {
+                api::GetTableResult::Table(table) => serde_json::to_string(&table)?,
+                api::GetTableResult::DetailedTable(table) => serde_json::to_string(&table)?,
+            };
+            Ok(
+                HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(ok_result)
+            )
+        })
+        .responder()
 }
 
-fn create_or_update_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
-    let body = once(Ok(Bytes::from_static(b"test")));
+fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
 
     result(Ok(
-        HttpResponse::Ok()
+        HttpResponse::InternalServerError()
             .content_type("application/json")
-            .body(Body::Streaming(Box::new(body)))
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
     )).responder()
 }
 
 fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
-    let body = once(Ok(Bytes::from_static(b"test")));
 
     result(Ok(
-        HttpResponse::Ok()
+        HttpResponse::InternalServerError()
             .content_type("application/json")
-            .body(Body::Streaming(Box::new(body)))
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
     )).responder()
 }
 
@@ -224,17 +243,16 @@ pub fn routes() -> App<AppState> {
     let state = AppState::new(connection, "ninchy");
     App::with_state(state)
         .middleware(middleware::Logger::default())
-        .resource("/api/table/", |r| {
+        .resource("/api/table", |r| {
             r.method(http::Method::GET).with(get_tables);
-            r.method(http::Method::POST).with_config(create_table, |((_, cfg),)| config(cfg));
+            r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
+        })
+        .resource("/api/table/{table_name}", |r| {
+            r.method(http::Method::GET).with(get_table);
+            r.method(http::Method::PUT).with(put_table);
+            r.method(http::Method::DELETE).with(delete_table);
         })
         /*
-        .resource("/api/table/{table_name}/", |r| {
-            r.method(http::Method::GET).with_config(get_table, config);
-            r.method(http::Method::PUT).with_config(create_or_update_table, config);
-            r.method(http::Method::DELETE).with_config(delete_table, config);
-        })
-
         .resource("/api/table/{table_name}/retrieve", |r| r.method(http::Method::GET).with(retrieve_table))
         .resource("/api/table/{table_name}/insert", |r| r.method(http::Method::POST).with(insert_into_table))
         .resource("/api/table/{table_name}/insert_or_update", |r| r.method(http::Method::POST).with(insert_or_update_table))

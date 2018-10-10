@@ -140,6 +140,40 @@ pub fn create_table(
 }
 
 
+fn get_single_table(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    table_schema: &TableSchema
+) -> Result<data::DetailedTable, diesel::result::Error> {
+    let table_history_items: Vec<TableSchemaHistory> = table_schema_history::table
+        .filter(table_schema_history::table_schema_id.eq(table_schema.table_schema_id))
+        .order_by(table_schema_history::modified_at.asc())
+        .load::<TableSchemaHistory>(conn)?;
+
+    let last_table_history_item = table_history_items.last()
+        .ok_or(diesel::result::Error::NotFound)?;
+
+    let description = &last_table_history_item.description;
+
+    let modifications: Vec<data::SchemaModification> = table_history_items.iter()
+        .map(|table_history_item| {
+            let schema_modification = data::SchemaModification {
+                date: table_history_item.modified_at,
+                action: serde_json::from_value::<data::SchemaAction>(table_history_item.modification.to_owned())?,
+            };
+            Ok(schema_modification)
+        })
+        .collect::<Result<Vec<data::SchemaModification>, serde_json::Error>>()
+        .or_else(|err| Err(diesel::result::Error::SerializationError(Box::new(err))))?;
+
+    let detailed_table = data::DetailedTable {
+        name: table_schema.name.to_string(),
+        description: description.to_string(),
+        schema: modifications,
+    };
+
+    Ok(detailed_table)
+}
+
 pub fn get_tables(
     conn: PooledConnection<ConnectionManager<PgConnection>>,
     detailed: bool,
@@ -153,38 +187,32 @@ pub fn get_tables(
 
         let tables: Vec<data::DetailedTable> = table_schemas.iter()
             .map(|table_schema| {
-                let table_history_items: Vec<TableSchemaHistory> = table_schema_history::table
-                    .filter(table_schema_history::table_schema_id.eq(table_schema.table_schema_id))
-                    .order_by(table_schema_history::modified_at.asc())
-                    .load::<TableSchemaHistory>(&conn)?;
-
-                let last_table_history_item = table_history_items.last()
-                    .ok_or(diesel::result::Error::NotFound)?;
-
-                let description = &last_table_history_item.description;
-
-                let modifications: Vec<data::SchemaModification> = table_history_items.iter()
-                    .map(|table_history_item| {
-                        let schema_modification = data::SchemaModification {
-                            date: table_history_item.modified_at,
-                            action: serde_json::from_value::<data::SchemaAction>(table_history_item.modification.to_owned())?,
-                        };
-                        Ok(schema_modification)
-                    })
-                    .collect::<Result<Vec<data::SchemaModification>, serde_json::Error>>()
-                    .or_else(|err| Err(diesel::result::Error::SerializationError(Box::new(err))))?;
-
-                let detailed_table = data::DetailedTable {
-                    name: table_schema.name.to_string(),
-                    description: description.to_string(),
-                    schema: modifications,
-                };
-
-                Ok(detailed_table)
+                get_single_table(&conn, &table_schema)
             })
             .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
 
         Ok(api::GetTablesResult::DetailedTables(tables))
+    });
+
+    result.or_else(|err| Err(api::Error::DatabaseError(err)))
+}
+
+pub fn get_table(
+    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    table_name: String,
+    detailed: bool,
+) -> Result<api::GetTableResult, api::Error> {
+
+    let result = conn.transaction::<api::GetTableResult, diesel::result::Error, _>(|| {
+        let table_schema: TableSchema = table_schema::table
+            .filter(table_schema::name.eq(table_name))
+            .get_result::<TableSchema>(&conn)?;
+        println!("table schema: {:?}", table_schema);
+
+
+        let table: data::DetailedTable = get_single_table(&conn, &table_schema)?;
+
+        Ok(api::GetTableResult::DetailedTable(table))
     });
 
     result.or_else(|err| Err(api::Error::DatabaseError(err)))
