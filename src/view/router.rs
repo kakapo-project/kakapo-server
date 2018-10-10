@@ -88,6 +88,7 @@ use bytes::Bytes;
 use futures::stream::once;
 use futures::future::{Future, result};
 use actix_web::{http::NormalizePath};
+use actix_web::dev::JsonConfig;
 
 use model::api;
 use std::error::Error;
@@ -142,8 +143,8 @@ fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncRespo
             let unwrapped_result = resl?;
             println!("final result: {:?}", &unwrapped_result);
             let ok_result = match unwrapped_result {
-                api::GetTablesResult::Tables(tables) => serde_json::to_string(&tables).unwrap(),
-                api::GetTablesResult::DetailedTables(tables) => serde_json::to_string(&tables).unwrap(),
+                api::GetTablesResult::Tables(tables) => serde_json::to_string(&tables)?,
+                api::GetTablesResult::DetailedTables(tables) => serde_json::to_string(&tables)?,
             };
             Ok(
                 HttpResponse::Ok()
@@ -169,7 +170,7 @@ fn create_table((state, reqdata): (State<AppState>, Json<api::PostTable>)) -> As
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
-                    .body(serde_json::to_string(&json!({"success": true})).unwrap())
+                    .body(serde_json::to_string(&json!({"success": true}))?)
             )
         })
         .responder()
@@ -205,6 +206,18 @@ fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse
     )).responder()
 }
 
+fn config(cfg: &mut JsonConfig<AppState>) -> () {
+    cfg.limit(4096)
+        .error_handler(|err, req| {
+            println!("error: {:?}", err);
+            let response =  HttpResponse::InternalServerError()
+                .content_type("application/json")
+                .body(serde_json::to_string(&json!({ "error": err.to_string() }))
+                    .unwrap_or_default());
+            error::InternalError::from_response(
+                err, response).into()
+        });
+}
 
 pub fn routes() -> App<AppState> {
     let connection = connection::create();
@@ -213,14 +226,15 @@ pub fn routes() -> App<AppState> {
         .middleware(middleware::Logger::default())
         .resource("/api/table/", |r| {
             r.method(http::Method::GET).with(get_tables);
-            r.method(http::Method::POST).with(create_table);
-        })
-        .resource("/api/table/{table_name}/", |r| {
-            r.method(http::Method::GET).with(get_table);
-            r.method(http::Method::PUT).with(create_or_update_table);
-            r.method(http::Method::DELETE).with(delete_table);
+            r.method(http::Method::POST).with_config(create_table, |((_, cfg),)| config(cfg));
         })
         /*
+        .resource("/api/table/{table_name}/", |r| {
+            r.method(http::Method::GET).with_config(get_table, config);
+            r.method(http::Method::PUT).with_config(create_or_update_table, config);
+            r.method(http::Method::DELETE).with_config(delete_table, config);
+        })
+
         .resource("/api/table/{table_name}/retrieve", |r| r.method(http::Method::GET).with(retrieve_table))
         .resource("/api/table/{table_name}/insert", |r| r.method(http::Method::POST).with(insert_into_table))
         .resource("/api/table/{table_name}/insert_or_update", |r| r.method(http::Method::POST).with(insert_or_update_table))

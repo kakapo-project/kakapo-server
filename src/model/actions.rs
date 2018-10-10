@@ -151,32 +151,38 @@ pub fn get_tables(
             .load::<TableSchema>(&conn)?;
         println!("table schemas: {:?}", table_schemas);
 
-        let mut tables: Vec<data::DetailedTable> = vec![];
-        for table_schema in table_schemas.iter() {
-            let table_history: Vec<TableSchemaHistory> = table_schema_history::table
-                .filter(table_schema_history::table_schema_id.eq(table_schema.table_schema_id))
-                .order_by(table_schema_history::modified_at.asc())
-                .load::<TableSchemaHistory>(&conn)?;
+        let tables: Vec<data::DetailedTable> = table_schemas.iter()
+            .map(|table_schema| {
+                let table_history_items: Vec<TableSchemaHistory> = table_schema_history::table
+                    .filter(table_schema_history::table_schema_id.eq(table_schema.table_schema_id))
+                    .order_by(table_schema_history::modified_at.asc())
+                    .load::<TableSchemaHistory>(&conn)?;
 
-            let description = &table_history.last().unwrap().description;
+                let last_table_history_item = table_history_items.last()
+                    .ok_or(diesel::result::Error::NotFound)?;
 
-            let modifications: Vec<data::SchemaModification> = table_history.iter()
-                .map(|x| {
-                    data::SchemaModification {
-                        date: x.modified_at,
-                        action: serde_json::from_value::<data::SchemaAction>(x.modification.to_owned()).unwrap(),
-                    }
-                })
-                .collect::<Vec<data::SchemaModification>>();
+                let description = &last_table_history_item.description;
 
-            let detailed_table = data::DetailedTable {
-                name: table_schema.name.to_string(),
-                description: description.to_string(),
-                schema: modifications,
-            };
+                let modifications: Vec<data::SchemaModification> = table_history_items.iter()
+                    .map(|table_history_item| {
+                        let schema_modification = data::SchemaModification {
+                            date: table_history_item.modified_at,
+                            action: serde_json::from_value::<data::SchemaAction>(table_history_item.modification.to_owned())?,
+                        };
+                        Ok(schema_modification)
+                    })
+                    .collect::<Result<Vec<data::SchemaModification>, serde_json::Error>>()
+                    .or_else(|err| Err(diesel::result::Error::SerializationError(Box::new(err))))?;
 
-            tables.push(detailed_table);
-        }
+                let detailed_table = data::DetailedTable {
+                    name: table_schema.name.to_string(),
+                    description: description.to_string(),
+                    schema: modifications,
+                };
+
+                Ok(detailed_table)
+            })
+            .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
 
         Ok(api::GetTablesResult::DetailedTables(tables))
     });
