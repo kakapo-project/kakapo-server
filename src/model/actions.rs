@@ -114,8 +114,8 @@ pub fn create_table(
                 Ok(result)
             })?;
 
-
-        let modification = serde_json::to_value(&post_table.action)
+        let modification: data::SchemaAction = post_table.action;
+        let json_modification = serde_json::to_value(&modification)
             .or_else(|err| {
                 Err(Error::SerializationError(Box::new(err)))
             })?;
@@ -124,7 +124,7 @@ pub fn create_table(
             .values(&NewTableSchemaHistory {
                 table_schema_id: table_schema.table_schema_id,
                 description: post_table.description,
-                modification: modification,
+                modification: json_modification,
                 //TODO: deleted
                 modified_by: user_id,
             })

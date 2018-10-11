@@ -123,6 +123,7 @@ impl ResponseError for api::Error {
 
 // getting
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct GetTables {
     #[serde(default)]
     pub detailed: bool,
@@ -131,6 +132,7 @@ struct GetTables {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct GetTable {
     #[serde(default)]
     pub detailed: bool,

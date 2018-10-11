@@ -6,14 +6,12 @@ use std::fmt;
 use std;
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PostTable {
     pub name: String,
     #[serde(default)]
     pub description: String,
-    #[serde(default)]
     pub action: data::SchemaAction,
-    #[serde(default)]
-    pub delete: bool,
 }
 
 #[derive(Debug)]
