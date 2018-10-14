@@ -1,8 +1,11 @@
 
+use std::collections::HashMap;
+
 use chrono::prelude::*;
 use chrono::DateTime;
 
-#[derive(Debug, Deserialize, Serialize)]
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DataType {
     String,
@@ -10,7 +13,7 @@ pub enum DataType {
     Json,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum Value {
@@ -19,7 +22,7 @@ pub enum Value {
     Integer(i64),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Column {
     pub name: String,
@@ -28,7 +31,7 @@ pub struct Column {
     pub default: Option<Value>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "op")]
 pub enum Expression {
@@ -55,7 +58,7 @@ pub enum Expression {
 }
 
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Constraint {
     Unique(String),
@@ -81,10 +84,20 @@ pub enum Constraint {
 
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+
+// This is the same as SchemaModification::Create
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SchemaState {
+    pub columns: Vec<Column>,
+    pub constraint: Vec<Constraint>,
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "type")]
-pub enum SchemaAction {
+pub enum SchemaModification {
     Create {
         columns: Vec<Column>,
         constraint: Vec<Constraint>,
@@ -94,7 +107,7 @@ pub enum SchemaAction {
         constraint: Vec<Constraint>,
     },
     Rename {
-        column: Vec<(String, String)>,
+        mapping: HashMap<String, String>,
     },
     Raw {
         up: String,
@@ -104,31 +117,33 @@ pub enum SchemaAction {
     Revert,
     Delete,
 }
-impl Default for SchemaAction {
+impl Default for SchemaModification {
     fn default() -> Self {
-        SchemaAction::Nop
+        SchemaModification::Nop
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SchemaModification {
+pub struct SchemaModificationCommit {
     pub date: NaiveDateTime,
-    pub action: SchemaAction,
+    pub action: SchemaModification,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetailedTable {
     pub name: String,
     pub description: String,
-    pub schema: Vec<SchemaModification>,
+    pub schema: Vec<SchemaModificationCommit>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Table {
     pub name: String,
     pub description: String,
-    pub schema: Vec<SchemaModification>,
+    pub schema: SchemaState,
 }
+

@@ -11,7 +11,7 @@ pub struct PostTable {
     pub name: String,
     #[serde(default)]
     pub description: String,
-    pub action: data::SchemaAction,
+    pub action: data::SchemaModification,
 }
 
 #[derive(Debug)]
@@ -30,6 +30,7 @@ pub enum GetTableResult {
 #[derive(Debug)]
 pub enum Error {
     DatabaseError(diesel::result::Error),
+    InvalidStateError,
     UnknownError,
 }
 
@@ -43,6 +44,7 @@ impl std::error::Error for Error {
     fn description(&self) -> &str {
         match self {
             Error::DatabaseError(x) => x.description(),
+            Error::InvalidStateError => "The state of the data is broken",
             Error::UnknownError => "Unknown error",
         }
     }

@@ -8,6 +8,8 @@ extern crate dotenv;
 #[macro_use]
 extern crate diesel;
 extern crate env_logger;
+#[macro_use]
+extern crate failure;
 extern crate futures;
 #[macro_use]
 extern crate json;
