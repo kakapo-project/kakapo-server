@@ -26,6 +26,9 @@ pub enum GetTableResult {
     DetailedTable(data::DetailedTable),
 }
 
+#[derive(Debug)]
+pub struct CreateTableResult(pub data::Table);
+
 
 #[derive(Debug)]
 pub enum Error {

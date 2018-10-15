@@ -14,11 +14,11 @@ pub struct CreateTable {
 }
 
 impl Message for CreateTable {
-    type Result = Result<(), api::Error>;
+    type Result = Result<api::CreateTableResult, api::Error>;
 }
 
 impl Handler<CreateTable> for DatabaseExecutor {
-    type Result = Result<(), api::Error>;
+    type Result = Result<api::CreateTableResult, api::Error>;
 
     fn handle(&mut self, msg: CreateTable, _: &mut Self::Context) -> Self::Result {
         actions::create_table(self.get_connection(), msg.reqdata)

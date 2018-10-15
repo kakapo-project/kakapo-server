@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/src/view/router.rs" line="248" />
+    <bookmark url="file://$PROJECT_DIR$/src/view/router.rs" line="187" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4dd03919-d2ad-46e3-85d1-f21a651c1a50" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/TODO.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/model/err.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/model/sqlgen.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/actions/management.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/actions/mod.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/actions/tableactions.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/crud.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/meta.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/mod.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/query.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/repository.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/rows.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/schema.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/old_src/controller2/types.rs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/actions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/actions.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/api/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/api/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/data.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/data.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/view/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/view/handlers.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/view/router.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/view/router.rs" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
     <ignored path="$PROJECT_DIR$/out/" />
@@ -28,83 +33,29 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="main.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="405">
-              <caret line="27" column="10" selection-start-line="27" selection-start-column="10" selection-end-line="27" selection-end-column="10" />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="router.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/view/router.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="413">
-              <caret line="260" column="45" lean-forward="true" selection-start-line="260" selection-start-column="45" selection-end-line="260" selection-end-column="45" />
+            <state relative-caret-position="182">
+              <caret line="115" column="16" selection-start-line="115" selection-start-column="16" selection-end-line="115" selection-end-column="16" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="actions.rs" pinned="false" current-in-tab="false">
+      <file leaf-file-name="actions.rs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/model/actions.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="308">
-              <caret line="358" column="55" lean-forward="true" selection-start-line="358" selection-start-column="55" selection-end-line="358" selection-end-column="55" />
+            <state relative-caret-position="302">
+              <caret line="442" column="63" selection-start-line="442" selection-start-column="63" selection-end-line="442" selection-end-column="63" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="sqlgen.rs" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/model/sqlgen.rs">
+      <file leaf-file-name="handlers.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/view/handlers.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="30">
-              <caret line="2" column="13" selection-start-line="2" selection-start-column="3" selection-end-line="2" selection-end-column="13" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="data.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/data.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="570">
-              <caret line="145" column="28" lean-forward="true" selection-start-line="145" selection-start-column="28" selection-end-line="145" selection-end-column="28" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="err.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/err.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="75">
-              <caret line="5" column="1" lean-forward="true" selection-start-line="5" selection-start-column="1" selection-end-line="5" selection-end-column="1" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="mod.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/auth/mod.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="15">
-              <caret line="3" column="1" selection-start-line="3" selection-start-column="1" selection-end-line="3" selection-end-column="1" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="mod.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/mod.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="105">
-              <caret line="7" column="12" selection-start-line="7" selection-start-column="12" selection-end-line="7" selection-end-column="12" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Cargo.toml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Cargo.toml">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="195">
-              <caret line="13" column="16" selection-start-line="13" selection-start-column="16" selection-end-line="13" selection-end-column="16" />
+            <state relative-caret-position="237">
+              <caret line="19" column="48" lean-forward="true" selection-start-line="19" selection-start-column="48" selection-end-line="19" selection-end-column="48" />
             </state>
           </provider>
         </entry>
@@ -112,11 +63,11 @@
       <file leaf-file-name="mod.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/model/api/mod.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="533">
-              <caret line="46" column="74" selection-start-line="46" selection-start-column="74" selection-end-line="46" selection-end-column="74" />
+            <state relative-caret-position="300">
+              <caret line="29" column="33" selection-start-line="29" selection-start-column="33" selection-end-line="29" selection-end-column="33" />
               <folding>
-                <element signature="e#702#703#0" expanded="true" />
-                <element signature="e#740#741#0" expanded="true" />
+                <element signature="e#756#757#0" expanded="true" />
+                <element signature="e#794#795#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -133,15 +84,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>DatabaseExecutor</find>
-      <find>user_account_id</find>
-      <find>state</find>
-      <find>chrono</find>
-      <find>conn</find>
-      <find>params</find>
-      <find>Success</find>
-      <find>get_tables</find>
-      <find>ResponseError</find>
       <find>Error</find>
       <find>with_config</find>
       <find>unwrap</find>
@@ -158,11 +100,20 @@
       <find>SchemaAction</find>
       <find>SchemaModi</find>
       <find>SchemaAct</find>
-      <find>unroll_modifications</find>
+      <find>get_single_table</find>
+      <find>api::Error</find>
+      <find>api::Error&gt;</find>
+      <find>Partial</find>
       <find>initial_state</find>
       <find>empty_state_stack</find>
-      <find>Partial</find>
-      <find>get_single_table</find>
+      <find>unroll_modifications</find>
+      <find>create_table</find>
+      <find>conn</find>
+      <find>empty_backwards_state_stack</find>
+      <find>unroll_next_modification</find>
+      <find>update_migration</find>
+      <find>new_modification</find>
+      <find>ResponseError</find>
     </findStrings>
     <dirStrings>
       <dir>$PROJECT_DIR$/src</dir>
@@ -220,16 +171,16 @@
         <option value="$PROJECT_DIR$/src/model/api/result.rs" />
         <option value="$PROJECT_DIR$/src/view/mod.rs" />
         <option value="$PROJECT_DIR$/src/model/api/error.rs" />
-        <option value="$PROJECT_DIR$/src/view/handlers.rs" />
-        <option value="$PROJECT_DIR$/src/view/router.rs" />
         <option value="$PROJECT_DIR$/TODO.md" />
         <option value="$PROJECT_DIR$/src/model/sqlgen.rs" />
         <option value="$PROJECT_DIR$/migrations/2018-10-04-133230_create_meta_tables/up.sql" />
         <option value="$PROJECT_DIR$/src/main.rs" />
         <option value="$PROJECT_DIR$/src/model/mod.rs" />
         <option value="$PROJECT_DIR$/Cargo.toml" />
-        <option value="$PROJECT_DIR$/src/model/err.rs" />
         <option value="$PROJECT_DIR$/src/model/data.rs" />
+        <option value="$PROJECT_DIR$/src/model/err.rs" />
+        <option value="$PROJECT_DIR$/src/view/router.rs" />
+        <option value="$PROJECT_DIR$/src/view/handlers.rs" />
         <option value="$PROJECT_DIR$/src/model/api/mod.rs" />
         <option value="$PROJECT_DIR$/src/model/actions.rs" />
       </list>
@@ -249,7 +200,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -326,11 +276,12 @@
         </subPane>
       </pane>
       <pane id="PackagesPane" />
+      <pane id="Scope" />
       <pane id="AndroidView" />
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file:///home/atta/ninchy/src/model/data.rs" />
+    <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file:///home/atta/ninchy/src/view/router.rs" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
   </component>
@@ -444,7 +395,8 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1984" y="-4" width="1857" height="1085" extended-state="6" />
+    <frame x="1984" y="-11" width="1857" height="1092" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="right" id="Cargo" order="3" />
@@ -453,18 +405,19 @@
       <window_info anchor="right" id="Capture Analysis" order="3" />
       <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.501382" side_tool="true" weight="0.32948583" />
       <window_info anchor="right" id="Maven Projects" order="3" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.498618" visible="true" weight="0.33892968" />
       <window_info anchor="bottom" id="Version Control" order="7" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.498618" visible="true" weight="0.33892968" />
       <window_info anchor="bottom" id="Terminal" order="7" weight="0.32948583" />
       <window_info id="Capture Tool" order="2" />
       <window_info id="Designer" order="2" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.29519072" />
       <window_info anchor="bottom" id="Run with VisualVM" order="7" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.29187396" />
+      <window_info anchor="bottom" id="Find" order="1" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" id="Theme Preview" order="3" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Debug with VisualVM" order="7" />
       <window_info anchor="right" id="Palette" order="3" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -473,7 +426,6 @@
       <window_info id="UI Designer" order="2" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Find" order="1" />
     </layout>
   </component>
   <component name="VcsContentAnnotationSettings">
@@ -481,21 +433,12 @@
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/src/lib.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/mod.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/crud.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/meta.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/rows.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/query.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/schema.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/repository.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller/mod.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/server/router.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/server/mod.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/database/mod.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/actions/management.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/actions/mod.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/actions/tableactions.rs" />
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/types.rs" />
     <entry file="file://$PROJECT_DIR$/src/view/repository.rs" />
     <entry file="file://$PROJECT_DIR$/src/view/procedures.rs" />
     <entry file="file://$PROJECT_DIR$/.env">
@@ -540,16 +483,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="30">
           <caret line="2" column="30" selection-start-line="2" selection-start-column="30" selection-end-line="2" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/migrations/2018-10-04-133027_create_versioning/down.sql">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/migrations/2018-10-04-133027_create_versioning/up.sql">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="6" column="2" lean-forward="true" selection-start-line="6" selection-start-column="2" selection-end-line="6" selection-end-column="2" />
         </state>
       </provider>
     </entry>
@@ -604,13 +537,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/handlers.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="870">
-          <caret line="58" column="80" selection-start-line="58" selection-start-column="80" selection-end-line="58" selection-end-column="80" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/migrations/2018-10-04-133230_create_meta_tables/up.sql">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="510">
@@ -639,38 +565,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/router.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="413">
-          <caret line="260" column="45" lean-forward="true" selection-start-line="260" selection-start-column="45" selection-end-line="260" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/err.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="75">
-          <caret line="5" column="1" lean-forward="true" selection-start-line="5" selection-start-column="1" selection-end-line="5" selection-end-column="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/api/mod.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="533">
-          <caret line="46" column="74" selection-start-line="46" selection-start-column="74" selection-end-line="46" selection-end-column="74" />
-          <folding>
-            <element signature="e#702#703#0" expanded="true" />
-            <element signature="e#740#741#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/data.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="570">
-          <caret line="145" column="28" lean-forward="true" selection-start-line="145" selection-start-column="28" selection-end-line="145" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/model/mod.rs">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="105">
@@ -678,17 +572,97 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/actions.rs">
+    <entry file="file://$PROJECT_DIR$/src/model/sqlgen.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="308">
-          <caret line="358" column="55" lean-forward="true" selection-start-line="358" selection-start-column="55" selection-end-line="358" selection-end-column="55" />
+        <state relative-caret-position="135">
+          <caret line="11" selection-start-line="11" selection-end-line="11" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/sqlgen.rs">
+    <entry file="file://$PROJECT_DIR$/migrations/2018-10-04-133027_create_versioning/down.sql">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/migrations/2018-10-04-133027_create_versioning/up.sql">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="30">
-          <caret line="2" column="13" selection-start-line="2" selection-start-column="3" selection-end-line="2" selection-end-column="13" />
+        <state relative-caret-position="90">
+          <caret line="6" column="2" lean-forward="true" selection-start-line="6" selection-start-column="2" selection-end-line="6" selection-end-column="2" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/model/data.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" selection-start-line="10" selection-end-line="12" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/model/err.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="1" column="14" selection-start-line="1" selection-start-column="14" selection-end-line="1" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller/mod.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/crud.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/mod.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/meta.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/query.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/repository.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="228">
+          <caret line="16" column="7" selection-start-line="16" selection-start-column="7" selection-end-line="16" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/rows.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/schema.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_src/controller2/types.rs">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/handlers.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="237">
+          <caret line="19" column="48" lean-forward="true" selection-start-line="19" selection-start-column="48" selection-end-line="19" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/router.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="182">
+          <caret line="115" column="16" selection-start-line="115" selection-start-column="16" selection-end-line="115" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/model/api/mod.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="300">
+          <caret line="29" column="33" selection-start-line="29" selection-start-column="33" selection-end-line="29" selection-end-column="33" />
+          <folding>
+            <element signature="e#756#757#0" expanded="true" />
+            <element signature="e#794#795#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/model/actions.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="442" column="63" selection-start-line="442" selection-start-column="63" selection-end-line="442" selection-end-column="63" />
         </state>
       </provider>
     </entry>
