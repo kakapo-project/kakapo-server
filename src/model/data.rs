@@ -1,8 +1,11 @@
 
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use chrono::prelude::*;
 use chrono::DateTime;
+
+use serde_json;
 
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -13,8 +16,6 @@ pub enum DataType {
     Json,
 }
 
-/*
-// Do I have to use this for the Hash value?
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
@@ -22,25 +23,26 @@ pub enum IndexableValue {
     String(String),
     Integer(i64),
 }
-*/
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum Value {
     Null,
     String(String),
     Integer(i64),
+    Json(serde_json::Value),
 }
 
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IndexedData(pub HashMap<Value, HashMap<String, Value>>);
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RowsData(pub Vec<HashMap<String, Value>>);
+#[serde(untagged)]
+pub enum TableData {
+    IndexedData(HashMap<IndexableValue, HashMap<String, Value>>), //TODO: I think this might need to be a btreemap
+    RowsData(Vec<BTreeMap<String, Value>>),
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,7 +53,7 @@ pub struct Column {
     pub default: Option<Value>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "op")]
 pub enum Expression {
@@ -78,7 +80,7 @@ pub enum Expression {
 }
 
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Constraint {
     Unique(String),
@@ -167,3 +169,9 @@ pub struct Table {
     pub schema: SchemaState,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TableWithData {
+    pub table: Table,
+    pub data: TableData,
+}

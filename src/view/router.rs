@@ -176,10 +176,9 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
         .and_then(|res| {
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
-            let ok_result = match unwrapped_result {
-                api::GetTableDataResult::Indexed(rows) => serde_json::to_string(&rows)?,
-                api::GetTableDataResult::Rows(rows) => serde_json::to_string(&rows)?,
-            };
+            let api::GetTableDataResult(table_with_data) = unwrapped_result;
+            let data = table_with_data.data; //TODO: just need the data, give the user the option to have it all maybe?
+            let ok_result = serde_json::to_string(&data)?;
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")

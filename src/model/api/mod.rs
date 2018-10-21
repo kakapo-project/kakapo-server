@@ -30,11 +30,7 @@ pub enum GetTableResult {
 pub struct CreateTableResult(pub data::Table);
 
 #[derive(Debug)]
-pub enum GetTableDataResult {
-    Indexed(data::IndexedData),
-    Rows(data::RowsData),
-}
-
+pub struct GetTableDataResult(pub data::TableWithData);
 
 #[derive(Debug)]
 pub enum Error {

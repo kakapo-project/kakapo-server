@@ -81,7 +81,7 @@ fn unroll_one_modification(
             let mut backwards_state_clone = backwards_state.to_owned();
 
             last_state.columns.retain(|x| column.contains(&x.name));
-            last_state.constraint.retain(|x| constraint.contains(&x));
+            // last_state.constraint.retain(|x| constraint.contains(&x)); //TODO: constraint identifier??
 
             state_clone.push(last_state);
             backwards_state_clone.push(modification.to_owned());
