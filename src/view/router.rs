@@ -28,6 +28,13 @@ use futures::future::{Future, result};
 use actix_web::{http::NormalizePath};
 use actix_web::dev::JsonConfig;
 
+use actix_web::fs::{StaticFileConfig, StaticFiles};
+use actix_web::fs::{NamedFile};
+use actix_web::http::header::DispositionType;
+
+
+use std::path::PathBuf;
+
 use model::api;
 use std::error::Error;
 use super::handlers;
@@ -188,6 +195,10 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
         .responder()
 }
 
+fn index(state: State<AppState>) -> Result<NamedFile> {
+    Ok(NamedFile::open("./www/index.html")?)
+}
+
 fn config(cfg: &mut JsonConfig<AppState>) -> () {
     cfg.limit(4096)
         .error_handler(|err, req| {
@@ -206,6 +217,9 @@ pub fn routes() -> App<AppState> {
     let state = AppState::new(connection, "ninchy");
     App::with_state(state)
         .middleware(middleware::Logger::default())
+        .resource("/", |r| {
+            r.method(http::Method::GET).with(index)
+        })
         .resource("/api/manage/table", |r| {
             r.method(http::Method::GET).with(get_tables);
             r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
@@ -227,4 +241,9 @@ pub fn routes() -> App<AppState> {
         .resource("/api/table/{table_name}/delete", |r| r.method(http::Method::POST).with(delete_from_table))
         */
         .default_resource(|r| r.h(NormalizePath::default()))
+        .handler(
+            "/",
+            fs::StaticFiles::new("./www/")
+                .unwrap()
+                .show_files_listing())
 }
