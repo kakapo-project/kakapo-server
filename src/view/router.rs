@@ -166,6 +166,29 @@ fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse
     )).responder()
 }
 
+fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+    let conn = &state.db_connection;
+
+    conn.send(handlers::GetTableData {
+            name: path.to_string(),
+        })
+        .from_err()
+        .and_then(|res| {
+            let unwrapped_result = res?;
+            println!("final result: {:?}", &unwrapped_result);
+            let ok_result = match unwrapped_result {
+                api::GetTableDataResult::Indexed(rows) => serde_json::to_string(&rows)?,
+                api::GetTableDataResult::Rows(rows) => serde_json::to_string(&rows)?,
+            };
+            Ok(
+                HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(ok_result)
+            )
+        })
+        .responder()
+}
+
 fn config(cfg: &mut JsonConfig<AppState>) -> () {
     cfg.limit(4096)
         .error_handler(|err, req| {
@@ -184,14 +207,17 @@ pub fn routes() -> App<AppState> {
     let state = AppState::new(connection, "ninchy");
     App::with_state(state)
         .middleware(middleware::Logger::default())
-        .resource("/api/table", |r| {
+        .resource("/api/manage/table", |r| {
             r.method(http::Method::GET).with(get_tables);
             r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
         })
-        .resource("/api/table/{table_name}", |r| {
+        .resource("/api/manage/table/{table_name}", |r| {
             r.method(http::Method::GET).with(get_table);
             r.method(http::Method::PUT).with(put_table);
             r.method(http::Method::DELETE).with(delete_table);
+        })
+        .resource("/api/table/{table_name}", |r| {
+            r.method(http::Method::GET).with(get_table_data);
         })
         /*
         .resource("/api/table/{table_name}/retrieve", |r| r.method(http::Method::GET).with(retrieve_table))

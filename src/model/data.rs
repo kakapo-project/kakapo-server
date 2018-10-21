@@ -13,7 +13,18 @@ pub enum DataType {
     Json,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+/*
+// Do I have to use this for the Hash value?
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum IndexableValue {
+    String(String),
+    Integer(i64),
+}
+*/
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum Value {
@@ -21,6 +32,15 @@ pub enum Value {
     String(String),
     Integer(i64),
 }
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexedData(pub HashMap<Value, HashMap<String, Value>>);
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RowsData(pub Vec<HashMap<String, Value>>);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -134,7 +154,7 @@ pub struct SchemaModificationCommit {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetailedTable {
-    pub name: String,
+    pub name: String, //TODO: make sure this is an alphanumeric
     pub description: String,
     pub schema: Vec<SchemaModificationCommit>,
 }
@@ -142,7 +162,7 @@ pub struct DetailedTable {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Table {
-    pub name: String,
+    pub name: String, //TODO: make sure this is an alphanumeric
     pub description: String,
     pub schema: SchemaState,
 }

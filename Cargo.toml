@@ -7,9 +7,11 @@ authors = ["Atta Zadeh <atta.h.zadeh@gmail.com>"]
 actix = "0.7"
 actix-web = "^0.7"
 
+byteorder = "1"
 bytes = "0.4"
 chrono = { version = "0.4.6", features = ["serde"] }
 diesel = { version = "1.0.0", features = ["chrono", "postgres", "r2d2", "serde_json"] }
+diesel-dynamic-schema = { path = "./diesel_dynamic_schema/" }
 dotenv = "0.9.0"
 env_logger = "*"
 failure = "0.1.2"

@@ -29,6 +29,12 @@ pub enum GetTableResult {
 #[derive(Debug)]
 pub struct CreateTableResult(pub data::Table);
 
+#[derive(Debug)]
+pub enum GetTableDataResult {
+    Indexed(data::IndexedData),
+    Rows(data::RowsData),
+}
+
 
 #[derive(Debug)]
 pub enum Error {

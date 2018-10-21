@@ -26,62 +26,7 @@ use auth;
 use super::schema::{entity, table_schema, table_schema_history};
 use super::connection::DatabaseExecutor;
 
-
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UserAccount {
-    username: String,
-    password: String,
-    email: String,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "entity"]
-pub struct NewEntity {
-    pub scope_id: i64,
-    pub created_by: i64,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "table_schema"]
-pub struct NewTableSchema {
-    pub entity_id: i64,
-    pub name: String,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "table_schema_history"]
-pub struct NewTableSchemaHistory {
-    pub table_schema_id: i64,
-    pub description: String,
-    pub modification: serde_json::Value,
-    pub modified_by: i64,
-}
-
-#[derive(Debug, Queryable)]
-pub struct Entity {
-    pub entity_id: i64,
-    pub scope_id: i64,
-    pub created_at: NaiveDateTime,
-    pub created_by: i64,
-}
-
-#[derive(Debug, Queryable)]
-pub struct TableSchema {
-    pub table_schema_id: i64,
-    pub entity_id: i64,
-    pub name: String,
-}
-
-#[derive(Debug, Queryable)]
-pub struct TableSchemaHistory {
-    pub table_schema_history_id: i64,
-    pub table_schema_id: i64,
-    pub description: String,
-    pub modification: serde_json::Value,
-    pub modified_at: NaiveDateTime,
-    pub modified_by: i64,
-}
+use super::dbdata::*;
 
 
 fn parse_table_history_items_to_modification_commits(
@@ -260,7 +205,8 @@ fn unroll_modification_commits(
     unroll_modifications(modifications)
 }
 
-fn unroll_table(table: data::DetailedTable) -> Result<data::Table, StateError> {
+//Fixme: this is not supposed to be public for all, this is public for table.rs,
+pub fn unroll_table(table: data::DetailedTable) -> Result<data::Table, StateError> {
     let modifications = table.schema.iter()
         .map(|x| x.action.to_owned())
         .collect::<Vec<data::SchemaModification>>();
@@ -299,28 +245,30 @@ fn update_migration(
         data::SchemaModification::Create { columns, constraint, } => {
             let formatted_columns: Vec<String> = columns.iter().map(|x| format_column(x)).collect();
             if is_empty {
+                //TODO: escape values?
                 format!("CREATE TABLE {} ({})", table_name, formatted_columns.join(", "))
             } else {
                 format!("ALTER TABLE {} ADD COLUMN {}", table_name, formatted_columns.join(", ADD COLUMN"))
             }
+            //TODO: implement the constraints
         },
         data::SchemaModification::Remove { column, constraint, } => {
-            format!("")
+            format!("IMPLEMENT ME") //TODO: ...
         },
         data::SchemaModification::Rename { mapping, } => {
-            format!("")
+            format!("IMPLEMENT ME") //TODO: ...
         },
         data::SchemaModification::Raw { up, down, } => {
-            format!("")
+            format!("IMPLEMENT ME") //TODO: ...
         },
         data::SchemaModification::Nop => {
-            format!("")
+            format!("IMPLEMENT ME") //TODO: ...
         },
         data::SchemaModification::Revert => {
-            format!("")
+            format!("IMPLEMENT ME") //TODO: ...
         },
         data::SchemaModification::Delete => {
-            format!("")
+            format!("IMPLEMENT ME") //TODO: ...
         },
     };
 
@@ -360,7 +308,8 @@ fn get_modification_commits(
     Ok(modification_commits)
 }
 
-fn get_single_table(
+//Fixme: this is not supposed to be public for all, this is public for table.rs,
+pub fn get_single_table(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_schema: &TableSchema
 ) -> Result<data::DetailedTable, diesel::result::Error> {
