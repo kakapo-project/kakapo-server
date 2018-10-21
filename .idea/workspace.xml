@@ -4,24 +4,7 @@
     <bookmark url="file://$PROJECT_DIR$/src/view/router.rs" line="224" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4dd03919-d2ad-46e3-85d1-f21a651c1a50" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/LICENSE-APACHE" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/LICENSE-APACHE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/LICENSE-MIT" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/LICENSE-MIT" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/src/column.rs" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/column.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/src/dummy_expression.rs" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/dummy_expression.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/src/schema.rs" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/schema.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/src/table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/table.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/diesel_dynamic_schema/tests/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/tests/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/view/router.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/view/router.rs" afterDir="false" />
-    </list>
+    <list default="true" id="4dd03919-d2ad-46e3-85d1-f21a651c1a50" name="Default" comment="" />
     <ignored path="$PROJECT_DIR$/target/" />
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -64,7 +47,7 @@
         <entry file="file://$PROJECT_DIR$/package.json">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="390">
-              <caret line="26" lean-forward="true" selection-start-line="26" selection-end-line="26" />
+              <caret line="26" selection-start-line="26" selection-end-line="26" />
             </state>
           </provider>
         </entry>
@@ -72,21 +55,30 @@
       <file leaf-file-name="main.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="811">
+            <state relative-caret-position="1080">
               <caret line="72" column="1" selection-start-line="72" selection-start-column="1" selection-end-line="72" selection-end-column="1" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="router.rs" pinned="false" current-in-tab="true">
+      <file leaf-file-name="router.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/view/router.rs">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="263">
               <caret line="198" column="41" selection-start-line="198" selection-start-column="41" selection-end-line="198" selection-end-column="41" />
               <folding>
                 <element signature="e#5710#5711#0" expanded="true" />
-                <element signature="e#5753#5754#0" expanded="true" />
+                <element signature="e#5757#5758#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="index.js" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/src/index.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="180">
+              <caret line="12" lean-forward="true" selection-start-line="12" selection-end-line="12" />
             </state>
           </provider>
         </entry>
@@ -96,9 +88,13 @@
           <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
-      <file leaf-file-name="App.js" pinned="false" current-in-tab="false">
+      <file leaf-file-name="App.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/client/src/App.js">
-          <provider selected="true" editor-type-id="text-editor" />
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="330">
+              <caret line="22" column="12" lean-forward="true" selection-start-line="22" selection-start-column="12" selection-end-line="22" selection-end-column="12" />
+            </state>
+          </provider>
         </entry>
       </file>
       <file leaf-file-name="data.rs" pinned="false" current-in-tab="false">
@@ -106,15 +102,6 @@
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="30">
               <caret line="2" column="31" selection-start-line="2" selection-start-column="31" selection-end-line="2" selection-end-column="31" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="column.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/column.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2475">
-              <caret line="169" column="5" selection-start-line="169" selection-start-column="5" selection-end-line="169" selection-end-column="5" />
             </state>
           </provider>
         </entry>
@@ -246,8 +233,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="PackagesPane" />
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -294,6 +279,8 @@
         </subPane>
       </pane>
       <pane id="AndroidView" />
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -415,7 +402,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="64" y="-4" width="1857" height="1085" extended-state="6" />
+    <frame x="64" y="-11" width="1857" height="1092" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -425,13 +412,13 @@
       <window_info anchor="right" id="Capture Analysis" order="3" />
       <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.501382" side_tool="true" weight="0.32948583" />
       <window_info anchor="right" id="Maven Projects" order="3" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.498618" visible="true" weight="0.33892968" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.498618" weight="0.33892968" />
       <window_info anchor="bottom" id="Version Control" order="7" weight="0.32948583" />
       <window_info anchor="bottom" id="Terminal" order="7" weight="0.32948583" />
       <window_info id="Capture Tool" order="2" />
       <window_info id="Designer" order="2" />
       <window_info anchor="bottom" id="Run with VisualVM" order="7" />
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.33222774" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.3360973" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" id="Theme Preview" order="3" />
@@ -452,7 +439,6 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/old_src/controller2/crud.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/controller2/mod.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/controller2/meta.rs" />
     <entry file="file://$PROJECT_DIR$/old_src/controller2/query.rs" />
@@ -627,13 +613,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/build.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="75">
-          <caret line="5" lean-forward="true" selection-start-line="5" selection-end-line="5" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/build.rs" />
     <entry file="file://$PROJECT_DIR$/Cargo.toml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="345">
@@ -644,19 +624,16 @@
     <entry file="file://$PROJECT_DIR$/client/src/App.test.js">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/client/src/App.js">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/package.json">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="390">
-          <caret line="26" lean-forward="true" selection-start-line="26" selection-end-line="26" />
+          <caret line="26" selection-start-line="26" selection-end-line="26" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="811">
+        <state relative-caret-position="1080">
           <caret line="72" column="1" selection-start-line="72" selection-start-column="1" selection-end-line="72" selection-end-column="1" />
         </state>
       </provider>
@@ -667,8 +644,22 @@
           <caret line="198" column="41" selection-start-line="198" selection-start-column="41" selection-end-line="198" selection-end-column="41" />
           <folding>
             <element signature="e#5710#5711#0" expanded="true" />
-            <element signature="e#5753#5754#0" expanded="true" />
+            <element signature="e#5757#5758#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/src/index.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="12" lean-forward="true" selection-start-line="12" selection-end-line="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/src/App.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="330">
+          <caret line="22" column="12" lean-forward="true" selection-start-line="22" selection-start-column="12" selection-end-line="22" selection-end-column="12" />
         </state>
       </provider>
     </entry>
