@@ -25,6 +25,16 @@ class TableData extends Component {
 
     let nColumns = 3;
 
+    //Modify Table
+    //Duplicate Table
+    //Delete Table
+    //History
+    // =========
+    //Download Table
+    //View Table At History
+    // =========
+    //Filters....
+
     return (
       <Table celled>
         <Table.Header>
@@ -82,7 +92,7 @@ class TableData extends Component {
 
           `}</style>
           { [...Array(25).keys()].map(x =>
-            <Table.Row negative>
+            <Table.Row>
               <Table.Cell>
                 <Input placeholder='Search...' />
               </Table.Cell>
