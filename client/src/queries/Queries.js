@@ -14,14 +14,16 @@ class Queries extends Component {
   render() {
 
     return (
-      <Form>
-        <CodeMirror options={{
-          theme: 'darcula',
-          mode: 'text/x-mysql',
-          lineNumbers: true,
-          styleActiveLine: true,
-        }} />
-      </Form>
+      <Segment basic>
+        <Form>
+          <CodeMirror options={{
+            theme: 'darcula',
+            mode: 'text/x-mysql',
+            lineNumbers: true,
+            styleActiveLine: true,
+          }} />
+        </Form>
+      </Segment>
     )
 
   }
