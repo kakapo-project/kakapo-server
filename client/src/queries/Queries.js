@@ -4,6 +4,7 @@ import { Button, Card, Container, Form, Header, Grid, Icon, Image, Menu, Segment
 
 import CodeMirror from 'react-codemirror'
 
+
 import 'codemirror/addon/hint/sql-hint'
 import 'codemirror/lib/codemirror.css'
 import 'codemirror/theme/darcula.css'

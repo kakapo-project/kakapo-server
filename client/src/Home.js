@@ -51,10 +51,10 @@ class Home extends Component {
     })
   }
 
-  switchCompression() {
+  toggleSidebar() {
     this.setState({
       ...this.state,
-      compress: !this.state.compress,
+      sidebarOpen: !this.state.sidebarOpen,
     })
   }
 
@@ -74,8 +74,8 @@ class Home extends Component {
     return (
       <div>
         <Header
-          compress={this.state.compress}
-          switchCompression={() => this.switchCompression()}
+          sidebarOpen={this.state.sidebarOpen}
+          onToggle={() => this.toggleSidebar()}
         />
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5em)'}}>
           <Sidebar
@@ -84,9 +84,8 @@ class Home extends Component {
             icon='labeled'
             inverted
             color='grey'
-            onHide={this.handleSidebarHide}
             vertical
-            visible={!this.state.compress}
+            visible={!this.state.sidebarOpen}
             width='thin'
           >
             <Menu.Item

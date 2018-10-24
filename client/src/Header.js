@@ -1,40 +1,53 @@
 
 import React, { Component } from 'react'
-import { Button, Icon, Image, Menu, Search, Segment, Sidebar } from 'semantic-ui-react'
+import { Button, Divider, Icon, Image, Menu, Search, Segment, Sidebar } from 'semantic-ui-react'
 
 class Header extends Component {
 
   state = {
-    headerItem: 'home',
-  }
-
-  setHeaderItem(headerItem) {
-    this.setState({
-      ...this.state,
-      headerItem,
-    })
   }
 
   render() {
-    let switchCompression = this.props.switchCompression
+    let switchCompression = this.props.onToggle
+    let compress = this.props.sidebarOpen
 
     return (
-      <Segment inverted attached='top' basic style={{border: 0}}>
-        <Menu inverted pointing secondary>
+      <Segment inverted attached='top' basic style={{border: 0, height: '5em', textAlign: 'bottom'}}>
+        <Menu inverted pointing secondary style={{height: '3.1em'}}>
           <Menu.Item
             name='home'
-            active={this.state.headerItem === 'home'}
-            onClick={(e, {name}) => this.setHeaderItem(name)} />
-          <Menu.Item
-            name='messages'
-            active={this.state.headerItem === 'messages'}
-            onClick={(e, {name}) => this.setHeaderItem(name)}
+            as='a'
           />
-          <Menu.Item
-            name='friends'
-            active={this.state.headerItem === 'friends'}
-            onClick={(e, {name}) => this.setHeaderItem(name)}
-          />
+          { this.props.editor && (
+            <Menu secondary>
+              <Menu.Item
+                as='a'
+              >
+                <Icon name='undo' />
+              </Menu.Item>
+              <Menu.Item
+                as='a'
+              >
+                <Icon name='redo' />
+              </Menu.Item>
+              <Divider />
+              <Menu.Item
+                as='a'
+              >
+                <Icon name='cut' />
+              </Menu.Item>
+              <Menu.Item
+                as='a'
+              >
+                <Icon name='copy' />
+              </Menu.Item>
+              <Menu.Item
+                as='a'
+              >
+                <Icon name='paste' />
+              </Menu.Item>
+            </Menu>
+          )}
           <Menu.Menu position='right'>
             <Search
                 loading={false}
@@ -45,16 +58,16 @@ class Header extends Component {
               name='compress'
               onClick={(e, {name}) => switchCompression()}
             >
-            {this.props.compress ?
-              <Icon name='expand' /> :
-              <Icon name='compress' />
-            }
+              {compress ?
+                <Icon name='expand' /> :
+                <Icon name='compress' />
+              }
             </Menu.Item>
             <Menu.Item
               name='documentation'
               onClick={(e, {name}) => {}}
             >
-            <Icon name='file alternate' />
+              <Icon name='file alternate' />
             </Menu.Item>
 
           </Menu.Menu>
