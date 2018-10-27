@@ -78,12 +78,22 @@ class Home extends Component {
           onToggle={() => this.toggleSidebar()}
         />
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5em)'}}>
+          <style>
+            {`
+              .ui.inverted.menu .dark-green.active.item, .ui.inverted.dark-green.menu {
+                background-color: #005322;
+              }
+              .ui.menu .light-green.active.item, .ui.light-green.menu {
+                background-color: #C9E400;
+              }
+            `}
+          </style>
           <Sidebar
             as={Menu}
             animation='push scale down'
             icon='labeled'
             inverted
-            color='grey'
+            color='black'
             vertical
             visible={!this.state.sidebarOpen}
             width='thin'

@@ -41,7 +41,7 @@ class Tables extends Component {
   renderTypeSymbol(type) {
     switch (type) {
       case 'Boolean':
-      return '<i aria-hidden="true" class="check icon">'
+        return '<i aria-hidden="true" class="check icon">'
       case 'String':
         return '<i aria-hidden="true" class="font icon">'
       case 'Integer':
@@ -63,8 +63,19 @@ class Tables extends Component {
     }
   }
 
-  renderColumn(column) {
-    return `${column.name}  <small>${this.renderTypeSymbol(column.dataType)}</small>`
+  getHandsontableType(type) {
+
+    switch (type) {
+      case 'Boolean':
+        return 'checkbox'
+      default:
+        return 'text'
+    }
+  }
+
+
+  renderColumnHeader(column) {
+    return `<strong>${column.name}</strong>`
   }
 
   renderIndexForRowWithNoKey() {
@@ -127,7 +138,7 @@ class Tables extends Component {
         'data': '{}',
         'last_visited': new Date(),
         'joined': new Date(),
-        'is_admin': false,
+        'is_admin': true,
       },
       {
         'id': 3,
@@ -145,7 +156,7 @@ class Tables extends Component {
         'data': '{}',
         'last_visited': new Date(),
         'joined': new Date(),
-        'is_admin': false,
+        'is_admin': true,
       },
       {
         'id': 5,
@@ -163,11 +174,18 @@ class Tables extends Component {
         'data': '{}',
         'last_visited': new Date(),
         'joined': new Date(),
-        'is_admin': false,
+        'is_admin': true,
       },
     ]
 
     return { schema, data }
+  }
+
+  getColumnMetadata(column) {
+    return {
+      data: column.name,
+      type: this.getHandsontableType(column.dataType),
+    }
   }
 
   getColumnsWithKey() {
@@ -212,9 +230,9 @@ class Tables extends Component {
 
     let { data } = this.getData()
 
-    const orderBasedOnColumn = (row) => columns.map(column => row[column.name])
+    //const orderBasedOnColumn = (row) => columns.map(column => row[column.name])
 
-    return data.map(row => orderBasedOnColumn(row))
+    return data //data.map(row => orderBasedOnColumn(row))
   }
 
 
@@ -294,13 +312,22 @@ class Tables extends Component {
           <Sidebar.Pusher>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
               <Segment padded style={{ height: '100%', overflow: 'hidden'}}>
+                <style>
+                  {`
+                    .handsontable .colHeader {
+                      width: 100%;
+                    }
+                  `}
+                </style>
                 <HotTable
                   data={this.getRows()}
-                  colHeaders={this.getColumns().map(x => this.renderColumn(x))}
+                  colHeaders={this.getColumns().map(x => this.renderColumnHeader(x))}
+                  columns={this.getColumns().map(x => this.getColumnMetadata(x))}
                   rowHeaders={this.getIndices()}
-                  /*stretchH="all"*/
+                  AutoColumnSize={true}
+                  //stretchH="all"
                   autoWrapRow={true}
-                  style={{width: '100%', height: '100%'}}
+                  //style={{width: '100%', height: '100%'}}
                 />
               </Segment>
             </Segment>

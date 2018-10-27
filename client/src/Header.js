@@ -2,6 +2,7 @@
 import React, { Component } from 'react'
 import { Button, Divider, Icon, Image, Menu, Search, Segment, Sidebar } from 'semantic-ui-react'
 
+import logo from './logo.svg'
 class Header extends Component {
 
   state = {
@@ -14,10 +15,9 @@ class Header extends Component {
     return (
       <Segment inverted attached='top' basic style={{border: 0, height: '5em', textAlign: 'bottom'}}>
         <Menu inverted pointing secondary style={{height: '3.1em'}}>
-          <Menu.Item
-            name='home'
-            as='a'
-          />
+          <Menu.Item as='a' style={{marginBottom: '-1.35em', marginLeft: '1.75em'}}>
+            <Image src={logo} style={{width: 45, height: 'auto'}} />
+          </Menu.Item>
           { this.props.editor && (
             <Menu secondary>
               <Menu.Item
