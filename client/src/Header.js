@@ -15,7 +15,7 @@ class Header extends Component {
     return (
       <Segment inverted attached='top' basic style={{border: 0, height: '5em', textAlign: 'bottom'}}>
         <Menu inverted pointing secondary style={{height: '3.1em'}}>
-          <Menu.Item as='a' style={{marginBottom: '-1.35em', marginLeft: '1.75em'}}>
+          <Menu.Item as='a' style={{marginBottom: '-1.35em', marginLeft: '1.65em'}}>
             <Image src={logo} style={{width: 45, height: 'auto'}} />
           </Menu.Item>
           { this.props.editor && (

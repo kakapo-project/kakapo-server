@@ -82,24 +82,23 @@ class Entities extends Component {
     ]
   }
 
+  renderIcon(entity) {
+    switch (entity.type) {
+      case 'query':
+        return <Icon circular size='huge' color='scheme-green' name={entity.icon} style={{boxShadow: '0 0 0 0.1em rgba(0,83,34, 1) inset'}}/>
+      case 'view':
+        return <Icon circular inverted size='huge' color='grey' name={entity.icon} />
+      case 'table':
+        return <Icon circular inverted size='huge' color='black' name={entity.icon} />
+      case 'script':
+        return <Icon circular inverted size='huge' color='scheme-green' name={entity.icon} />
+    }
+  }
+
   render() {
     let selectedRenderEntities = this.props.select
 
     let entities = this.getEntities()
-
-    let colors = {
-      'query': 'grey',
-      'view': 'grey',
-      'table': 'black',
-      'script': 'blue',
-    }
-
-    let isInverted = {
-      'query': false,
-      'view': true,
-      'table': true,
-      'script': true,
-    }
 
     return (
       <Segment basic>
@@ -109,9 +108,7 @@ class Entities extends Component {
               .map( entity =>
             <Grid.Column>
                 <Card>
-                  <Segment textAlign='center' basic>
-                    <Icon circular inverted={isInverted[entity.type]} size='huge' color={colors[entity.type]} name={entity.icon} />
-                  </Segment>
+                  <Segment textAlign='center' basic>{this.renderIcon(entity)}</Segment>
                   <Card.Content>
                     <Card.Header>{entity.name}</Card.Header>
                     <Card.Meta>last updated {entity.lastUpdated}</Card.Meta>

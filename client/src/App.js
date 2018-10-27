@@ -10,6 +10,20 @@ class App extends Component {
   render() {
     return (
       <main>
+        <style>
+          {`
+            i.scheme-green.icon {
+              color: #005322!important;
+            }
+            i.inverted.scheme-green.icon {
+              color: #005322!important;
+            }
+            i.inverted.bordered.scheme-green.icon, i.inverted.circular.scheme-green.icon {
+              background-color: #005322!important;
+              color: #fff!important;
+            }
+          `}
+        </style>
         <Switch>
           <Route exact path='/' component={Home}/>
           <Route path='/tables' component={Tables}/>
