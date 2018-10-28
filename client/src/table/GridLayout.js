@@ -2,9 +2,11 @@
 import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 
-import { AgGridReact } from 'ag-grid-react';
-import 'ag-grid-community/dist/styles/ag-grid.css';
-import 'ag-grid-community/dist/styles/ag-theme-balham.css';
+import { Icon, Label, Menu, Table } from 'semantic-ui-react'
+
+import { getColumns, getRows, getIndices } from './actions.js'
+
+import DataGrid from '../data-grid'
 
 class GridLayout extends Component {
 
@@ -48,231 +50,151 @@ class GridLayout extends Component {
     }
   }
 
-  getHandsontableType(type) {
-
-    switch (type) {
-      case 'Boolean':
-        return 'checkbox'
-      default:
-        return 'text'
+  renderColumnIcon(column) {
+    if (column.isPrimaryKey) {
+      return <Icon name='key' />
+    } else if (column.isForeignKey) {
+      return <Icon name='linkify' />
+    } else {
+      return <></>
     }
-  }
-
-
-  renderColumnName(column) {
-
-    const renderKeySymbol = (column) => {
-      if (column.isPrimaryKey) {
-        return '  <i aria-hidden="true" class="key icon">'
-      } else if (column.isForeignKey) {
-        return '  <i aria-hidden="true" class="linkify icon">'
-      } else {
-        return ''
-      }
-    }
-
-    return `<strong>${column.name}</strong>${renderKeySymbol(column)}`
   }
 
   renderIndexForRowWithNoKey() {
     return '<i aria-hidden="true" class="question icon">'
   }
 
-  renderColumn(column) {
-    return {
-      headerName: this.renderColumnName(column),
-      field: column.name,
-    }
+  renderColumns() {
+
+    let columns = getColumns()
+
+    return columns.map((column, idx) =>
+      <Table.HeaderCell
+          key={idx}
+          onMouseDown={(e) => this.onMouseDown(null, idx)}
+          onMouseOver={(e) => this.onMouseOver(null, idx)}
+          onMouseUp={(e) => this.onMouseUp(null, idx)}
+      >
+        {this.renderColumnIcon(column)}{column.name}
+      </Table.HeaderCell>,
+    )
   }
 
-  getData() {
-    let schema = {
-      columns: [
-        {
-          name: 'id',
-          dataType: 'Integer'
-        },
-        {
-          name: 'name',
-          dataType: 'String'
-        },
-        {
-          name: 'age',
-          dataType: 'Integer'
-        },
-        {
-          name: 'data',
-          dataType: 'Json'
-        },
-        {
-          name: 'last_visited',
-          dataType: 'DateTime'
-        },
-        {
-          name: 'joined',
-          dataType: 'Date'
-        },
-        {
-          name: 'is_admin',
-          dataType: 'Boolean'
-        },
+  renderRows() {
+    let indices = getIndices()
+    return indices.map((x, idx) =>
+      <Table.Cell
+          key={idx}
+          onMouseDown={(e) => this.onMouseDown(idx, null)}
+          onMouseOver={(e) => this.onMouseOver(idx, null)}
+          onMouseUp={(e) => this.onMouseUp(idx, null)}
+      >
+        {x}
+      </Table.Cell>
+    )
+  }
+
+  renderData(rowKey, colKey) {
+    return (
+      <Table.Cell
+          key={colKey}
+          onMouseDown={(e) => this.onMouseDown(rowKey, colKey)}
+          onMouseOver={(e) => this.onMouseOver(rowKey, colKey)}
+          onMouseUp={(e) => this.onMouseUp(rowKey, colKey)}
+          style={{backgroundColor: this.isSelected(rowKey, colKey)? '#A0A0A0': '#EFEFEF'}}
+      >
+        {rowKey}|{colKey}
+      </Table.Cell>
+    )
+  }
+
+  onMouseDown(rowKey, colKey, state = this.state) {
+    let newState = {
+      ...state,
+      mouseDown: [
+        (rowKey === null) ? 0 : rowKey,
+        (colKey === null) ? 0 : colKey,
       ],
-      constraints: [
-        {
-          key: 'id'
-        },
-        {
-          reference: {
-            column: 'age',
-            foreignTable: 'other_table',
-            foreignColumn: 'other_table_id',
-          },
-        },
-      ]
+      mouseOn: [
+        (rowKey === null) ? Number.MAX_SAFE_INTEGER  : rowKey,
+        (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+      ],
+      mouseUp: null
     }
-
-    let data = [
-      {
-        'id': 1,
-        'name': 'I.P. Freely',
-        'age': 69,
-        'data': '{}',
-        'last_visited': new Date(),
-        'joined': new Date(),
-        'is_admin': false,
-      },
-      {
-        'id': 2,
-        'name': 'I.P. Freely',
-        'age': 69,
-        'data': '{}',
-        'last_visited': new Date(),
-        'joined': new Date(),
-        'is_admin': true,
-      },
-      {
-        'id': 3,
-        'name': 'I.P. Freely',
-        'age': 69,
-        'data': '{}',
-        'last_visited': new Date(),
-        'joined': new Date(),
-        'is_admin': false,
-      },
-      {
-        'id': 4,
-        'name': 'I.P. Freely',
-        'age': 69,
-        'data': '{}',
-        'last_visited': new Date(),
-        'joined': new Date(),
-        'is_admin': true,
-      },
-      {
-        'id': 5,
-        'name': 'I.P. Freely',
-        'age': 69,
-        'data': '{}',
-        'last_visited': new Date(),
-        'joined': new Date(),
-        'is_admin': false,
-      },
-      {
-        'id': 6,
-        'name': 'I.P. Freely',
-        'age': 69,
-        'data': '{}',
-        'last_visited': new Date(),
-        'joined': new Date(),
-        'is_admin': true,
-      },
-    ]
-
-    return { schema, data }
+    this.setState(newState)
+    return newState
   }
 
-  getColumnMetadata(column) {
-    return {
-      data: column.name,
-      type: this.getHandsontableType(column.dataType),
-    }
-  }
-
-  getColumnsWithKey() {
-    let { schema } = this.getData()
-    let { columns, constraints } = schema
-
-    let keyConstraints = constraints.map(x => x.key).filter(x => x !== undefined)
-    let key = null
-    if (keyConstraints.length !== 0) {
-      key = keyConstraints[0]
-    } else if (keyConstraints.length > 1) {
-      console.log('warning, more than one primary key found. Server is wrong')
-    }
-
-    let foreignKeyConstraints = constraints.map(x => x.reference).filter(x => x !== undefined)
-    let foreignKeys = foreignKeyConstraints.map(x => x.column)
-
-    return { columns, key, foreignKeys }
-  }
-
-
-  getColumns() {
-    let { columns, key, foreignKeys } = this.getColumnsWithKey()
-
-    let columnsByName = {}
-    for (let column of columns) {
-      columnsByName[column.name] = {...column, isPrimaryKey: false, isForeignKey: false}
-    }
-
-    // add in the primary key
-    if (key in columnsByName) {
-      columnsByName[key] = {...columnsByName[key], isPrimaryKey: true}
-    } else {
-      console.log('warning, could not find key in any of the columns. Server is wrong')
-    }
-
-    // add in the foreign keys
-    for (let key of foreignKeys) {
-      if (key in columnsByName) {
-        columnsByName[key] = {...columnsByName[key], isForeignKey: true}
-      } else {
-        console.log('warning, could not find key in any of the columns. Server is wrong')
+  onMouseOver(rowKey, colKey, state = this.state) {
+    if (!this.state.mouseUp) {
+      let newState = {
+        ...state,
+        mouseOn: [
+          (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+        ]
       }
+      this.setState(newState)
+      return newState
+    } else {
+      return state
     }
-
-    return Object.values(columnsByName)
   }
 
-
-  getIndices() {
-
-    let { key } = this.getColumnsWithKey()
-
-    let { data } = this.getData()
-
-    let indices = null
-    if (key !== null) {
-      indices = data.map(x => x[key])
+  onMouseUp(rowKey, colKey, state = this.state) {
+    let newState = {
+      ...state,
+      mouseUp: [
+        (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+        (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+      ],
+      mouseOn: null
     }
-
-    return indices
+    this.setState(newState)
+    return newState
   }
 
-  getRows() {
-    let { columns } = this.getColumnsWithKey()
+  isSelected(rowKey, colKey) {
+    let initial = this.state.mouseDown
+    if (!initial) {
+      return false
+    }
 
-    let { data } = this.getData()
+    let final = this.state.mouseOn || this.state.mouseUp
 
-    //const orderBasedOnColumn = (row) => columns.map(column => row[column.name])
+    if (
+      initial[0] >= rowKey && final[0] <= rowKey &&
+      initial[1] >= colKey && final[1] <= colKey
+    ) {
+      return true
+    }
 
-    return data //data.map(row => orderBasedOnColumn(row))
+    if (
+      initial[0] >= rowKey && final[0] <= rowKey &&
+      initial[1] <= colKey && final[1] >= colKey
+    ) {
+      return true
+    }
+
+    if (
+      initial[0] <= rowKey && final[0] >= rowKey &&
+      initial[1] >= colKey && final[1] <= colKey
+    ) {
+      return true
+    }
+
+    if (
+      initial[0] <= rowKey && final[0] >= rowKey &&
+      initial[1] <= colKey && final[1] >= colKey
+    ) {
+      return true
+    }
+
+    return false
   }
 
   render() {
 
-    console.log('this.state.columnDefs: ', this.state.columnDefs)
-    console.log('this.getColumns(): ', this.getColumns())
     return (
       <div
         className="ag-theme-balham"
@@ -281,18 +203,13 @@ class GridLayout extends Component {
           width: '100%',
         }}
       >
-          <AgGridReact
-              columnDefs={this.getColumns().map(x => this.renderColumn(x))}
-              rowData={this.getRows()}>
-          </AgGridReact>
+          <DataGrid
+            columns={this.renderColumns()}
+            rows={this.renderRows()}
+            getData={(rowKey, colKey) => this.renderData(rowKey, colKey)}
+          />
       </div>
     )
-  }
-
-  componentDidMount() {
-    // For setting the context menu manually
-    let dom = ReactDOM.findDOMNode(this)
-    dom.querySelector('.ag-header').addEventListener('click', (x) => console.log('is clicked!'), false)
   }
 }
 

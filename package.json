@@ -3,8 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "ag-grid-community": "^19.0.0",
-    "ag-grid-react": "^19.0.0",
     "codemirror": "^5.40.2",
     "lodash": "^4.17.11",
     "react": "^16.5.2",
