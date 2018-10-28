@@ -2,7 +2,7 @@
 import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 
-import { Header, Icon, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
+import { Button, Divider, Header, Icon, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
 import ContextMenu from './ContextMenu.js';
 
 import { getColumns, getRows, getIndices } from './actions.js'
@@ -71,9 +71,9 @@ class GridLayout extends Component {
 
     return columns.map((column, idx) =>
       <ContextMenu
+        key={idx}
         trigger={
           <Table.HeaderCell
-              key={idx}
               onMouseDown={(e) => this.onMouseDown(e, null, idx)}
               onMouseOver={(e) => this.onMouseOver(e, null, idx)}
               onMouseUp={(e) => this.onMouseUp(e, null, idx)}
@@ -81,9 +81,21 @@ class GridLayout extends Component {
             {this.renderColumnIcon(column)}{column.name}
           </Table.HeaderCell>
         }
-        content='I am positioned to the right center'
-        position='right center'
-      />
+        position='left bottom'
+      >
+        <div>
+          <Button.Group vertical labeled icon>
+            <Button icon='copy' content='Copy' />
+            <Button icon='paste' content='Paste' />
+            <Button icon='cut' content='Cut' />
+            <Divider />
+            <Button icon='sort' content='Sort' />
+            <Button icon='filter' content='Filter' />
+            <Button icon='arrows alternate horizontal' content='Expand' />
+            <Button icon='hide' content='Hide' />
+          </Button.Group>
+        </div>
+      </ContextMenu>
 
 
     )
@@ -92,28 +104,62 @@ class GridLayout extends Component {
   renderRows() {
     let indices = getIndices()
     return indices.map((x, idx) =>
-      <Table.Cell
-          key={idx}
-          onMouseDown={(e) => this.onMouseDown(e, idx, null)}
-          onMouseOver={(e) => this.onMouseOver(e, idx, null)}
-          onMouseUp={(e) => this.onMouseUp(e, idx, null)}
+      <ContextMenu
+        key={idx}
+        trigger={
+          <Table.Cell
+              key={idx}
+              onMouseDown={(e) => this.onMouseDown(e, idx, null)}
+              onMouseOver={(e) => this.onMouseOver(e, idx, null)}
+              onMouseUp={(e) => this.onMouseUp(e, idx, null)}
+          >
+            {x}
+          </Table.Cell>
+        }
+        position='right center'
       >
-        {x}
-      </Table.Cell>
+        <div>
+          <Button.Group vertical labeled icon>
+            <Button icon='copy' content='Copy' />
+            <Button icon='paste' content='Paste' />
+            <Button icon='cut' content='Cut' />
+            <Divider />
+            <Button icon='add' content='Add Row' />
+            <Button icon='clone' content='Duplicate Row' />
+            <Button icon='trash' content='Delete Row' />
+          </Button.Group>
+        </div>
+      </ContextMenu>
+
     )
   }
 
   renderData(rowKey, colKey) {
     return (
-      <Table.Cell
-          key={colKey}
-          onMouseDown={(e) => this.onMouseDown(e, rowKey, colKey)}
-          onMouseOver={(e) => this.onMouseOver(e, rowKey, colKey)}
-          onMouseUp={(e) => this.onMouseUp(e, rowKey, colKey)}
-          style={{backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white'}}
+      <ContextMenu
+        key={colKey}
+        trigger={
+          <Table.Cell
+              key={colKey}
+              onMouseDown={(e) => this.onMouseDown(e, rowKey, colKey)}
+              onMouseOver={(e) => this.onMouseOver(e, rowKey, colKey)}
+              onMouseUp={(e) => this.onMouseUp(e, rowKey, colKey)}
+              style={{backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white'}}
+          >
+            {rowKey}|{colKey}
+          </Table.Cell>
+        }
+        position='bottom center'
       >
-        {rowKey}|{colKey}
-      </Table.Cell>
+        <div>
+          <Button.Group vertical labeled icon>
+            <Button icon='copy' content='Copy' />
+            <Button icon='paste' content='Paste' />
+            <Button icon='cut' content='Cut' />
+          </Button.Group>
+        </div>
+      </ContextMenu>
+
     )
   }
 
