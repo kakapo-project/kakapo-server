@@ -3,16 +3,11 @@
 
 Oct 26, Grid Frontend
 - Grid is the frontend for views and tables
-- Banners at the top
-  - Select
-  - Where
-  - Sort
-  - Limit/Offset
-- Less important banners
+
+- Figure out what other sql function we want to have
   - join
   - Groupby
   - sum, avg, ...
-- Column headers have icon of key for primary key and link for foreign key
 - right click column headers to
   - create sort filter
   - expand for join
@@ -26,4 +21,4 @@ Oct 26, Grid Frontend
 - views can act on queries or tables
 - align right for numbers, left for text, <pre> for json, checkbox for boolean
 - show red for unique or foreign key error, and yellow for unique key error
--
+- add button to grid for creating new tables and queries

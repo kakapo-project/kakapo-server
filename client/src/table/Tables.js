@@ -15,9 +15,8 @@ import {
   Sidebar,
   Table } from 'semantic-ui-react'
 
-import 'handsontable/dist/handsontable.full.css'
 
-import { HotTable } from '@handsontable/react'
+import GridLayout from './GridLayout.js'
 
 import Header from '../Header.js'
 
@@ -75,7 +74,18 @@ class Tables extends Component {
 
 
   renderColumnHeader(column) {
-    return `<strong>${column.name}</strong>`
+
+    const renderKeySymbol = (column) => {
+      if (column.isPrimaryKey) {
+        return '  <i aria-hidden="true" class="key icon">'
+      } else if (column.isForeignKey) {
+        return '  <i aria-hidden="true" class="linkify icon">'
+      } else {
+        return ''
+      }
+    }
+
+    return `<strong>${column.name}</strong>${renderKeySymbol(column)}`
   }
 
   renderIndexForRowWithNoKey() {
@@ -117,7 +127,14 @@ class Tables extends Component {
       constraints: [
         {
           key: 'id'
-        }
+        },
+        {
+          reference: {
+            column: 'age',
+            foreignTable: 'other_table',
+            foreignColumn: 'other_table_id',
+          },
+        },
       ]
     }
 
@@ -196,16 +213,42 @@ class Tables extends Component {
     let key = null
     if (keyConstraints.length !== 0) {
       key = keyConstraints[0]
+    } else if (keyConstraints.length > 1) {
+      console.log('warning, more than one primary key found. Server is wrong')
     }
 
-    return { columns, key }
+    let foreignKeyConstraints = constraints.map(x => x.reference).filter(x => x !== undefined)
+    let foreignKeys = foreignKeyConstraints.map(x => x.column)
+
+    return { columns, key, foreignKeys }
   }
 
 
   getColumns() {
-    let { columns } = this.getColumnsWithKey()
+    let { columns, key, foreignKeys } = this.getColumnsWithKey()
 
-    return columns
+    let columnsByName = {}
+    for (let column of columns) {
+      columnsByName[column.name] = {...column, isPrimaryKey: false, isForeignKey: false}
+    }
+
+    // add in the primary key
+    if (key in columnsByName) {
+      columnsByName[key] = {...columnsByName[key], isPrimaryKey: true}
+    } else {
+      console.log('warning, could not find key in any of the columns. Server is wrong')
+    }
+
+    // add in the foreign keys
+    for (let key of foreignKeys) {
+      if (key in columnsByName) {
+        columnsByName[key] = {...columnsByName[key], isForeignKey: true}
+      } else {
+        console.log('warning, could not find key in any of the columns. Server is wrong')
+      }
+    }
+
+    return Object.values(columnsByName)
   }
 
 
@@ -234,7 +277,6 @@ class Tables extends Component {
 
     return data //data.map(row => orderBasedOnColumn(row))
   }
-
 
   render() {
     return (
@@ -312,23 +354,27 @@ class Tables extends Component {
           <Sidebar.Pusher>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
               <Segment padded style={{ height: '100%', overflow: 'hidden'}}>
-                <style>
-                  {`
-                    .handsontable .colHeader {
-                      width: 100%;
-                    }
-                  `}
-                </style>
-                <HotTable
-                  data={this.getRows()}
-                  colHeaders={this.getColumns().map(x => this.renderColumnHeader(x))}
-                  columns={this.getColumns().map(x => this.getColumnMetadata(x))}
-                  rowHeaders={this.getIndices()}
-                  AutoColumnSize={true}
-                  //stretchH="all"
-                  autoWrapRow={true}
-                  //style={{width: '100%', height: '100%'}}
-                />
+                <Segment>
+                  <Label as='a'>
+                    <Icon name='mouse pointer' />
+                    select
+                    <Icon name='delete' />
+                  </Label>
+                  <Label as='a'>
+                    <Icon name='filter' />
+                    where
+                    <Icon name='delete' />
+                  </Label>
+                  <Label as='a'>
+                    <Icon name='sort' />
+                    order by
+                    <Icon name='delete' />
+                  </Label>
+                  <Label as='a' color='green'>
+                    <Icon name='add' style={{marginRight: 0}}/>
+                  </Label>
+                </Segment>
+                <GridLayout />
               </Segment>
             </Segment>
           </Sidebar.Pusher>

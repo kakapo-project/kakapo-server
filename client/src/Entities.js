@@ -1,7 +1,7 @@
 
 
 import React, { Component } from 'react'
-import { Button, Card, Container, Header, Grid, Icon, Image, Menu, Segment, Sidebar } from 'semantic-ui-react'
+import { Button, Card, Container, Header, Grid, Icon, Image, Menu, Segment, Sidebar, Transition } from 'semantic-ui-react'
 
 class Entities extends Component {
 
@@ -102,11 +102,11 @@ class Entities extends Component {
 
     return (
       <Segment basic>
-        <Grid container doubling columns={4}>
+        <Transition.Group as={Grid} animation='scale' duration={400} container doubling columns={4} >
           { entities
               .filter( entity => selectedRenderEntities.includes(entity.type))
-              .map( entity =>
-            <Grid.Column>
+              .map( (entity, idx) =>
+            <Grid.Column key={idx}>
                 <Card>
                   <Segment textAlign='center' basic>{this.renderIcon(entity)}</Segment>
                   <Card.Content>
@@ -123,7 +123,7 @@ class Entities extends Component {
                 </Card>
             </Grid.Column>
           )}
-        </Grid>
+        </Transition.Group>
       </Segment>
     )
   }

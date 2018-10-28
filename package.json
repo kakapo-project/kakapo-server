@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@handsontable/react": "^2.0.0",
+    "ag-grid-community": "^19.0.0",
+    "ag-grid-react": "^19.0.0",
     "codemirror": "^5.40.2",
-    "handsontable": "^6.1.1",
     "lodash": "^4.17.11",
     "react": "^16.5.2",
     "react-codemirror": "^1.0.0",
