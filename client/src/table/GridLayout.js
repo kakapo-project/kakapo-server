@@ -2,7 +2,8 @@
 import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 
-import { Icon, Label, Menu, Table } from 'semantic-ui-react'
+import { Header, Icon, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
+import ContextMenu from './ContextMenu.js';
 
 import { getColumns, getRows, getIndices } from './actions.js'
 
@@ -71,12 +72,27 @@ class GridLayout extends Component {
     return columns.map((column, idx) =>
       <Table.HeaderCell
           key={idx}
-          onMouseDown={(e) => this.onMouseDown(null, idx)}
-          onMouseOver={(e) => this.onMouseOver(null, idx)}
-          onMouseUp={(e) => this.onMouseUp(null, idx)}
+          onMouseDown={(e) => this.onMouseDown(e, null, idx)}
+          onMouseOver={(e) => this.onMouseOver(e, null, idx)}
+          onMouseUp={(e) => this.onMouseUp(e, null, idx)}
       >
+
         {this.renderColumnIcon(column)}{column.name}
-      </Table.HeaderCell>,
+        <ContextMenu
+          trigger={<Icon name='heart' color='red' size='large' circular />}
+          content='I am positioned to the right center'
+          position='right center'
+        />
+        {/*
+          <Portal open={true}>
+            <Segment style={{ left: '40%', position: 'fixed', top: '50%', zIndex: 1000 }}>
+              <Header>This is a controlled portal</Header>
+              <p>Portals have tons of great callback functions to hook into.</p>
+              <p>To close, simply click the close button or click away</p>
+            </Segment>
+          </Portal>
+        */}
+      </Table.HeaderCell>
     )
   }
 
@@ -85,9 +101,9 @@ class GridLayout extends Component {
     return indices.map((x, idx) =>
       <Table.Cell
           key={idx}
-          onMouseDown={(e) => this.onMouseDown(idx, null)}
-          onMouseOver={(e) => this.onMouseOver(idx, null)}
-          onMouseUp={(e) => this.onMouseUp(idx, null)}
+          onMouseDown={(e) => this.onMouseDown(e, idx, null)}
+          onMouseOver={(e) => this.onMouseOver(e, idx, null)}
+          onMouseUp={(e) => this.onMouseUp(e, idx, null)}
       >
         {x}
       </Table.Cell>
@@ -98,17 +114,33 @@ class GridLayout extends Component {
     return (
       <Table.Cell
           key={colKey}
-          onMouseDown={(e) => this.onMouseDown(rowKey, colKey)}
-          onMouseOver={(e) => this.onMouseOver(rowKey, colKey)}
-          onMouseUp={(e) => this.onMouseUp(rowKey, colKey)}
-          style={{backgroundColor: this.isSelected(rowKey, colKey)? '#A0A0A0': '#EFEFEF'}}
+          onMouseDown={(e) => this.onMouseDown(e, rowKey, colKey)}
+          onMouseOver={(e) => this.onMouseOver(e, rowKey, colKey)}
+          onMouseUp={(e) => this.onMouseUp(e, rowKey, colKey)}
+          style={{backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white'}}
       >
         {rowKey}|{colKey}
       </Table.Cell>
     )
   }
 
-  onMouseDown(rowKey, colKey, state = this.state) {
+  onContextMenu(rowKey, colKey, state = this.state) {
+    let newState = {...state, contextMenu: [rowKey, colKey]}
+    this.setState(newState)
+    return newState
+  }
+
+  clearState(state = this.state) {
+    let newState = {...state, mouseUp: null, mouseOn: null, mouseDown: null, contextMenu: null}
+    this.setState(newState)
+    return newState
+  }
+
+  onMouseDown(event, rowKey, colKey, state = this.state) {
+    if (event.button !== 0) {
+      return this.clearState(state)
+    }
+
     let newState = {
       ...state,
       mouseDown: [
@@ -125,7 +157,11 @@ class GridLayout extends Component {
     return newState
   }
 
-  onMouseOver(rowKey, colKey, state = this.state) {
+  onMouseOver(event, rowKey, colKey, state = this.state) {
+    if (event.button !== 0) {
+      return this.clearState(state)
+    }
+
     if (!this.state.mouseUp) {
       let newState = {
         ...state,
@@ -141,7 +177,15 @@ class GridLayout extends Component {
     }
   }
 
-  onMouseUp(rowKey, colKey, state = this.state) {
+  onMouseUp(event, rowKey, colKey, state = this.state) {
+    if (event.button !== 0) {
+      let newState =  this.clearState(state)
+      if (event.button === 2) { //right clicked
+        newState = this.onContextMenu(rowKey, colKey, newState)
+      }
+      return newState
+    }
+
     let newState = {
       ...state,
       mouseUp: [
