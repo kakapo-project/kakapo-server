@@ -11,7 +11,33 @@ import _ from 'lodash'
 class ContextPortal extends Portal {
 
   handleContextMenu = (e, ...rest) => {
-    console.log('handleContextMenu')
+    const { trigger, closeOnTriggerClick, openOnTriggerClick } = this.props
+    const { open } = this.state
+
+    e.preventDefault()
+
+    // Call original event handler
+    _.invoke(trigger, 'props.onClick', e, ...rest)
+
+    if (open && closeOnTriggerClick) {
+      this.close(e)
+    } else if (!open && openOnTriggerClick) {
+      this.open(e)
+    }
+  }
+
+  handleTriggerClick = (e, ...rest) => {
+    const { trigger, closeOnTriggerClick, openOnTriggerClick } = this.props
+    const { open } = this.state
+
+    e.preventDefault()
+
+    // Call original event handler
+    _.invoke(trigger, 'props.onClick', e, ...rest)
+
+    if (open && closeOnTriggerClick) {
+      this.close(e)
+    }
   }
 
   render() {
@@ -32,10 +58,8 @@ class ContextPortal extends Portal {
         {trigger && (
           <Ref innerRef={this.handleTriggerRef}>
             {React.cloneElement(trigger, {
-              onBlur: this.handleTriggerBlur,
-              onClick: this.handleTriggerClick,
               onContextMenu: this.handleContextMenu,
-              onFocus: this.handleTriggerFocus,
+              onClick: this.handleTriggerClick,
               onMouseLeave: this.handleTriggerMouseLeave,
               onMouseEnter: this.handleTriggerMouseEnter,
             })}

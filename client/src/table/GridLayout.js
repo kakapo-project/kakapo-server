@@ -70,29 +70,22 @@ class GridLayout extends Component {
     let columns = getColumns()
 
     return columns.map((column, idx) =>
-      <Table.HeaderCell
-          key={idx}
-          onMouseDown={(e) => this.onMouseDown(e, null, idx)}
-          onMouseOver={(e) => this.onMouseOver(e, null, idx)}
-          onMouseUp={(e) => this.onMouseUp(e, null, idx)}
-      >
+      <ContextMenu
+        trigger={
+          <Table.HeaderCell
+              key={idx}
+              onMouseDown={(e) => this.onMouseDown(e, null, idx)}
+              onMouseOver={(e) => this.onMouseOver(e, null, idx)}
+              onMouseUp={(e) => this.onMouseUp(e, null, idx)}
+          >
+            {this.renderColumnIcon(column)}{column.name}
+          </Table.HeaderCell>
+        }
+        content='I am positioned to the right center'
+        position='right center'
+      />
 
-        {this.renderColumnIcon(column)}{column.name}
-        <ContextMenu
-          trigger={<Icon name='heart' color='red' size='large' circular />}
-          content='I am positioned to the right center'
-          position='right center'
-        />
-        {/*
-          <Portal open={true}>
-            <Segment style={{ left: '40%', position: 'fixed', top: '50%', zIndex: 1000 }}>
-              <Header>This is a controlled portal</Header>
-              <p>Portals have tons of great callback functions to hook into.</p>
-              <p>To close, simply click the close button or click away</p>
-            </Segment>
-          </Portal>
-        */}
-      </Table.HeaderCell>
+
     )
   }
 
