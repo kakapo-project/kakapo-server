@@ -3,8 +3,8 @@ import React, { Component } from 'react'
 
 import { Popup, Portal } from 'semantic-ui-react'
 
-import Ref from 'semantic-ui-react/src/addons/Ref'
-import PortalInner from 'semantic-ui-react/src/addons/Portal/PortalInner'
+import Ref from 'semantic-ui-react/dist/commonjs/addons/Ref'
+import PortalInner from 'semantic-ui-react/dist/commonjs/addons/Portal/PortalInner'
 
 import _ from 'lodash'
 
