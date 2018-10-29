@@ -36,6 +36,7 @@
     "jest-resolve": "23.6.0",
     "lodash": "^4.17.11",
     "mini-css-extract-plugin": "0.4.3",
+    "n": "^2.1.12",
     "optimize-css-assets-webpack-plugin": "5.0.1",
     "pnp-webpack-plugin": "1.1.0",
     "postcss-flexbugs-fixes": "4.1.0",
@@ -61,10 +62,10 @@
     "workbox-webpack-plugin": "3.6.2"
   },
   "scripts": {
-    "start-fe": "node scripts/start.js",
+    "start-fe": "node client/scripts/start.js",
     "start-be": "cargo run",
-    "build": "cargo build --release && rm -rf ./www/ && node scripts/build.js && mv build ../www/",
-    "test": "cargo test && node scripts/test.js"
+    "build": "cargo build --release && node client/scripts/build.js",
+    "test": "cargo test && node client/scripts/test.js"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -77,22 +78,22 @@
   ],
   "jest": {
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx}"
+      "client/src/**/*.{js,jsx}"
     ],
     "resolver": "jest-pnp-resolver",
     "setupFiles": [
       "react-app-polyfill/jsdom"
     ],
     "testMatch": [
-      "<rootDir>/src/**/__tests__/**/*.{js,jsx}",
-      "<rootDir>/src/**/?(*.)(spec|test).{js,jsx}"
+      "<rootDir>/client/src/**/__tests__/**/*.{js,jsx}",
+      "<rootDir>/client/src/**/?(*.)(spec|test).{js,jsx}"
     ],
     "testEnvironment": "jsdom",
     "testURL": "http://localhost",
     "transform": {
       "^.+\\.(js|jsx)$": "<rootDir>/node_modules/babel-jest",
-      "^.+\\.css$": "<rootDir>/config/jest/cssTransform.js",
-      "^(?!.*\\.(js|jsx|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
+      "^.+\\.css$": "<rootDir>/client/config/jest/cssTransform.js",
+      "^(?!.*\\.(js|jsx|css|json)$)": "<rootDir>/client/config/jest/fileTransform.js"
     },
     "transformIgnorePatterns": [
       "[/\\\\]node_modules[/\\\\].+\\.(js|jsx)$",

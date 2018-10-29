@@ -14,4 +14,20 @@ Oct 26, Grid Frontend
 - <pre> for json, checkbox for boolean, date for date
 - show red for unique or foreign key error, and yellow for unique key error
 - add button to grid for creating new tables and queries
+- Render background, figure out teletyping
 - Fix slow rendering (too many cells are being rendered)
+
+Oct 28, Backend
+- Figure out websocket
+- Hook up table creation to websocket
+- Hook up table get data to websocket
+- Hook up table create row to websocket
+- Hook up table updates to websocket
+- Hook up table delete to websocket
+- When queries are run, there is no way of determining the type of object, therefore we need to add `PQfType` to diesel to do the dynamic type inference
+- Figure out docker
+- Figure out authentication
+- Excel + CSV maker
+- plugins:
+  - S3
+  - airflow
