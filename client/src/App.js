@@ -5,6 +5,7 @@ import { Switch, Route } from 'react-router-dom'
 import Home from './Home.js'
 import Tables from './table/Tables.js'
 import Queries from './queries/Queries.js'
+import Login from './Login.js'
 
 class App extends Component {
   render() {
@@ -28,6 +29,7 @@ class App extends Component {
           <Route exact path='/' component={Home}/>
           <Route path='/tables' component={Tables}/>
           <Route path='/queries' component={Queries}/>
+          <Route path='/login' component={Login}/>
         </Switch>
       </main>
     )

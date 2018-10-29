@@ -86,7 +86,7 @@ class Home extends Component {
             vertical
             visible={!this.state.sidebarOpen}
             width='thin'
-            style={{backgroundImage: 'linear-gradient(to bottom, #005322, black)'}}
+            style={{backgroundImage: 'linear-gradient(#1b1c1d, rgb(0, 83, 34)'}}
           >
             <Menu.Item
                 as='a'
