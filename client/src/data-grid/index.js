@@ -9,15 +9,26 @@ class DataGrid extends Component {
       <Table celled style={{userSelect: 'none'}}>
         <style>
           {`
+            .ui.table thead th:first-child {
+              background: #1b1c1d;
+              color: rgba(255,255,255,.9);
+              border-color: none;
+            }
             .ui.table thead th {
               background: #333;
               color: rgba(255,255,255,.9);
               border: none;
-            }
-            .ui.table th {
-              background-color: rgba(0,0,0,.15);
               border-color: rgba(255,255,255,.1)!important;
-              color: rgba(255,255,255,.9)!important;
+              border-left: none !important;
+              border-right: 1px solid rgba(34,36,38,.1);
+            }
+            .ui.table tbody tr td:first-child {
+              background: #333;
+              color: rgba(255,255,255,.9);
+              border: none;
+              border-color: rgba(255,255,255,.1)!important;
+              border-top: none !important;
+              border-bottom: 1px solid rgba(34,36,38,.1);
             }
           `}
         </style>

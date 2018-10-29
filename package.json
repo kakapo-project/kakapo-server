@@ -65,7 +65,9 @@
     "start-fe": "node client/scripts/start.js",
     "start-be": "cargo run",
     "build": "cargo build --release && node client/scripts/build.js",
-    "test": "cargo test && node client/scripts/test.js"
+    "test-fe": "node client/scripts/test.js",
+    "test-be": "cargo test",
+    "test": "yarn test-fe && yarn test-be"
   },
   "eslintConfig": {
     "extends": "react-app"
