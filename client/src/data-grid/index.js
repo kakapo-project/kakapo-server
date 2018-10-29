@@ -33,7 +33,7 @@ class DataGrid extends Component {
             rows.map(x =>
               <Table.Row key={x.key}>
                 {x}
-                {columns.map(col => getData(x.key, col.key))}
+                {columns.map(col => getData(parseInt(x.key), parseInt(col.key))) /* FIXME: why the parseInt?*/ }
               </Table.Row>
             )
           }

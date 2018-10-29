@@ -8,17 +8,10 @@ Oct 26, Grid Frontend
   - join
   - Groupby
   - sum, avg, ...
-- right click column headers to
-  - create sort filter
-  - expand for join
-  - add filter
-- right click row index to
-  - create new row
-  - duplicate row
-  - delete row
 - Adding new items take 60 seconds to filter
 - Save + refresh buttons for view (Save is update or create new)
 - views can act on queries or tables
-- align right for numbers, left for text, <pre> for json, checkbox for boolean
+- <pre> for json, checkbox for boolean, date for date
 - show red for unique or foreign key error, and yellow for unique key error
 - add button to grid for creating new tables and queries
+- Fix slow rendering (too many cells are being rendered)

@@ -112,7 +112,7 @@ class Tables extends Component {
 
           <Sidebar.Pusher>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
-              <Segment padded style={{ height: '100%', overflow: 'hidden'}}>
+              <Segment padded style={{ height: '100%', overflowY: 'scroll', overflowX: 'hidden'}}>
                 <Segment>
                   <Label as='a'>
                     <Icon name='mouse pointer' />

@@ -25,6 +25,8 @@ class GridLayout extends Component {
     ]
   }
 
+  rows = getRows()
+  columns = getColumns()
 
   renderTypeSymbol(type) {
     switch (type) {
@@ -67,9 +69,7 @@ class GridLayout extends Component {
 
   renderColumns() {
 
-    let columns = getColumns()
-
-    return columns.map((column, idx) =>
+    return this.columns.map((column, idx) =>
       <ContextMenu
         key={idx}
         trigger={
@@ -77,11 +77,14 @@ class GridLayout extends Component {
               onMouseDown={(e) => this.onMouseDown(e, null, idx)}
               onMouseOver={(e) => this.onMouseOver(e, null, idx)}
               onMouseUp={(e) => this.onMouseUp(e, null, idx)}
+              style={{
+                textAlign: (column.dataType == 'Integer') ? 'right' : 'left'
+              }}
           >
             {this.renderColumnIcon(column)}{column.name}
           </Table.HeaderCell>
         }
-        position='left bottom'
+        position='bottom left'
       >
         <div>
           <Button.Group vertical labeled icon>
@@ -135,6 +138,8 @@ class GridLayout extends Component {
   }
 
   renderData(rowKey, colKey) {
+    let data = this.rows[rowKey][colKey]
+    let dataType = this.columns[colKey].dataType
     return (
       <ContextMenu
         key={colKey}
@@ -144,9 +149,12 @@ class GridLayout extends Component {
               onMouseDown={(e) => this.onMouseDown(e, rowKey, colKey)}
               onMouseOver={(e) => this.onMouseOver(e, rowKey, colKey)}
               onMouseUp={(e) => this.onMouseUp(e, rowKey, colKey)}
-              style={{backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white'}}
+              style={{
+                backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white',
+                textAlign: (dataType === 'Integer') ? 'right' : 'left'
+              }}
           >
-            {rowKey}|{colKey}
+            {`${data}`}
           </Table.Cell>
         }
         position='bottom center'
@@ -161,12 +169,6 @@ class GridLayout extends Component {
       </ContextMenu>
 
     )
-  }
-
-  onContextMenu(rowKey, colKey, state = this.state) {
-    let newState = {...state, contextMenu: [rowKey, colKey]}
-    this.setState(newState)
-    return newState
   }
 
   clearState(state = this.state) {
@@ -202,15 +204,12 @@ class GridLayout extends Component {
     }
 
     if (!this.state.mouseUp) {
-      let newState = {
-        ...state,
-        mouseOn: [
-          (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
-          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-        ]
-      }
-      this.setState(newState)
-      return newState
+      state.mouseOn = [
+        (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+        (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+      ]
+      this.setState(state)
+      return state
     } else {
       return state
     }
@@ -219,9 +218,6 @@ class GridLayout extends Component {
   onMouseUp(event, rowKey, colKey, state = this.state) {
     if (event.button !== 0) {
       let newState =  this.clearState(state)
-      if (event.button === 2) { //right clicked
-        newState = this.onContextMenu(rowKey, colKey, newState)
-      }
       return newState
     }
 

@@ -46,62 +46,19 @@ export function getData() {
     ]
   }
 
-  let data = [
+  let data = [...Array(3).keys()].map(x => (
     {
-      'id': 1,
-      'name': 'I.P. Freely',
-      'age': 69,
-      'data': '{}',
-      'last_visited': new Date(),
-      'joined': new Date(),
-      'is_admin': false,
-    },
-    {
-      'id': 2,
+      'id': x,
       'name': 'I.P. Freely',
       'age': 69,
       'data': '{}',
       'last_visited': new Date(),
       'joined': new Date(),
       'is_admin': true,
-    },
-    {
-      'id': 3,
-      'name': 'I.P. Freely',
-      'age': 69,
-      'data': '{}',
-      'last_visited': new Date(),
-      'joined': new Date(),
-      'is_admin': false,
-    },
-    {
-      'id': 4,
-      'name': 'I.P. Freely',
-      'age': 69,
-      'data': '{}',
-      'last_visited': new Date(),
-      'joined': new Date(),
-      'is_admin': true,
-    },
-    {
-      'id': 5,
-      'name': 'I.P. Freely',
-      'age': 69,
-      'data': '{}',
-      'last_visited': new Date(),
-      'joined': new Date(),
-      'is_admin': false,
-    },
-    {
-      'id': 6,
-      'name': 'I.P. Freely',
-      'age': 69,
-      'data': '{}',
-      'last_visited': new Date(),
-      'joined': new Date(),
-      'is_admin': true,
-    },
-  ]
+    }
+  ))
+
+
 
   return { schema, data }
 }
@@ -172,7 +129,6 @@ export function getRows() {
 
   let { data } = getData()
 
-  //const orderBasedOnColumn = (row) => columns.map(column => row[column.name])
-
-  return data //data.map(row => orderBasedOnColumn(row))
+  const orderBasedOnColumn = (row) => columns.map(column => row[column.name])
+  return data.map(x => orderBasedOnColumn(x))
 }
