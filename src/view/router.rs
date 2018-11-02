@@ -1,57 +1,38 @@
 
-use log::LevelFilter;
-use env_logger::{Builder, Target};
-use actix_web::Error as ActixError;
+use actix::prelude::*;
+
 use actix_web::{
-    error, http, middleware, server, App, AsyncResponder, HttpMessage,
-    HttpRequest, HttpResponse, Json, ResponseError,
+    App, AsyncResponder, Error as ActixError,
+    dev::JsonConfig, error, http, http::header::DispositionType, http::NormalizePath, middleware,
+    server, HttpMessage, HttpRequest, HttpResponse, fs, fs::{NamedFile, StaticFileConfig, StaticFiles},
+    Json, Path, Query, ResponseError, State, ws,
 };
-use bytes::BytesMut;
+
+use bytes::{Bytes, BytesMut};
+
+use env_logger::{Builder, Target};
+
+use futures::{future::{Future, result}, stream::once};
+
+use json;
 use json::JsonValue;
+
+use log::LevelFilter;
+
+use model::{api, connection, connection::DatabaseExecutor};
+
 use serde;
 use serde_derive;
 use serde_json;
-use json;
+
+use std::{error::Error, path::PathBuf};
+
+use super::handlers;
+use super::state::AppState;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
 
-use actix::prelude::*;
-
-use model::connection;
-use model::connection::DatabaseExecutor;
-
-use actix_web::*;
-use bytes::Bytes;
-use futures::stream::once;
-use futures::future::{Future, result};
-use actix_web::{http::NormalizePath};
-use actix_web::dev::JsonConfig;
-
-use actix_web::fs::{StaticFileConfig, StaticFiles};
-use actix_web::fs::{NamedFile};
-use actix_web::http::header::DispositionType;
-
-
-use std::path::PathBuf;
-
-use model::api;
-use std::error::Error;
-use super::handlers;
-
-pub struct AppState {
-    db_connection: Addr<DatabaseExecutor>,
-    app_name: String,
-}
-
-impl AppState {
-    pub fn new(connection: Addr<DatabaseExecutor>, app_name: &str) -> Self {
-        AppState {
-            db_connection: connection,
-            app_name: app_name.to_string(),
-        }
-    }
-}
 
 
 //TODO: implement for own Response Type
@@ -195,7 +176,44 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
         .responder()
 }
 
-fn index(state: State<AppState>) -> Result<NamedFile> {
+fn post_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+    //TODO: on duplicate - update (default), ignore, fail
+    //TODO: implement
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
+fn put_table_data((state, path): (State<AppState>, Path<(String, String)>)) -> AsyncResponse {
+    //TODO: implement
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
+fn delete_table_data((state, path): (State<AppState>, Path<(String, String)>)) -> AsyncResponse {
+    //TODO: implement
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
+impl Actor for handlers::TableSession {
+    type Context = ws::WebsocketContext<Self, AppState>;
+}
+
+fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
+    ws::start(req, handlers::TableSession::new())
+}
+
+
+fn index(state: State<AppState>) -> Result<NamedFile, ActixError> {
     Ok(NamedFile::open("./www/index.html")?)
 }
 
@@ -214,7 +232,7 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 
 pub fn routes() -> App<AppState> {
     let connection = connection::create();
-    let state = AppState::new(connection, "ninchy");
+    let state = AppState::new(connection, "kakapo");
     App::with_state(state)
         .middleware(middleware::Logger::default())
         .resource("/", |r| {
@@ -231,15 +249,15 @@ pub fn routes() -> App<AppState> {
         })
         .resource("/api/table/{table_name}", |r| {
             r.method(http::Method::GET).with(get_table_data);
+            r.method(http::Method::POST).with(post_table_data);
         })
-        /*
-        .resource("/api/table/{table_name}/retrieve", |r| r.method(http::Method::GET).with(retrieve_table))
-        .resource("/api/table/{table_name}/insert", |r| r.method(http::Method::POST).with(insert_into_table))
-        .resource("/api/table/{table_name}/insert_or_update", |r| r.method(http::Method::POST).with(insert_or_update_table))
-        .resource("/api/table/{table_name}/insert_or_ignore", |r| r.method(http::Method::POST).with(insert_or_ignore_table))
-        .resource("/api/table/{table_name}/update", |r| r.method(http::Method::POST).with(update_table))
-        .resource("/api/table/{table_name}/delete", |r| r.method(http::Method::POST).with(delete_from_table))
-        */
+        .resource("/api/table/{table_name}/{id}", |r| {
+            r.method(http::Method::PUT).with(put_table_data);
+            r.method(http::Method::DELETE).with(delete_table_data);
+        })
+        .resource("/api/listen/table/{table_name}", |r| {
+            r.method(http::Method::GET).f(websocket_table_listener)
+        })
         .default_resource(|r| r.h(NormalizePath::default()))
         .handler(
             "/",

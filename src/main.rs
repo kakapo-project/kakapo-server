@@ -1,6 +1,7 @@
 
 /// Crates
 extern crate actix;
+extern crate actix_broker;
 extern crate actix_web;
 extern crate byteorder;
 extern crate bytes;

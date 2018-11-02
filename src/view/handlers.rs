@@ -1,12 +1,14 @@
 
 use actix::prelude::*;
+use actix_web::error::ResponseError;
+use actix_web::ws;
+
 use model::api;
 use model::connection::DatabaseExecutor;
 
-use actix_web::error::ResponseError;
-
 use model::manage;
 use model::table;
+
 
 
 // Create Table
@@ -79,5 +81,27 @@ impl Handler<GetTableData> for DatabaseExecutor {
 
     fn handle(&mut self, msg: GetTableData, _: &mut Self::Context) -> Self::Result {
         table::get_table_data(self.get_connection(), msg.name)
+    }
+}
+
+
+// Websockets
+pub struct TableSession {
+    pub table_name: String,
+    pub session_id: usize,
+}
+
+impl TableSession {
+    pub fn new() -> Self {
+        Self {
+            table_name: "tmp".to_string(),
+            session_id: 0,
+        }
+    }
+}
+
+impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
+    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+        unimplemented!();
     }
 }
