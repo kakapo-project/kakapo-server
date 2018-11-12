@@ -2,7 +2,7 @@
 use actix::prelude::*;
 
 use actix_web::{
-    App, AsyncResponder, Error as ActixError,
+    App, AsyncResponder, Error as ActixError, FromRequest,
     dev::JsonConfig, error, http, http::header::DispositionType, http::NormalizePath, middleware,
     server, HttpMessage, HttpRequest, HttpResponse, fs, fs::{NamedFile, StaticFileConfig, StaticFiles},
     Json, Path, Query, ResponseError, State, ws,
@@ -26,6 +26,8 @@ use serde_derive;
 use serde_json;
 
 use std::{error::Error, path::PathBuf};
+use std::result::Result;
+use std::result::Result::Ok;
 
 use super::handlers;
 use super::state::AppState;
@@ -165,7 +167,7 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
             let api::GetTableDataResult(table_with_data) = unwrapped_result;
-            let data = table_with_data.data; //TODO: just need the data, give the user the option to have it all maybe?
+            let data = table_with_data.data; //TODO: just need the data, give the user the option to have the schema as well maybe?
             let ok_result = serde_json::to_string(&data)?;
             Ok(
                 HttpResponse::Ok()
@@ -209,7 +211,12 @@ impl Actor for handlers::TableSession {
 }
 
 fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
-    ws::start(req, handlers::TableSession::new())
+    let path = Path::<String>::extract(req);
+    let state: &AppState = req.state();
+    let table_name = path?.to_string();
+    let conn = &state.db_connection;
+
+    ws::start(req, handlers::TableSession::new(conn.to_owned(), table_name))
 }
 
 
@@ -232,7 +239,7 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 
 pub fn routes() -> App<AppState> {
     let connection = connection::create();
-    let state = AppState::new(connection, "kakapo");
+    let state = AppState::new(connection, "Kakapo");
     App::with_state(state)
         .middleware(middleware::Logger::default())
         .resource("/", |r| {

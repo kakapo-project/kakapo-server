@@ -6,7 +6,7 @@ authors = ["Atta Zadeh <atta.h.zadeh@gmail.com>"]
 [dependencies]
 actix = "0.7"
 actix-broker = "0.1.4"
-actix-web = "^0.7"
+actix-web = "0.7"
 
 byteorder = "1"
 bytes = "0.4"

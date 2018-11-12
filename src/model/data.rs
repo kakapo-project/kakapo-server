@@ -22,6 +22,7 @@ pub enum DataType {
 pub enum IndexableValue {
     String(String),
     Integer(i64),
+    //TODO: allow for multiple indexable values if the multiple keys exists
 }
 
 
@@ -35,13 +36,19 @@ pub enum Value {
     Json(serde_json::Value),
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct RowData(pub BTreeMap<String, Value>);
+
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum TableData {
-    IndexedData(HashMap<IndexableValue, HashMap<String, Value>>), //TODO: I think this might need to be a btreemap
-    RowsData(Vec<BTreeMap<String, Value>>),
+    //IndexedData(BTreeMap<IndexableValue, RowData>),
+    RowsData(Vec<RowData>),
+    //ColumnData(BTreeMap<String, Vec<Value>>),
+    //RowsFlatData(Vec<Vec<Value>>), //TODO: pass in a column map
+    //ColumnFlatData(Vec<Vec<Value>>), //TODO: pass in a column map
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -83,9 +90,10 @@ pub enum Expression {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Constraint {
+    Key(String),
+    //KeyTogether(Vec<String>),
     Unique(String),
     UniqueTogether(Vec<String>),
-    Key(String),
 
     Check(Expression),
 

@@ -77,21 +77,22 @@ pub fn get_table_data(
         let query = schema_table.select(VecColumn::new(columns));
         println!("DEBUG QUERY: {:?}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
         let raw_rows = query.load::<ValueList<Vec<u8>>>(&conn)?;
-        let rows: Vec<BTreeMap<String, data::Value>> = raw_rows.iter()
+        let rows: Vec<data::RowData> = raw_rows.iter()
             .map(|row| {
                 let values: Vec<DynamicValue> = row.decode(&types)?;
-                let mut row_data: BTreeMap<String, data::Value> = BTreeMap::new();
+                let mut raw_row_data: BTreeMap<String, data::Value> = BTreeMap::new();
                 for (key, raw_value) in column_names.iter().zip(values) {
                     let value = match raw_value {
                         DynamicValue::Text(x) => data::Value::String(x),
                         DynamicValue::Integer(x) => data::Value::Integer(x as i64),
                         DynamicValue::Json(x) => data::Value::Json(x),
                     };
-                    row_data.insert(key.to_owned(), value);
+                    raw_row_data.insert(key.to_owned(), value);
                 }
+                let row_data = data::RowData(raw_row_data);
                 Ok(row_data)
             })
-            .collect::<Result<Vec<BTreeMap<String, data::Value>>, _>>()
+            .collect::<Result<Vec<data::RowData>, _>>()
             .or_else(|err: Box<dyn std::error::Error + std::marker::Send + std::marker::Sync>|
                 Err(Error::SerializationError(Box::new(io::Error::new(io::ErrorKind::Other, "could not decode")))) //TODO: clean this up
             )?;
