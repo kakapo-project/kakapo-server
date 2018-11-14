@@ -12,7 +12,7 @@ use model::manage;
 use model::table;
 
 
-// Create Table
+// Create or Update Table
 pub struct CreateTable {
     pub reqdata: api::PostTable,
 }
@@ -68,7 +68,7 @@ impl Handler<GetTable> for DatabaseExecutor {
 
 //
 
-// Get Table
+// Get Table Data
 pub struct GetTableData {
     pub name: String,
 }
@@ -85,69 +85,20 @@ impl Handler<GetTableData> for DatabaseExecutor {
     }
 }
 
-
-// Websockets
-pub struct TableSession {
-    pub conn: Addr<DatabaseExecutor>,
-    pub table_name: String,
-    pub session_id: usize,
+// Insert Table Data
+pub struct InsertTableData {
+    pub name: String,
+    pub data: api::TableData,
 }
 
-impl TableSession {
-    pub fn new(conn: Addr<DatabaseExecutor>, table_name: String) -> Self {
-        Self {
-            conn: conn,
-            table_name: table_name,
-            session_id: 0,
-        }
-    }
-
-
-    fn handle_action(&self, table_session_request: api::TableSessionRequest) -> () {
-        match table_session_request {
-            api::TableSessionRequest::GetTable => {
-
-            },
-            api::TableSessionRequest::GetAllTableData { begin, chunk_size } => {
-
-            },
-            api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
-
-            },
-            api::TableSessionRequest::Create(row) => {
-
-            },
-            api::TableSessionRequest::Update(row) => {
-
-            },
-            api::TableSessionRequest::Delete(index) => {
-
-            },
-        };
-    }
-
+impl Message for InsertTableData {
+    type Result = Result<api::InsertTableDataResult, api::Error>;
 }
 
-impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
-    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
-        match msg {
-            ws::Message::Text(text) => {
-                serde_json::from_str(&text)
-                    .and_then(|table_session_request: api::TableSessionRequest| {
-                        self.handle_action(table_session_request);
-                        Ok(())
-                    })
-                    .or_else::<serde_json::error::Error, _>(|err| {
-                        println!("Error occured while parsing websocket request: {:?}", err);
-                        ctx.stop();
-                        //TODO: send error message
-                        Ok(())
-                    });
-            },
-            ws::Message::Close(_) => {
-                ctx.stop();
-            },
-            _ => {}
-        }
+impl Handler<InsertTableData> for DatabaseExecutor {
+    type Result = Result<api::InsertTableDataResult, api::Error>;
+
+    fn handle(&mut self, msg: InsertTableData, _: &mut Self::Context) -> Self::Result {
+        table::insert_table_data(self.get_connection(), msg.name, msg.data)
     }
 }

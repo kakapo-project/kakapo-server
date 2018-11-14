@@ -178,17 +178,31 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
         .responder()
 }
 
-fn post_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+fn post_table_data((state, path, json): (State<AppState>, Path<String>, Json<api::TableData>)) -> AsyncResponse {
     //TODO: on duplicate - update (default), ignore, fail
     //TODO: implement
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+    let conn = &state.db_connection;
+
+    conn.send(handlers::InsertTableData {
+        name: path.to_string(),
+        data: json.into_inner(),
+    })
+        .from_err()
+        .and_then(|res| {
+            let unwrapped_result = res?;
+            println!("final result: {:?}", &unwrapped_result);
+            let api::InsertTableDataResult(data) = unwrapped_result;
+            let ok_result = serde_json::to_string(&data)?;
+            Ok(
+                HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(ok_result)
+            )
+        })
+        .responder()
 }
 
-fn put_table_data((state, path): (State<AppState>, Path<(String, String)>)) -> AsyncResponse {
+fn put_table_data((state, path, json): (State<AppState>, Path<(String, String)>, Json<u32>)) -> AsyncResponse {
     //TODO: implement
     result(Ok(
         HttpResponse::InternalServerError()
@@ -206,8 +220,74 @@ fn delete_table_data((state, path): (State<AppState>, Path<(String, String)>)) -
     )).responder()
 }
 
-impl Actor for handlers::TableSession {
+
+pub struct TableSession {
+    pub conn: Addr<DatabaseExecutor>,
+    pub table_name: String,
+    pub session_id: usize,
+}
+
+impl Actor for TableSession {
     type Context = ws::WebsocketContext<Self, AppState>;
+}
+
+impl TableSession {
+    pub fn new(conn: Addr<DatabaseExecutor>, table_name: String) -> Self {
+        Self {
+            conn: conn,
+            table_name: table_name,
+            session_id: 0,
+        }
+    }
+
+
+    fn handle_action(&self, ctx: &mut <Self as Actor>::Context, table_session_request: api::TableSessionRequest) -> () {
+        match table_session_request {
+            api::TableSessionRequest::GetTable => {
+
+            },
+            api::TableSessionRequest::GetAllTableData { begin, chunk_size } => {
+
+            },
+            api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
+
+            },
+            api::TableSessionRequest::Create(row) => {
+
+            },
+            api::TableSessionRequest::Update(row) => {
+
+            },
+            api::TableSessionRequest::Delete(index) => {
+
+            },
+        };
+    }
+
+}
+
+impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
+    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+        match msg {
+            ws::Message::Text(text) => {
+                serde_json::from_str(&text)
+                    .or_else::<serde_json::error::Error, _>(|err| {
+                        println!("Error occured while parsing websocket request: {:?}", err);
+                        ctx.stop();
+                        //TODO: send error message
+                        Err(err)
+                    })
+                    .and_then(|table_session_request: api::TableSessionRequest| {
+                        self.handle_action(ctx, table_session_request);
+                        Ok(())
+                    });
+            },
+            ws::Message::Close(_) => {
+                ctx.stop();
+            },
+            _ => {}
+        }
+    }
 }
 
 fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
@@ -216,7 +296,7 @@ fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse,
     let table_name = path?.to_string();
     let conn = &state.db_connection;
 
-    ws::start(req, handlers::TableSession::new(conn.to_owned(), table_name))
+    ws::start(req, TableSession::new(conn.to_owned(), table_name))
 }
 
 

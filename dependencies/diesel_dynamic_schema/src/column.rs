@@ -4,7 +4,10 @@ use diesel::prelude::*;
 use diesel::query_builder::*;
 use std::borrow::Borrow;
 use std::marker::PhantomData;
+use std::mem;
 
+use diesel::serialize::ToSql;
+use diesel::serialize::Output;
 use diesel::deserialize::FromSql;
 use diesel::deserialize::FromSqlRow;
 use diesel::deserialize::Result;
@@ -142,6 +145,27 @@ impl DynamicValueType {
 
         Ok(result)
     }
+
+    pub fn encode(value: &DynamicValue) -> Result<(DynamicValueType, Vec<u8>)> {
+        let mut bytes: Vec<u8> = vec![];
+        let mut output: Output<Vec<u8>, Pg> = Output::new(bytes, unsafe { mem::uninitialized() }); //TODO: should this be uninitialized
+        let result = match value {
+            DynamicValue::Integer(x) => {
+                <i32 as ToSql<Integer, Pg>>::to_sql(x, &mut output)?;
+                DynamicValueType::Integer
+            },
+            DynamicValue::Text(x) => {
+                <String as ToSql<Text, Pg>> ::to_sql(x, &mut output)?;
+                DynamicValueType::Text
+            },
+            DynamicValue::Json(x) => {
+                <serde_json::Value as ToSql<Json, Pg>>::to_sql(x, &mut output)?;
+                DynamicValueType::Json
+            },
+        };
+
+        Ok((result, output.into_inner()))
+    }
 }
 
 impl<T> ValueList<T> {
@@ -164,6 +188,15 @@ impl ValueList<Vec<u8>> {
             })
             .collect()
     }
+
+    pub fn encode(values: &Vec<DynamicValue>) -> Result<Vec<(DynamicValueType, Vec<u8>)>> {
+        values.iter()
+            .map(|value| {
+                DynamicValueType::encode(value)
+            })
+            .collect()
+    }
+
 }
 
 impl<U, ST> Queryable<ST, Pg> for ValueList<U>

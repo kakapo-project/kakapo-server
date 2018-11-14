@@ -14,6 +14,8 @@ pub struct PostTable {
     pub action: data::SchemaModification,
 }
 
+pub type TableData = data::TableData;
+
 #[derive(Debug)]
 pub enum GetTablesResult {
     Tables(Vec<data::Table>), //unrolls the tables
@@ -31,6 +33,9 @@ pub struct CreateTableResult(pub data::Table);
 
 #[derive(Debug)]
 pub struct GetTableDataResult(pub data::TableWithData);
+
+#[derive(Debug)]
+pub struct InsertTableDataResult(pub data::TableData);
 
 #[derive(Debug)]
 pub enum Error {

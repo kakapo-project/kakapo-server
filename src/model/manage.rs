@@ -268,7 +268,7 @@ fn update_migration(
             format!("IMPLEMENT ME") //TODO: ...
         },
         data::SchemaModification::Delete => {
-            format!("IMPLEMENT ME") //TODO: ...
+            format!("DROP TABLE IF EXISTS {}", table_name)
         },
     };
 
