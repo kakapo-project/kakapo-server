@@ -223,19 +223,18 @@ pub fn get_table_data(
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
 
         let table = get_table(&conn, table_name)?;
-        let rows: Vec<data::RowData> = database::get_all_rows(&conn, &table)?;
-
-        let data = data::TableData::RowsData(rows);
+        let data = database::get_all_rows(&conn, &table)?;
 
         let table_with_data = data::TableWithData {
             table: table,
-            data: data,
+            data: data.into_rows_data(),
         };
 
         Ok(table_with_data)
 
     }).or_else(|err| Err(api::Error::DatabaseError(err)))?;
 
+    println!("final result: {:?}", result);
 
     Ok(api::GetTableDataResult(result))
 }

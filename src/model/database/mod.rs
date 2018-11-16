@@ -17,7 +17,7 @@ use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 
 use serde_json;
 
-use super::data::{RowData, Table, Value, DataType};
+use super::data::{RowData, Table, Value, DataType, TableData};
 use diesel::pg::Pg;
 use diesel::sql_types;
 use diesel::deserialize::FromSql;
@@ -39,12 +39,14 @@ impl ConnWrapper {
         self.0
     }
 }
-
+/*
 impl Drop for ConnWrapper {
+    //TODO: is this handled or not handled (MEMORY LEAK!!!!!!!!!!!!!)
     fn drop(&mut self) {
         unsafe { pq_sys::PQfinish(self.p()) };
     }
 }
+*/
 
 impl ResultWrapper {
     fn p(&self) -> *mut pq_sys::PGresult {
@@ -124,6 +126,20 @@ impl ResultWrapper {
         Ok(result)
     }
 
+    pub fn get_rows_data(&self) -> Result<Vec<Vec<Value>>, Error> {
+        let num_cols = self.num_cols();
+        let num_rows = self.num_rows();
+
+        let res: Result<Vec<Vec<Value>>, Error> =
+            (0..num_rows).map(|row_idx| {
+                (0..num_cols).map(|col_idx| {
+                    self.get(row_idx, col_idx)
+                }).collect()
+            }).collect();
+
+        res
+    }
+
     pub fn is_null(&self, row_idx: usize, col_idx: usize) -> bool {
         unsafe {
             0 != pq_sys::PQgetisnull(
@@ -193,7 +209,7 @@ fn exec(conn: ConnWrapper, query: &str) -> Result<ResultWrapper, Error> {
 pub fn get_all_rows(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table: &Table,
-) -> Result<Vec<RowData>, Error> {
+) -> Result<TableData, Error> {
 
     let db: &PgConnection = conn.deref();
     let internal_conn = conn_ptr(&db);
@@ -212,14 +228,12 @@ pub fn get_all_rows(
     let result = exec(internal_conn, &query)?;
     println!("Number of results: {}", result.num_rows());
 
-    let res: Result<Vec<Vec<Value>>, Error> =
-    (0..result.num_rows()).map(|row_idx| {
-        (0..result.num_cols()).map(|col_idx| {
-            result.get(row_idx, col_idx)
-        }).collect()
-    }).collect();
+    let rows = result.get_rows_data()?;
 
-    println!("res: {:?}", res?);
+    let table_data = TableData::RowsFlatData {
+        columns: columns.iter().map(|x| x.name.to_owned()).collect(),
+        data: rows
+    };
 
-    Ok(vec![])
+    Ok(table_data)
 }

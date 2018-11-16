@@ -37,7 +37,15 @@ pub enum Value {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct RowData(pub BTreeMap<String, Value>);
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum RowData {
+    RowData(BTreeMap<String, Value>),
+    RowsFlatData {
+        columns: Vec<String>,
+        data: Vec<Value>,
+    }
+}
 
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -45,10 +53,33 @@ pub struct RowData(pub BTreeMap<String, Value>);
 #[serde(untagged)]
 pub enum TableData {
     //IndexedData(BTreeMap<IndexableValue, RowData>),
-    RowsData(Vec<RowData>),
+    RowsData(Vec<BTreeMap<String, Value>>),
     //ColumnData(BTreeMap<String, Vec<Value>>),
-    //RowsFlatData(Vec<Vec<Value>>), //TODO: pass in a column map
-    //ColumnFlatData(Vec<Vec<Value>>), //TODO: pass in a column map
+    RowsFlatData {
+        columns: Vec<String>,
+        data: Vec<Vec<Value>>,
+    },
+}
+
+impl TableData {
+    pub fn into_rows_data(self) -> TableData {
+        match self {
+            TableData::RowsFlatData { columns, data } => {
+                let rows_data =
+                data.iter().map(|row| {
+
+                    let mut row_data = BTreeMap::new();
+                    for (name, value) in columns.iter().zip(row) {
+                        row_data.insert(name.to_owned(), value.to_owned());
+                    }
+
+                    row_data
+                }).collect();
+                TableData::RowsData(rows_data)
+            },
+            TableData::RowsData(_) => self
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
