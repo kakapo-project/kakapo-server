@@ -17,6 +17,7 @@ use std::io::Write;
 use std::io;
 use std::collections::BTreeMap;
 use std;
+use std::ops::Deref;
 
 use super::data;
 use super::data::DataType;
@@ -25,7 +26,9 @@ use super::api;
 use super::dbdata::*;
 use super::schema::{entity, table_schema, table_schema_history};
 use super::manage::{get_single_table, unroll_table};
+use super::database;
 
+/*
 use diesel_dynamic_schema::table as dynamic_table;
 use diesel_dynamic_schema::Table as DynamicTable;
 use diesel_dynamic_schema::Column as DynamicColumn;
@@ -167,6 +170,8 @@ pub fn insert_table_data(
 
         let meta = get_table_meta_data(&conn, table_name)?;
 
+        let db_connection: &PgConnection = conn.deref();
+
         /*
         let query = diesel::insert_into(meta.schema_table)
             .values((
@@ -186,4 +191,71 @@ pub fn insert_table_data(
 
     Ok(api::InsertTableDataResult(result))
 }
+*/
 
+fn get_table(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    table_name: String
+) -> Result<data::Table, diesel::result::Error> {
+
+
+    let table_schema: TableSchema = table_schema::table
+        .filter(table_schema::name.eq(table_name.to_string()))
+        .get_result::<TableSchema>(conn)?;
+    println!("table schema: {:?}", table_schema);
+
+
+    let detailed_table: data::DetailedTable = get_single_table(&conn, &table_schema)?;
+
+    let table = unroll_table(detailed_table.to_owned())
+        .or_else(|err| Err(Error::SerializationError(Box::new(err.compat()))))?;
+
+    Ok(table)
+}
+
+pub fn get_table_data(
+    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    table_name: String,
+    //TODO: Better SQL query functionality, i.e. filter, ...
+    //TODO: Add output format: indexed, rows (default), columns, schema
+) -> Result<api::GetTableDataResult, api::Error> {
+
+    let result = conn.transaction::<_, diesel::result::Error, _>(|| {
+
+        let table = get_table(&conn, table_name)?;
+        let rows: Vec<data::RowData> = database::get_all_rows(&conn, &table)?;
+
+        let data = data::TableData::RowsData(rows);
+
+        let table_with_data = data::TableWithData {
+            table: table,
+            data: data,
+        };
+
+        Ok(table_with_data)
+
+    }).or_else(|err| Err(api::Error::DatabaseError(err)))?;
+
+
+    Ok(api::GetTableDataResult(result))
+}
+
+
+pub fn insert_table_data(
+    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    table_name: String,
+    table_data: api::TableData,
+    //TODO: Add output format: indexed, rows (default), columns, schema
+) -> Result<api::InsertTableDataResult, api::Error> {
+    let result = conn.transaction::<_, diesel::result::Error, _>(|| {
+
+        let table = get_table(&conn, table_name)?;
+
+        let db_connection: &PgConnection = conn.deref();
+
+        Ok(data::TableData::RowsData(vec![]))
+    }).or_else(|err| Err(api::Error::DatabaseError(err)))?;
+
+
+    Ok(api::InsertTableDataResult(result))
+}

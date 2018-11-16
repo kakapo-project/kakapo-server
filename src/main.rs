@@ -9,7 +9,6 @@ extern crate chrono;
 extern crate dotenv;
 #[macro_use]
 extern crate diesel;
-extern crate diesel_dynamic_schema;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -30,8 +29,6 @@ extern crate objekt;
 mod view;
 mod model;
 mod auth;
-
-
 
 /// Extenal dependencies
 use log::LevelFilter;
