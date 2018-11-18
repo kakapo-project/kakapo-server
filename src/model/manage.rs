@@ -135,6 +135,7 @@ fn unroll_one_modification(
     }
 }
 
+// Gets the next modification state from using the current state, and the next modifcation
 fn unroll_next_modification(
     modification: &data::SchemaModification,
     state: data::SchemaState,
@@ -230,6 +231,71 @@ fn format_column(column: &data::Column) -> String {
     result.to_string()
 }
 
+fn run_sql_commands_for_modification(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    new_modification: &data::SchemaModification,
+    table_name: String,
+    is_empty: bool
+) -> Result<(), diesel::result::Error> {
+
+    let sql_commands = match new_modification {
+        data::SchemaModification::Create { columns, constraint, } => {
+            let formatted_columns: Vec<String> = columns.iter().map(|x| format_column(x)).collect();
+            let mut commands = if is_empty {
+                //TODO: escape values?
+                vec![format!("CREATE TABLE {} ({});", table_name, formatted_columns.join(", "))]
+            } else {
+                if columns.is_empty() {
+                    vec![]
+                } else {
+                    vec![format!("ALTER TABLE {} ADD COLUMN {};", table_name, formatted_columns.join(", ADD COLUMN"))]
+                }
+            };
+
+            for cons in constraint {
+                match cons {
+                    data::Constraint::Key(x) => {
+                        commands.append(&mut vec![format!("ALTER TABLE {} ADD PRIMARY KEY ({});", table_name, x)]); //FIXME: SQL INJECTION!!!!!!
+                    },
+                    data::Constraint::Unique(x) => {}, //TODO:...
+                    data::Constraint::UniqueTogether(xs) => {}, //TODO:...
+                    data::Constraint::Check(Expression) => {}, //TODO:...
+                    data::Constraint::Reference { column, foreign_table, foreign_column, } => {}, //TODO:...
+                    data::Constraint::ReferenceTogether { columns, foreign_table, foreign_columns, } => {}, //TODO:...
+                };
+            }
+
+            commands
+        },
+        data::SchemaModification::Remove { column, constraint, } => {
+            vec![] //TODO: ...
+        },
+        data::SchemaModification::Rename { mapping, } => {
+            vec![] //TODO: ...
+        },
+        data::SchemaModification::Raw { up, down, } => {
+            vec![] //TODO: ...
+        },
+        data::SchemaModification::Nop => {
+            vec![] //TODO: ...
+        },
+        data::SchemaModification::Revert => {
+            vec![] //TODO: ...
+        },
+        data::SchemaModification::Delete => {
+            vec![format!("DROP TABLE IF EXISTS {}", table_name)]
+        },
+    };
+
+    println!("running for: {:?}", sql_commands);
+
+    for cmd in sql_commands.iter() {
+        diesel::dsl::sql_query(cmd.to_owned()).execute(conn)?;
+    }
+
+    Ok(())
+}
+
 fn update_migration(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String,
@@ -241,40 +307,7 @@ fn update_migration(
     let data::SchemaState { columns, .. } = schema_state.to_owned();
     let is_empty = columns.is_empty();
 
-    let sql_command = match &new_modification {
-        data::SchemaModification::Create { columns, constraint, } => {
-            let formatted_columns: Vec<String> = columns.iter().map(|x| format_column(x)).collect();
-            if is_empty {
-                //TODO: escape values?
-                format!("CREATE TABLE {} ({})", table_name, formatted_columns.join(", "))
-            } else {
-                format!("ALTER TABLE {} ADD COLUMN {}", table_name, formatted_columns.join(", ADD COLUMN"))
-            }
-            //TODO: implement the constraints
-        },
-        data::SchemaModification::Remove { column, constraint, } => {
-            format!("IMPLEMENT ME") //TODO: ...
-        },
-        data::SchemaModification::Rename { mapping, } => {
-            format!("IMPLEMENT ME") //TODO: ...
-        },
-        data::SchemaModification::Raw { up, down, } => {
-            format!("IMPLEMENT ME") //TODO: ...
-        },
-        data::SchemaModification::Nop => {
-            format!("IMPLEMENT ME") //TODO: ...
-        },
-        data::SchemaModification::Revert => {
-            format!("IMPLEMENT ME") //TODO: ...
-        },
-        data::SchemaModification::Delete => {
-            format!("DROP TABLE IF EXISTS {}", table_name)
-        },
-    };
-
-    println!("running for: {}", sql_command);
-
-    diesel::dsl::sql_query(sql_command).execute(conn)?;
+    let sql_commands = run_sql_commands_for_modification(conn, &new_modification, table_name, is_empty)?;
 
     let (next_schema_state, _) = unroll_next_modification(&new_modification, schema_state, last_modification)
         .or_else(|err| {

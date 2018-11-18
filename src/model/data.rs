@@ -62,22 +62,34 @@ pub enum TableData {
 }
 
 impl TableData {
+    fn get_rows_data_from_rows_flat_data(columns: Vec<String>, data: Vec<Vec<Value>>) -> Vec<BTreeMap<String, Value>>{
+        data.iter().map(|row| {
+
+            let mut row_data = BTreeMap::new();
+            for (name, value) in columns.iter().zip(row) {
+                row_data.insert(name.to_owned(), value.to_owned());
+            }
+
+            row_data
+        }).collect()
+    }
+
     pub fn into_rows_data(self) -> TableData {
         match self {
             TableData::RowsFlatData { columns, data } => {
-                let rows_data =
-                data.iter().map(|row| {
-
-                    let mut row_data = BTreeMap::new();
-                    for (name, value) in columns.iter().zip(row) {
-                        row_data.insert(name.to_owned(), value.to_owned());
-                    }
-
-                    row_data
-                }).collect();
+                let rows_data = TableData::get_rows_data_from_rows_flat_data(columns, data);
                 TableData::RowsData(rows_data)
             },
-            TableData::RowsData(_) => self
+            TableData::RowsData(_) => self,
+        }
+    }
+
+    pub fn into_rows_data_vec(self) -> Vec<BTreeMap<String, Value>> {
+        match self {
+            TableData::RowsFlatData { columns, data } => {
+                TableData::get_rows_data_from_rows_flat_data(columns, data)
+            },
+            TableData::RowsData(x) => x,
         }
     }
 }
@@ -206,6 +218,23 @@ pub struct Table {
     pub name: String, //TODO: make sure this is an alphanumeric
     pub description: String,
     pub schema: SchemaState,
+}
+
+impl Table {
+    pub fn get_key(&self) -> Option<String> {
+        let constraints = &self.schema.constraint;
+        let keys: Vec<String> = constraints.iter().flat_map(|constraint| {
+            match constraint {
+                Constraint::Key(x) => vec![x],
+                _ => vec![],
+            }
+        }).cloned().collect();
+
+        if keys.len() > 1 {
+            println!("ERROR: several keys exists, something is wrong with this table");
+        }
+        keys.iter().nth(0).map(|x| x.to_owned())
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

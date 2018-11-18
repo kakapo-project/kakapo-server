@@ -6,6 +6,7 @@ use std::os::raw;
 use std::ffi::CString;
 use std::ptr::NonNull;
 use std::mem::transmute_copy;
+use std::mem;
 use std::{slice, str};
 use std::io;
 use std::str::from_utf8;
@@ -21,6 +22,11 @@ use super::data::{RowData, Table, Value, DataType, TableData};
 use diesel::pg::Pg;
 use diesel::sql_types;
 use diesel::deserialize::FromSql;
+use diesel::serialize::Output;
+use diesel::pg::PgMetadataLookup;
+use diesel::serialize::ToSql;
+use diesel::serialize::IsNull;
+use diesel::serialize;
 
 struct InternalRawConnection {
     pub internal_connection: NonNull<pq_sys::PGconn>,
@@ -47,6 +53,16 @@ impl Drop for ConnWrapper {
     }
 }
 */
+
+fn generate_error(fmt: &str) -> Error {
+    Error::SerializationError(
+        Box::new(
+            io::Error::new(
+                io::ErrorKind::Other, fmt
+            )
+        )
+    )
+}
 
 impl ResultWrapper {
     fn p(&self) -> *mut pq_sys::PGresult {
@@ -86,15 +102,7 @@ impl ResultWrapper {
         let data_type = match type_oid {
             0x17 => Ok(DataType::Integer),
             0x19 => Ok(DataType::String),
-            _ => Err(
-                Error::SerializationError(
-                    Box::new(
-                        io::Error::new(
-                            io::ErrorKind::Other, format!("could not understand oid : `0x{:X?}`", type_oid)
-                        )
-                    )
-                )
-            )
+            _ => Err(generate_error(&format!("could not understand oid : `0x{:X?}`", type_oid))),
         }?;
 
         self.get_with_hint(data_type, row_idx, col_idx)
@@ -170,11 +178,38 @@ fn conn_ptr(db: &PgConnection) -> ConnWrapper {
     ConnWrapper(conn)
 }
 
-fn exec(conn: ConnWrapper, query: &str) -> Result<ResultWrapper, Error> {
+fn exec(conn: &ConnWrapper, query: &str, params: Vec<Value>) -> Result<ResultWrapper, Error> {
 
     let query_cstring = CString::new(query)?;
 
-    let param_data: Vec<Option<Vec<u8>>> = vec![];
+    let param_data: Vec<Option<Vec<u8>>> = params.iter().map(|x| {
+
+        let mut bytes = Output::new(Vec::new(), unsafe { mem::uninitialized() }); //This is probably fine
+        let result = match x {
+            Value::Null => Ok(IsNull::Yes),
+            Value::Integer(x) => {
+                let value = *x as i32;
+                <i32 as ToSql<sql_types::Integer, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::String(x) => {
+                let value = x;
+                <String as ToSql<sql_types::Text, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::Json(x) => {
+                let value = x;
+                <serde_json::Value as ToSql<sql_types::Json, Pg>>::to_sql(&value, &mut bytes)
+            },
+        };
+
+        result
+            .and_then(|is_null| {
+                match is_null {
+                    IsNull::No => Ok(Some(bytes.into_inner())),
+                    IsNull::Yes => Ok(None),
+                }
+            })
+            .or_else(|err| Err(Error::SerializationError(err)))
+    }).collect::<Result<_, Error>>()?;
 
     let params_pointer = param_data
         .iter()
@@ -225,10 +260,78 @@ pub fn get_all_rows(
     println!("final query: {:?}", query);
 
 
-    let result = exec(internal_conn, &query)?;
+    let result = exec(&internal_conn, &query, vec![])?;
     println!("Number of results: {}", result.num_rows());
 
     let rows = result.get_rows_data()?;
+
+    let table_data = TableData::RowsFlatData {
+        columns: columns.iter().map(|x| x.name.to_owned()).collect(),
+        data: rows
+    };
+
+    Ok(table_data)
+}
+
+pub fn upsert_rows(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    table: &Table,
+    to_insert: TableData
+) -> Result<TableData, Error> {
+
+    let db: &PgConnection = conn.deref();
+    let internal_conn = conn_ptr(&db);
+
+    let table_name = &table.name;
+    let columns = &table.schema.columns;
+    let column_names = columns.iter()
+        .map(|x| format!("\"{}\"", x.name))
+        .collect::<Vec<String>>();
+    let key = table.get_key().ok_or(generate_error("no key"))?;
+    let key_column_name = format!("\"{}\"", key);
+    let column_names_without_key: Vec<String> = column_names.iter()
+        .filter(|&x| x.to_owned() != key_column_name)
+        .cloned()
+        .collect();
+
+    let mut rows: Vec<Vec<Value>> = vec![];
+    for item in to_insert.into_rows_data_vec() {
+        //INSERT INTO "table_name" ("col_1_pk", "col_2", "col_3")
+        //    VALUES (1, 2, 3)
+        //    ON CONFLICT (col_1_pk) DO UPDATE SET col_2 = EXCLUDED.col_2, col_3 = EXCLUDED.col_3;
+        //TODO: insert multiple values at once
+        let row_column_names: Vec<String> = item.keys().cloned().map(|x| format!("\"{}\"", x)).collect(); //TODO: SQL INJECTION!!!!!!!!!!!!!!!!!!!
+        let values: Vec<Value> = item.values().cloned().collect();
+
+        let query_insert_into = format!(
+            "INSERT INTO \"{}\" ({})",
+            table_name, row_column_names.join(", "));
+        let query_values = format!(
+            "VALUES ({})",
+            (0..row_column_names.len())
+                .map(|x| format!("${}", x+1))
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        let query_on_conflict = format!(
+            "ON CONFLICT ({}) DO UPDATE SET {}",
+            key_column_name,
+            column_names_without_key.iter().map(|x| format!("{} = EXCLUDED.{}", x, x))
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        let query_returning = format!(
+            "RETURNING {}",
+            column_names.join(", ")
+        );
+        let query = format!("{}\n{}\n{}\n{};", query_insert_into, query_values, query_on_conflict, query_returning);
+        println!("query: {}", query);
+
+        let result = exec(&internal_conn, &query, values)?;
+        let mut curr_row = result.get_rows_data()?;
+
+        rows.append(&mut curr_row);
+    }
 
     let table_data = TableData::RowsFlatData {
         columns: columns.iter().map(|x| x.name.to_owned()).collect(),
