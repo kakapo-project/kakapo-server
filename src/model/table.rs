@@ -33,7 +33,6 @@ fn get_table(
     table_name: String
 ) -> Result<data::Table, diesel::result::Error> {
 
-
     let table_schema: TableSchema = table_schema::table
         .filter(table_schema::name.eq(table_name.to_string()))
         .get_result::<TableSchema>(conn)?;
@@ -57,6 +56,8 @@ pub fn get_table_data(
 
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
 
+        println!("ok, in the transaction");
+
         let table = get_table(&conn, table_name)?;
         let data = database::get_all_rows(&conn, &table)?;
         let formatted_data = data.into_rows_data(); //TODO: this is where the magic happens to transform into different output format types
@@ -72,7 +73,7 @@ pub fn get_table_data(
 
     println!("final result: {:?}", result);
 
-    Ok(api::GetTableDataResult(result))
+    Ok(api::GetTableDataResult(result.data))
 }
 
 

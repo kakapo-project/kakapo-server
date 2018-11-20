@@ -24,6 +24,7 @@ extern crate serde_json;
 extern crate serde_derive;
 #[macro_use]
 extern crate objekt;
+extern crate tokio_core;
 
 /// Mods
 mod view;
@@ -45,7 +46,7 @@ fn main() {
         .filter_level(LevelFilter::Info)
         .init();
 
-    let sys = actix::System::new("ninchy");
+    let sys = actix::System::new("Kakapo");
 
     /*
     // https://actix.rs/docs/server/

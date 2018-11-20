@@ -1,11 +1,13 @@
 
 use actix::prelude::*;
 
+use actix::Arbiter;
+use actix_broker::{BrokerIssue, BrokerSubscribe};
 use actix_web::{
     App, AsyncResponder, Error as ActixError, FromRequest,
     dev::JsonConfig, error, http, http::header::DispositionType, http::NormalizePath, middleware,
     server, HttpMessage, HttpRequest, HttpResponse, fs, fs::{NamedFile, StaticFileConfig, StaticFiles},
-    Json, Path, Query, ResponseError, State, ws,
+    Json, Path, Query, ResponseError, Responder, State, ws,
 };
 
 use bytes::{Bytes, BytesMut};
@@ -13,6 +15,7 @@ use bytes::{Bytes, BytesMut};
 use env_logger::{Builder, Target};
 
 use futures::{future::{Future, result}, stream::once};
+use futures::future;
 
 use json;
 use json::JsonValue;
@@ -30,11 +33,10 @@ use std::result::Result;
 use std::result::Result::Ok;
 
 use super::handlers;
+use super::session::TableSession;
 use super::state::AppState;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
-
-
 
 
 //TODO: implement for own Response Type
@@ -79,10 +81,7 @@ fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncRespo
         .and_then(|res| {
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
-            let ok_result = match unwrapped_result {
-                api::GetTablesResult::Tables(tables) => serde_json::to_string(&tables)?,
-                api::GetTablesResult::DetailedTables(tables) => serde_json::to_string(&tables)?,
-            };
+            let ok_result = serde_json::to_string(&unwrapped_result)?;
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
@@ -103,11 +102,13 @@ fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncR
         })
         .from_err()
         .and_then(|res| {
-            let api::CreateTableResult(table) = res?;
+            let unwrapped_result = res?;
+            println!("final result: {:?}", &unwrapped_result);
+            let ok_result = serde_json::to_string(&unwrapped_result)?;
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
-                    .body(serde_json::to_string(&table)?)
+                    .body(ok_result)
             )
         })
         .responder()
@@ -125,10 +126,7 @@ fn get_table((state, path, query): (State<AppState>, Path<String>, Query<GetTabl
         .and_then(|res| {
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
-            let ok_result = match unwrapped_result {
-                api::GetTableResult::Table(table) => serde_json::to_string(&table)?,
-                api::GetTableResult::DetailedTable(table) => serde_json::to_string(&table)?,
-            };
+            let ok_result = serde_json::to_string(&unwrapped_result)?;
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
@@ -166,9 +164,7 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
         .and_then(|res| {
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
-            let api::GetTableDataResult(table_with_data) = unwrapped_result;
-            let data = table_with_data.data; //TODO: just need the data, give the user the option to have the schema as well maybe?
-            let ok_result = serde_json::to_string(&data)?;
+            let ok_result = serde_json::to_string(&unwrapped_result)?;
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
@@ -184,15 +180,14 @@ fn post_table_data((state, path, json): (State<AppState>, Path<String>, Json<api
     let conn = &state.db_connection;
 
     conn.send(handlers::InsertTableData {
-        name: path.to_string(),
-        data: json.into_inner(),
-    })
+            name: path.to_string(),
+            data: json.into_inner(),
+        })
         .from_err()
         .and_then(|res| {
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
-            let api::InsertTableDataResult(data) = unwrapped_result;
-            let ok_result = serde_json::to_string(&data)?;
+            let ok_result = serde_json::to_string(&unwrapped_result)?;
             Ok(
                 HttpResponse::Ok()
                     .content_type("application/json")
@@ -221,55 +216,52 @@ fn delete_table_data((state, path): (State<AppState>, Path<(String, String)>)) -
 }
 
 
-pub struct TableSession {
-    pub conn: Addr<DatabaseExecutor>,
-    pub table_name: String,
-    pub session_id: usize,
-}
-
-impl Actor for TableSession {
-    type Context = ws::WebsocketContext<Self, AppState>;
-}
-
 impl TableSession {
-    pub fn new(conn: Addr<DatabaseExecutor>, table_name: String) -> Self {
-        Self {
-            conn: conn,
-            table_name: table_name,
-            session_id: 0,
-        }
-    }
-
 
     fn handle_action(&self, ctx: &mut <Self as Actor>::Context, table_session_request: api::TableSessionRequest) -> () {
         match table_session_request {
             api::TableSessionRequest::GetTable => {
-
             },
             api::TableSessionRequest::GetAllTableData { begin, chunk_size } => {
-
             },
             api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
-
             },
             api::TableSessionRequest::Create(row) => {
-
             },
             api::TableSessionRequest::Update(row) => {
-
             },
             api::TableSessionRequest::Delete(index) => {
-
             },
-        };
+        }
     }
 
+}
+
+
+pub struct Test {
+    pub name: String,
+}
+
+impl Message for Test {
+    type Result = Result<String, api::Error>;
+}
+
+impl Handler<Test> for DatabaseExecutor {
+    type Result = Result<String, api::Error>;
+
+    fn handle(&mut self, msg: Test, _: &mut Self::Context) -> Self::Result {
+        println!("got a message! {}", msg.name);
+
+        Ok("ok".to_string())
+    }
 }
 
 impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
             ws::Message::Text(text) => {
+                /*
+                // parse json
                 serde_json::from_str(&text)
                     .or_else::<serde_json::error::Error, _>(|err| {
                         println!("Error occured while parsing websocket request: {:?}", err);
@@ -281,6 +273,15 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
                         self.handle_action(ctx, table_session_request);
                         Ok(())
                     });
+                */
+                println!("starting...");
+                //send to handler
+                let res = ctx.state().db_connection
+                    .send(Test {
+                        name: "hi!".to_string(),
+                    })
+                    .wait().unwrap().unwrap();
+                ctx.text(format!("result: {}", &res));
             },
             ws::Message::Close(_) => {
                 ctx.stop();
@@ -292,11 +293,9 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
 
 fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
     let path = Path::<String>::extract(req);
-    let state: &AppState = req.state();
     let table_name = path?.to_string();
-    let conn = &state.db_connection;
 
-    ws::start(req, TableSession::new(conn.to_owned(), table_name))
+    ws::start(req, TableSession::new(table_name))
 }
 
 
@@ -319,7 +318,7 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 
 pub fn routes() -> App<AppState> {
     let connection = connection::create();
-    let state = AppState::new(connection, "Kakapo");
+    let state = AppState::new(connection.clone(), "Kakapo");
     App::with_state(state)
         .middleware(middleware::Logger::default())
         .resource("/", |r| {

@@ -5,7 +5,7 @@ use dotenv::dotenv;
 use std::env;
 
 use actix::prelude::*;
-use diesel::{prelude::*, r2d2::ConnectionManager, r2d2::PooledConnection};
+use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
 use actix::sync::SyncArbiter;
 use num_cpus;
@@ -36,3 +36,6 @@ pub fn create() -> Addr<DatabaseExecutor> {
 
     SyncArbiter::start(num_cpus::get(), move || DatabaseExecutor(pool.clone()))
 }
+
+
+//TODO: do I need to impl Drop?

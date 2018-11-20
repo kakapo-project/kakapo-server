@@ -10,6 +10,9 @@ use model::connection::DatabaseExecutor;
 
 use model::manage;
 use model::table;
+use actix_broker::BrokerMsg;
+use view::state::AppState;
+use view::session::TableSession;
 
 
 // Create or Update Table
@@ -69,16 +72,14 @@ impl Handler<GetTable> for DatabaseExecutor {
 //
 
 // Get Table Data
+#[derive(Clone, Message)]
+#[rtype(result="Result<api::GetTableDataResult, api::Error>")]
 pub struct GetTableData {
     pub name: String,
 }
 
-impl Message for GetTableData {
-    type Result = Result<api::GetTableDataResult, api::Error>;
-}
-
 impl Handler<GetTableData> for DatabaseExecutor {
-    type Result = Result<api::GetTableDataResult, api::Error>;
+    type Result = <GetTableData as Message>::Result;
 
     fn handle(&mut self, msg: GetTableData, _: &mut Self::Context) -> Self::Result {
         table::get_table_data(self.get_connection(), msg.name)

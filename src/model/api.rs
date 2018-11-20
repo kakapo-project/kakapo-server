@@ -16,25 +16,27 @@ pub struct PostTable {
 
 pub type TableData = data::TableData;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum GetTablesResult {
     Tables(Vec<data::Table>), //unrolls the tables
     DetailedTables(Vec<data::DetailedTable>), //Has the full history of the tables
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum GetTableResult {
     Table(data::Table), //unrolls
     DetailedTable(data::DetailedTable), //full history
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct CreateTableResult(pub data::Table);
 
-#[derive(Debug)]
-pub struct GetTableDataResult(pub data::TableWithData);
+#[derive(Debug, Serialize)]
+pub struct GetTableDataResult(pub data::TableData);  //TODO: just need the data, give the user the option to have the schema as well maybe?
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct InsertTableDataResult(pub data::TableData);
 
 #[derive(Debug)]
