@@ -5,7 +5,7 @@ use actix::prelude::*;
 
 use model::{api, connection, connection::DatabaseExecutor};
 
-
+#[derive(Clone)]
 pub struct AppState {
     pub db_connection: Addr<DatabaseExecutor>,
     pub app_name: String,

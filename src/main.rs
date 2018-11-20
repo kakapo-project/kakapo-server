@@ -36,7 +36,7 @@ use log::LevelFilter;
 use env_logger::{Builder, Target};
 
 /// Internal dependencies
-use view::router;
+use view::server;
 use model::connection;
 
 fn main() {
@@ -57,13 +57,7 @@ fn main() {
     ssl_builder.set_certificate_chain_file("cert.pem").unwrap();
     */
 
-    actix_web::server::new(router::routes)
-        .workers(num_cpus::get())
-        .keep_alive(None)
-        .bind("127.0.0.1:8080")
-        .unwrap()
-        .shutdown_timeout(1)
-        .start();
+    server::serve();
 
     println!("Started http server: 127.0.0.1:8080");
 

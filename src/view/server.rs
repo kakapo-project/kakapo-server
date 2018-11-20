@@ -74,9 +74,9 @@ fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncRespo
 
     println!("received message: {:?}", &query);
     conn.send(handlers::GetTables {
-            detailed: query.detailed,
-            show_deleted: query.show_deleted,
-        })
+        detailed: query.detailed,
+        show_deleted: query.show_deleted,
+    })
         .from_err()
         .and_then(|res| {
             let unwrapped_result = res?;
@@ -98,8 +98,8 @@ fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncR
 
     println!("received message: {:?}", &json);
     conn.send(handlers::CreateTable {
-            reqdata: json.into_inner()
-        })
+        reqdata: json.into_inner()
+    })
         .from_err()
         .and_then(|res| {
             let unwrapped_result = res?;
@@ -119,9 +119,9 @@ fn get_table((state, path, query): (State<AppState>, Path<String>, Query<GetTabl
 
     println!("received message: {:?}", &query);
     conn.send(handlers::GetTable {
-            name: path.to_string(),
-            detailed: query.detailed,
-        })
+        name: path.to_string(),
+        detailed: query.detailed,
+    })
         .from_err()
         .and_then(|res| {
             let unwrapped_result = res?;
@@ -158,8 +158,8 @@ fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncRespon
     let conn = &state.db_connection;
 
     conn.send(handlers::GetTableData {
-            name: path.to_string(),
-        })
+        name: path.to_string(),
+    })
         .from_err()
         .and_then(|res| {
             let unwrapped_result = res?;
@@ -180,9 +180,9 @@ fn post_table_data((state, path, json): (State<AppState>, Path<String>, Json<api
     let conn = &state.db_connection;
 
     conn.send(handlers::InsertTableData {
-            name: path.to_string(),
-            data: json.into_inner(),
-        })
+        name: path.to_string(),
+        data: json.into_inner(),
+    })
         .from_err()
         .and_then(|res| {
             let unwrapped_result = res?;
@@ -316,38 +316,53 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
         });
 }
 
-pub fn routes() -> App<AppState> {
+
+
+pub fn serve() {
+
     let connection = connection::create();
-    let state = AppState::new(connection.clone(), "Kakapo");
-    App::with_state(state)
-        .middleware(middleware::Logger::default())
-        .resource("/", |r| {
-            r.method(http::Method::GET).with(index)
+
+
+    actix_web::server::new(move || {
+        let state = AppState::new(connection.clone(), "Kakapo");
+
+        App::with_state(state)
+            .middleware(middleware::Logger::default())
+            .resource("/", |r| {
+                r.method(http::Method::GET).with(index)
+            })
+            .resource("/api/manage/table", |r| {
+                r.method(http::Method::GET).with(get_tables);
+                r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
+            })
+            .resource("/api/manage/table/{table_name}", |r| {
+                r.method(http::Method::GET).with(get_table);
+                r.method(http::Method::PUT).with(put_table);
+                r.method(http::Method::DELETE).with(delete_table);
+            })
+            .resource("/api/table/{table_name}", |r| {
+                r.method(http::Method::GET).with(get_table_data);
+                r.method(http::Method::POST).with(post_table_data);
+            })
+            .resource("/api/table/{table_name}/{id}", |r| {
+                r.method(http::Method::PUT).with(put_table_data);
+                r.method(http::Method::DELETE).with(delete_table_data);
+            })
+            .resource("/api/listen/table/{table_name}", |r| {
+                r.method(http::Method::GET).f(websocket_table_listener)
+            })
+            .default_resource(|r| r.h(NormalizePath::default()))
+            .handler(
+                "/",
+                fs::StaticFiles::new("./www/")
+                    .unwrap()
+                    .show_files_listing())
         })
-        .resource("/api/manage/table", |r| {
-            r.method(http::Method::GET).with(get_tables);
-            r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
-        })
-        .resource("/api/manage/table/{table_name}", |r| {
-            r.method(http::Method::GET).with(get_table);
-            r.method(http::Method::PUT).with(put_table);
-            r.method(http::Method::DELETE).with(delete_table);
-        })
-        .resource("/api/table/{table_name}", |r| {
-            r.method(http::Method::GET).with(get_table_data);
-            r.method(http::Method::POST).with(post_table_data);
-        })
-        .resource("/api/table/{table_name}/{id}", |r| {
-            r.method(http::Method::PUT).with(put_table_data);
-            r.method(http::Method::DELETE).with(delete_table_data);
-        })
-        .resource("/api/listen/table/{table_name}", |r| {
-            r.method(http::Method::GET).f(websocket_table_listener)
-        })
-        .default_resource(|r| r.h(NormalizePath::default()))
-        .handler(
-            "/",
-            fs::StaticFiles::new("./www/")
-                .unwrap()
-                .show_files_listing())
+        .workers(num_cpus::get())
+        .keep_alive(None)
+        .bind("127.0.0.1:8080")
+        .unwrap()
+        .shutdown_timeout(1)
+        .start();
+
 }
