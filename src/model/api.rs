@@ -5,7 +5,7 @@ use diesel;
 use std::fmt;
 use std;
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PostTable {
     pub name: String,
@@ -74,14 +74,11 @@ impl std::error::Error for Error {
 #[serde(tag = "action")]
 pub enum TableSessionRequest {
     GetTable,
-    GetAllTableData {
-        begin: usize,
-        #[serde(rename = "chunkSize")]
-        chunk_size: usize,
-    },
     GetTableData {
-        begin: usize,
-        end: usize,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        begin: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        end: Option<usize>,
         #[serde(rename = "chunkSize")]
         chunk_size: usize,
     },

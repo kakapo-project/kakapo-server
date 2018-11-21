@@ -4,8 +4,7 @@
     <list default="true" id="4f6815eb-c4cf-48ec-858b-4894b1829bc5" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model/api.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/api.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/manage.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/manage.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model/table.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/table.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model/data.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/model/data.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/view/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/view/handlers.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/view/server.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/view/server.rs" afterDir="false" />
     </list>
@@ -18,11 +17,38 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="server.rs" pinned="false" current-in-tab="false">
+      <file leaf-file-name="server.rs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/view/server.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="735">
-              <caret line="236" column="45" selection-start-line="236" selection-start-column="45" selection-end-line="236" selection-end-column="45" />
+            <state relative-caret-position="527">
+              <caret line="83" column="22" lean-forward="true" selection-start-line="83" selection-start-column="22" selection-end-line="83" selection-end-column="22" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="handler.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/actix-0.7.6/src/handler.rs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="294">
+              <caret line="39" column="23" selection-start-line="39" selection-start-column="23" selection-end-line="39" selection-end-column="23" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="mod.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/actix-0.7.6/src/address/mod.rs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="294">
+              <caret line="122" column="24" selection-start-line="122" selection-start-column="8" selection-end-line="122" selection-end-column="24" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="main.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main.rs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="417">
+              <caret line="58" selection-start-line="58" selection-end-line="58" />
             </state>
           </provider>
         </entry>
@@ -30,8 +56,8 @@
       <file leaf-file-name="api.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/model/api.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="435">
-              <caret line="61" column="64" selection-start-line="61" selection-start-column="64" selection-end-line="61" selection-end-column="64" />
+            <state relative-caret-position="105">
+              <caret line="7" column="16" selection-start-line="7" selection-start-column="16" selection-end-line="7" selection-end-column="16" />
               <folding>
                 <element signature="e#1279#1280#0" expanded="true" />
                 <element signature="e#1317#1318#0" expanded="true" />
@@ -40,43 +66,20 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="manage.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/manage.rs">
+      <file leaf-file-name="data.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/model/data.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="107">
-              <caret line="502" column="43" selection-start-line="502" selection-start-column="43" selection-end-line="502" selection-end-column="43" />
+            <state relative-caret-position="425">
+              <caret line="74" column="1" selection-start-line="74" selection-start-column="1" selection-end-line="74" selection-end-column="1" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="schema.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/schema.rs">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file leaf-file-name="table.rs" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/model/table.rs">
+      <file leaf-file-name="session.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/view/session.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="410">
-              <caret line="72" column="8" selection-start-line="72" selection-start-column="8" selection-end-line="72" selection-end-column="8" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="mod.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/mod.rs">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file leaf-file-name="mod.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/database/mod.rs">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="497">
-              <caret line="342" selection-start-line="342" selection-end-line="342" />
-              <folding>
-                <element signature="e#4570#4571#0" expanded="true" />
-                <element signature="e#4621#4622#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="135">
+              <caret line="9" column="11" selection-start-line="9" selection-start-column="11" selection-end-line="9" selection-end-column="11" />
             </state>
           </provider>
         </entry>
@@ -84,26 +87,26 @@
       <file leaf-file-name="handlers.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/view/handlers.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="197">
-              <caret line="83" column="84" selection-start-line="83" selection-start-column="84" selection-end-line="83" selection-end-column="84" />
+            <state relative-caret-position="230">
+              <caret line="72" column="53" selection-start-line="72" selection-start-column="16" selection-end-line="72" selection-end-column="53" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="up.sql" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/migrations/2018-10-04-133230_create_meta_tables/up.sql">
+      <file leaf-file-name="lib.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.33/src/lib.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="477">
-              <caret line="84" selection-start-line="84" selection-end-line="84" />
+            <state relative-caret-position="227">
+              <caret line="379" selection-start-line="379" selection-end-line="379" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="connection.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/model/connection.rs">
+      <file leaf-file-name="state.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/view/state.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="452">
-              <caret line="37" column="1" selection-start-line="37" selection-start-column="1" selection-end-line="37" selection-end-column="1" />
+            <state relative-caret-position="165">
+              <caret line="11" column="1" selection-start-line="11" selection-start-column="1" selection-end-line="11" selection-end-column="1" />
             </state>
           </provider>
         </entry>
@@ -119,11 +122,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>Schema</find>
-      <find>AsyncResponse</find>
-      <find>AppState</find>
-      <find>GetTableDataIssu</find>
-      <find>BrokerMsg</find>
       <find>Actor</find>
       <find>TableSession</find>
       <find>::new</find>
@@ -145,10 +143,15 @@
       <find>upsert_rows</find>
       <find>insert_table_data</find>
       <find>&amp;conn</find>
-      <find>ActixError</find>
-      <find>GetTableData</find>
       <find>conn</find>
       <find>table_schema::</find>
+      <find>Null</find>
+      <find>ActixError</find>
+      <find>to_string</find>
+      <find>to_value</find>
+      <find>Option&lt;</find>
+      <find>GetTableData</find>
+      <find>GetTable</find>
     </findStrings>
     <dirStrings>
       <dir>$PROJECT_DIR$/</dir>
@@ -171,7 +174,6 @@
         <option value="$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/column.rs" />
         <option value="$PROJECT_DIR$/src/database/mod.rs" />
         <option value="$PROJECT_DIR$/src/model/mod.rs" />
-        <option value="$PROJECT_DIR$/src/model/data.rs" />
         <option value="$PROJECT_DIR$/src/view/issuer_handlers.rs" />
         <option value="$PROJECT_DIR$/src/view/mod.rs" />
         <option value="$PROJECT_DIR$/Cargo.toml" />
@@ -180,17 +182,18 @@
         <option value="$PROJECT_DIR$/src/view/router.rs" />
         <option value="$PROJECT_DIR$/src/model/connection.rs" />
         <option value="$PROJECT_DIR$/src/model/database/mod.rs" />
-        <option value="$PROJECT_DIR$/src/view/server.rs" />
-        <option value="$PROJECT_DIR$/src/view/handlers.rs" />
-        <option value="$PROJECT_DIR$/src/model/api.rs" />
         <option value="$PROJECT_DIR$/src/model/manage.rs" />
         <option value="$PROJECT_DIR$/src/model/table.rs" />
+        <option value="$PROJECT_DIR$/src/view/handlers.rs" />
+        <option value="$PROJECT_DIR$/src/model/data.rs" />
+        <option value="$PROJECT_DIR$/src/model/api.rs" />
+        <option value="$PROJECT_DIR$/src/view/server.rs" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-586" />
-    <option name="y" value="-4" />
+    <option name="x" value="2275" />
+    <option name="y" value="-26" />
     <option name="width" value="1857" />
     <option name="height" value="1071" />
   </component>
@@ -379,7 +382,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="64" y="-4" width="1857" height="1085" extended-state="6" />
+    <frame x="1984" y="-4" width="1857" height="1085" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -439,23 +442,6 @@
     </ignored-roots>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/lib.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="225">
-          <caret line="19" selection-start-line="19" selection-end-line="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/dependencies/diesel_dynamic_schema/src/dummy_expression.rs">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/r2d2-0.8.2/src/lib.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="7950">
-          <caret line="554" column="11" selection-start-line="554" selection-start-column="11" selection-end-line="554" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/pq-sys-0.4.6/src/lib.rs">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="234">
@@ -596,51 +582,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="377">
-          <caret line="56" column="29" selection-start-line="56" selection-start-column="29" selection-end-line="56" selection-end-column="29" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/state.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="315">
-          <caret line="21" selection-start-line="21" selection-end-line="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/mod.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="30">
-          <caret line="2" column="16" selection-start-line="2" selection-start-column="8" selection-end-line="2" selection-end-column="16" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/view/router.rs" />
-    <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/actix-web-0.7.14/src/error.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="185">
-          <caret line="167" column="42" selection-start-line="167" selection-start-column="35" selection-end-line="167" selection-end-column="42" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/session.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="135">
-          <caret line="9" column="11" selection-start-line="9" selection-start-column="11" selection-end-line="9" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/model/dependencies.rs">
       <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/data.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="257">
-          <caret line="137" column="19" selection-start-line="137" selection-start-column="19" selection-end-line="137" selection-end-column="19" />
-        </state>
-      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/model/schema.rs">
       <provider selected="true" editor-type-id="text-editor" />
@@ -673,24 +617,52 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/server.rs">
+    <entry file="file://$PROJECT_DIR$/src/model/table.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="735">
-          <caret line="236" column="45" selection-start-line="236" selection-start-column="45" selection-end-line="236" selection-end-column="45" />
+        <state relative-caret-position="180">
+          <caret line="75" selection-start-line="75" selection-end-line="75" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/view/handlers.rs">
+    <entry file="file://$PROJECT_DIR$/src/model/manage.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="197">
-          <caret line="83" column="84" selection-start-line="83" selection-start-column="84" selection-end-line="83" selection-end-column="84" />
+        <state relative-caret-position="302">
+          <caret line="515" column="66" selection-start-line="515" selection-start-column="66" selection-end-line="515" selection-end-column="66" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/mod.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="30">
+          <caret line="2" column="16" selection-start-line="2" selection-start-column="8" selection-end-line="2" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/state.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="165">
+          <caret line="11" column="1" selection-start-line="11" selection-start-column="1" selection-end-line="11" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="417">
+          <caret line="58" selection-start-line="58" selection-end-line="58" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.33/src/lib.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="227">
+          <caret line="379" selection-start-line="379" selection-end-line="379" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/model/api.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="435">
-          <caret line="61" column="64" selection-start-line="61" selection-start-column="64" selection-end-line="61" selection-end-column="64" />
+        <state relative-caret-position="105">
+          <caret line="7" column="16" selection-start-line="7" selection-start-column="16" selection-end-line="7" selection-end-column="16" />
           <folding>
             <element signature="e#1279#1280#0" expanded="true" />
             <element signature="e#1317#1318#0" expanded="true" />
@@ -698,17 +670,52 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/manage.rs">
+    <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/actix-web-0.7.14/src/error.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="107">
-          <caret line="502" column="43" selection-start-line="502" selection-start-column="43" selection-end-line="502" selection-end-column="43" />
+        <state relative-caret-position="245">
+          <caret line="133" column="40" lean-forward="true" selection-start-line="133" selection-start-column="40" selection-end-line="133" selection-end-column="40" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/model/table.rs">
+    <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/actix-0.7.6/src/address/mod.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="410">
-          <caret line="72" column="8" selection-start-line="72" selection-start-column="8" selection-end-line="72" selection-end-column="8" />
+        <state relative-caret-position="294">
+          <caret line="122" column="24" selection-start-line="122" selection-start-column="8" selection-end-line="122" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/model/data.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="425">
+          <caret line="74" column="1" selection-start-line="74" selection-start-column="1" selection-end-line="74" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/actix-0.7.6/src/handler.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="39" column="23" selection-start-line="39" selection-start-column="23" selection-end-line="39" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/handlers.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="230">
+          <caret line="72" column="53" selection-start-line="72" selection-start-column="16" selection-end-line="72" selection-end-column="53" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/session.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="135">
+          <caret line="9" column="11" selection-start-line="9" selection-start-column="11" selection-end-line="9" selection-end-column="11" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/view/server.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="527">
+          <caret line="83" column="22" lean-forward="true" selection-start-line="83" selection-start-column="22" selection-end-line="83" selection-end-column="22" />
         </state>
       </provider>
     </entry>

@@ -61,6 +61,19 @@ pub enum TableData {
     },
 }
 
+
+impl RowData {
+    pub fn into_table_data(self) -> TableData {
+        match self {
+            RowData::RowData(x) => TableData::RowsData(vec![x]),
+            RowData::RowsFlatData { columns, data } => TableData::RowsFlatData {
+                columns: columns,
+                data: vec![data],
+            },
+        }
+    }
+}
+
 impl TableData {
     fn get_rows_data_from_rows_flat_data(columns: Vec<String>, data: Vec<Vec<Value>>) -> Vec<BTreeMap<String, Value>>{
         data.iter().map(|row| {

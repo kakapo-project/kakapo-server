@@ -48,7 +48,57 @@ impl ResponseError for api::Error {
     }
 }
 
+fn http_response<M: Message<Result = Result<serde_json::Value, api::Error>>>
+    (state: &AppState, msg: M) -> AsyncResponse
+where
+    M: Send + 'static,
+    M::Result: Send,
+    DatabaseExecutor: Handler<M>,
+{
+    let conn = &state.db_connection;
+    conn
+        .send(msg)
+        .from_err()
+        .and_then(|res| {
+            let unwrapped_result = res?;
+            println!("final result: {:?}", &unwrapped_result);
+            let ok_result = serde_json::to_string(&unwrapped_result)?;
+            Ok(
+                HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(ok_result)
+            )
+        })
+        .responder()
+}
 
+
+fn websocket_response<M: Message<Result = Result<serde_json::Value, api::Error>>>
+    (ctx: &mut ws::WebsocketContext<TableSession, AppState>, msg: M)
+where
+    M: Send + 'static,
+    M::Result: Send,
+    DatabaseExecutor: Handler<M>,
+{
+    ctx.state()
+        .db_connection
+        .send(msg)
+        .wait()
+        .or_else(|err| Err(api::Error::TooManyConnections))
+        .and_then(|res| {
+            let unwrapped_result = res?;
+            println!("final result: {:?}", &unwrapped_result);
+            let ok_result = serde_json::to_string(&unwrapped_result)
+                .or_else(|err| Err(api::Error::SerializationError))?;
+
+            ctx.text(ok_result);
+            Ok(())
+        })
+        .or_else(|err| {
+            println!("encountered error: {:?}", &err);
+            Err(err)
+        });
+}
 
 
 // getting
@@ -68,72 +118,39 @@ struct GetTable {
     pub detailed: bool,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GetTableData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<usize>,
+}
+
 
 fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncResponse {
-    let conn = &state.db_connection;
-
     println!("received message: {:?}", &query);
-    conn.send(handlers::GetTables {
+    http_response(&state,handlers::GetTables {
         detailed: query.detailed,
         show_deleted: query.show_deleted,
     })
-        .from_err()
-        .and_then(|res| {
-            let unwrapped_result = res?;
-            println!("final result: {:?}", &unwrapped_result);
-            let ok_result = serde_json::to_string(&unwrapped_result)?;
-            Ok(
-                HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(ok_result)
-            )
-        })
-        .responder()
 }
 
 
 
 fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
-    let conn = &state.db_connection;
-
     println!("received message: {:?}", &json);
-    conn.send(handlers::CreateTable {
+    http_response(&state,handlers::CreateTable {
         reqdata: json.into_inner()
     })
-        .from_err()
-        .and_then(|res| {
-            let unwrapped_result = res?;
-            println!("final result: {:?}", &unwrapped_result);
-            let ok_result = serde_json::to_string(&unwrapped_result)?;
-            Ok(
-                HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(ok_result)
-            )
-        })
-        .responder()
 }
 
 fn get_table((state, path, query): (State<AppState>, Path<String>, Query<GetTable>)) -> AsyncResponse {
-    let conn = &state.db_connection;
-
     println!("received message: {:?}", &query);
-    conn.send(handlers::GetTable {
+    http_response(&state,handlers::GetTable {
         name: path.to_string(),
         detailed: query.detailed,
     })
-        .from_err()
-        .and_then(|res| {
-            let unwrapped_result = res?;
-            println!("final result: {:?}", &unwrapped_result);
-            let ok_result = serde_json::to_string(&unwrapped_result)?;
-            Ok(
-                HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(ok_result)
-            )
-        })
-        .responder()
 }
 
 fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
@@ -154,47 +171,23 @@ fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse
     )).responder()
 }
 
-fn get_table_data((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
-    let conn = &state.db_connection;
-
-    conn.send(handlers::GetTableData {
+fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableData>)) -> AsyncResponse {
+    println!("received message: {:?}", &query);
+    http_response(&state,handlers::GetTableData {
         name: path.to_string(),
+        start: query.start,
+        end: query.end,
     })
-        .from_err()
-        .and_then(|res| {
-            let unwrapped_result = res?;
-            println!("final result: {:?}", &unwrapped_result);
-            let ok_result = serde_json::to_string(&unwrapped_result)?;
-            Ok(
-                HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(ok_result)
-            )
-        })
-        .responder()
 }
 
 fn post_table_data((state, path, json): (State<AppState>, Path<String>, Json<api::TableData>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
     //TODO: on duplicate - update (default), ignore, fail
     //TODO: implement
-    let conn = &state.db_connection;
-
-    conn.send(handlers::InsertTableData {
+    http_response(&state,handlers::InsertTableData {
         name: path.to_string(),
         data: json.into_inner(),
     })
-        .from_err()
-        .and_then(|res| {
-            let unwrapped_result = res?;
-            println!("final result: {:?}", &unwrapped_result);
-            let ok_result = serde_json::to_string(&unwrapped_result)?;
-            Ok(
-                HttpResponse::Ok()
-                    .content_type("application/json")
-                    .body(ok_result)
-            )
-        })
-        .responder()
 }
 
 fn put_table_data((state, path, json): (State<AppState>, Path<(String, String)>, Json<u32>)) -> AsyncResponse {
@@ -221,40 +214,39 @@ impl TableSession {
     fn handle_action(&self, ctx: &mut <Self as Actor>::Context, table_session_request: api::TableSessionRequest) {
         match table_session_request {
             api::TableSessionRequest::GetTable => {
-            },
-            api::TableSessionRequest::GetAllTableData { begin, chunk_size } => {
-                println!("starting...");
-                //send to handler
-                let result = ctx.state().db_connection
-                    .send(handlers::GetTableData {
-                        name: self.table_name.to_string(),
-                    })
-                    .or_else(|err| Err(api::Error::TooManyConnections))
-                    .and_then(|res| {
-                        let unwrapped_result = res?;
-                        println!("final result: {:?}", &unwrapped_result);
-                        let ok_result = serde_json::to_string(&unwrapped_result)
-                            .or_else(|err| Err(api::Error::SerializationError))?;
-
-                        ctx.text(ok_result);
-                        Ok(())
-                    })
-                    .or_else(|err| {
-                        println!("encountered error: {:?}", &err);
-                        Err(err)
-                    })
-                    .wait();
-
+                websocket_response(ctx, handlers::GetTable {
+                    name: self.table_name.to_string(),
+                    detailed: false,
+                })
             },
             api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
+                websocket_response(ctx, handlers::GetTableData {
+                    name: self.table_name.to_string(),
+                    start: begin,
+                    end: end,
+                })
             },
             api::TableSessionRequest::Create(row) => {
+                websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
+                    name: self.table_name.to_string(),
+                    data: row.into_table_data()
+                })
             },
             api::TableSessionRequest::Update(row) => {
+                websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
+                    name: self.table_name.to_string(),
+                    data: row.into_table_data()
+                })
             },
             api::TableSessionRequest::Delete(index) => {
+                //TODO: implement me
+                websocket_response(ctx, handlers::GetTable {
+                    name: self.table_name.to_string(),
+                    detailed: false,
+                })
             },
-        }
+        };
+
     }
 
 }
