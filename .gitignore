@@ -4,6 +4,8 @@ www/
 
 .env
 
+/.idea/workspace.xml
+
 
 # dependencies
 /node_modules

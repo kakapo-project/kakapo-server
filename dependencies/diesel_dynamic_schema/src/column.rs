@@ -147,7 +147,7 @@ impl DynamicValueType {
     }
 
     pub fn encode(value: &DynamicValue) -> Result<(DynamicValueType, Vec<u8>)> {
-        let mut bytes: Vec<u8> = vec![];
+        let bytes: Vec<u8> = vec![];
         let mut output: Output<Vec<u8>, Pg> = Output::new(bytes, unsafe { mem::uninitialized() }); //TODO: should this be uninitialized
         let result = match value {
             DynamicValue::Integer(x) => {

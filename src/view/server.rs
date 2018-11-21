@@ -1,16 +1,13 @@
 
 use actix::prelude::*;
 
-use actix::Arbiter;
 use actix_broker::{BrokerIssue, BrokerSubscribe};
 use actix_web::{
     App, AsyncResponder, Error as ActixError, FromRequest,
     dev::JsonConfig, error, http, http::header::DispositionType, http::NormalizePath, middleware,
-    server, HttpMessage, HttpRequest, HttpResponse, fs, fs::{NamedFile, StaticFileConfig, StaticFiles},
+    HttpMessage, HttpRequest, HttpResponse, fs, fs::{NamedFile, StaticFileConfig, StaticFiles},
     Json, Path, Query, ResponseError, Responder, State, ws,
 };
-
-use bytes::{Bytes, BytesMut};
 
 use env_logger::{Builder, Target};
 
