@@ -28,7 +28,7 @@ impl Handler<CreateTable> for DatabaseExecutor {
     type Result = Result<api::CreateTableResult, api::Error>;
 
     fn handle(&mut self, msg: CreateTable, _: &mut Self::Context) -> Self::Result {
-        manage::create_table(self.get_connection(), msg.reqdata)
+        manage::create_table(&self.get_connection(), msg.reqdata)
     }
 }
 
@@ -46,7 +46,7 @@ impl Handler<GetTables> for DatabaseExecutor {
     type Result = Result<api::GetTablesResult, api::Error>;
 
     fn handle(&mut self, msg: GetTables, _: &mut Self::Context) -> Self::Result {
-        manage::get_tables(self.get_connection(), msg.detailed, msg.show_deleted)
+        manage::get_tables(&self.get_connection(), msg.detailed, msg.show_deleted)
     }
 }
 
@@ -64,7 +64,7 @@ impl Handler<GetTable> for DatabaseExecutor {
     type Result = Result<api::GetTableResult, api::Error>;
 
     fn handle(&mut self, msg: GetTable, _: &mut Self::Context) -> Self::Result {
-        manage::get_table(self.get_connection(), msg.name, msg.detailed)
+        manage::get_table(&self.get_connection(), msg.name, msg.detailed)
     }
 }
 
@@ -82,7 +82,7 @@ impl Handler<GetTableData> for DatabaseExecutor {
     type Result = <GetTableData as Message>::Result;
 
     fn handle(&mut self, msg: GetTableData, _: &mut Self::Context) -> Self::Result {
-        table::get_table_data(self.get_connection(), msg.name)
+        table::get_table_data(&self.get_connection(), msg.name)
     }
 }
 
@@ -100,6 +100,6 @@ impl Handler<InsertTableData> for DatabaseExecutor {
     type Result = Result<api::InsertTableDataResult, api::Error>;
 
     fn handle(&mut self, msg: InsertTableData, _: &mut Self::Context) -> Self::Result {
-        table::insert_table_data(self.get_connection(), msg.name, msg.data)
+        table::insert_table_data(&self.get_connection(), msg.name, msg.data)
     }
 }

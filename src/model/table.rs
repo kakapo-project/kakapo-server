@@ -48,7 +48,7 @@ fn get_table(
 }
 
 pub fn get_table_data(
-    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String,
     //TODO: Better SQL query functionality, i.e. filter, ...
     //TODO: Add output format: indexed, rows (default), columns, schema
@@ -56,10 +56,8 @@ pub fn get_table_data(
 
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
 
-        println!("ok, in the transaction");
-
-        let table = get_table(&conn, table_name)?;
-        let data = database::get_all_rows(&conn, &table)?;
+        let table = get_table(conn, table_name)?;
+        let data = database::get_all_rows(conn, &table)?;
         let formatted_data = data.into_rows_data(); //TODO: this is where the magic happens to transform into different output format types
 
         let table_with_data = data::TableWithData {
@@ -69,7 +67,10 @@ pub fn get_table_data(
 
         Ok(table_with_data)
 
-    }).or_else(|err| Err(api::Error::DatabaseError(err)))?;
+    }).or_else(|err| match err {
+        diesel::result::Error::NotFound => Err(api::Error::TableNotFound),
+        _ => Err(api::Error::DatabaseError(err)),
+    })?;
 
     println!("final result: {:?}", result);
 
@@ -78,15 +79,15 @@ pub fn get_table_data(
 
 
 pub fn insert_table_data(
-    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String,
     table_data: api::TableData,
     //TODO: Add output format: indexed, rows (default), columns, schema
 ) -> Result<api::InsertTableDataResult, api::Error> {
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
 
-        let table = get_table(&conn, table_name)?;
-        let data = database::upsert_rows(&conn, &table, table_data)?;
+        let table = get_table(conn, table_name)?;
+        let data = database::upsert_rows(conn, &table, table_data)?;
         let formatted_data = data.into_rows_data(); //TODO: this is where the magic happens to transform into different output format types
 
         Ok(formatted_data)

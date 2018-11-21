@@ -218,11 +218,33 @@ fn delete_table_data((state, path): (State<AppState>, Path<(String, String)>)) -
 
 impl TableSession {
 
-    fn handle_action(&self, ctx: &mut <Self as Actor>::Context, table_session_request: api::TableSessionRequest) -> () {
+    fn handle_action(&self, ctx: &mut <Self as Actor>::Context, table_session_request: api::TableSessionRequest) {
         match table_session_request {
             api::TableSessionRequest::GetTable => {
             },
             api::TableSessionRequest::GetAllTableData { begin, chunk_size } => {
+                println!("starting...");
+                //send to handler
+                let result = ctx.state().db_connection
+                    .send(handlers::GetTableData {
+                        name: self.table_name.to_string(),
+                    })
+                    .or_else(|err| Err(api::Error::TooManyConnections))
+                    .and_then(|res| {
+                        let unwrapped_result = res?;
+                        println!("final result: {:?}", &unwrapped_result);
+                        let ok_result = serde_json::to_string(&unwrapped_result)
+                            .or_else(|err| Err(api::Error::SerializationError))?;
+
+                        ctx.text(ok_result);
+                        Ok(())
+                    })
+                    .or_else(|err| {
+                        println!("encountered error: {:?}", &err);
+                        Err(err)
+                    })
+                    .wait();
+
             },
             api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
             },
@@ -238,29 +260,10 @@ impl TableSession {
 }
 
 
-pub struct Test {
-    pub name: String,
-}
-
-impl Message for Test {
-    type Result = Result<String, api::Error>;
-}
-
-impl Handler<Test> for DatabaseExecutor {
-    type Result = Result<String, api::Error>;
-
-    fn handle(&mut self, msg: Test, _: &mut Self::Context) -> Self::Result {
-        println!("got a message! {}", msg.name);
-
-        Ok("ok".to_string())
-    }
-}
-
 impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
             ws::Message::Text(text) => {
-                /*
                 // parse json
                 serde_json::from_str(&text)
                     .or_else::<serde_json::error::Error, _>(|err| {
@@ -273,15 +276,6 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
                         self.handle_action(ctx, table_session_request);
                         Ok(())
                     });
-                */
-                println!("starting...");
-                //send to handler
-                let res = ctx.state().db_connection
-                    .send(Test {
-                        name: "hi!".to_string(),
-                    })
-                    .wait().unwrap().unwrap();
-                ctx.text(format!("result: {}", &res));
             },
             ws::Message::Close(_) => {
                 ctx.stop();

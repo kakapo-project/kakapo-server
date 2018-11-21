@@ -43,6 +43,9 @@ pub struct InsertTableDataResult(pub data::TableData);
 pub enum Error {
     DatabaseError(diesel::result::Error),
     InvalidStateError,
+    TableNotFound,
+    TooManyConnections,
+    SerializationError,
     UnknownError,
 }
 
@@ -57,6 +60,9 @@ impl std::error::Error for Error {
         match self {
             Error::DatabaseError(x) => x.description(),
             Error::InvalidStateError => "The state of the data is broken",
+            Error::TableNotFound => "Table could not be found",
+            Error::TooManyConnections => "Too many connections, or too many requests",
+            Error::SerializationError => "Could not serialize data",
             Error::UnknownError => "Unknown error",
         }
     }

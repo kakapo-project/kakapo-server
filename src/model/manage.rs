@@ -335,7 +335,7 @@ fn get_modification_commits(
     table_schema: &TableSchema
 ) -> Result<Vec<data::SchemaModificationCommit>, diesel::result::Error> {
 
-    let table_history_items = get_table_history_items(&conn, &table_schema)?;
+    let table_history_items = get_table_history_items(conn, &table_schema)?;
     let modification_commits = parse_table_history_items_to_modification_commits(&table_history_items)?;
 
     Ok(modification_commits)
@@ -347,7 +347,7 @@ pub fn get_single_table(
     table_schema: &TableSchema
 ) -> Result<data::DetailedTable, diesel::result::Error> {
 
-    let table_history_items = get_table_history_items(&conn, &table_schema)?;
+    let table_history_items = get_table_history_items(conn, &table_schema)?;
     let modification_commits = parse_table_history_items_to_modification_commits(&table_history_items)?;
 
     let last_table_history_item = table_history_items.last()
@@ -365,7 +365,7 @@ pub fn get_single_table(
 }
 
 pub fn create_table(
-    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
     post_table: api::PostTable
 ) -> Result<api::CreateTableResult, api::Error> {
 
@@ -376,7 +376,7 @@ pub fn create_table(
 
         let table_schema: TableSchema = table_schema::table
             .filter(table_schema::name.eq(table_name.to_string()))
-            .get_result::<TableSchema>(&conn)
+            .get_result::<TableSchema>(conn)
             .and_then(|result| {
                 println!("table already loaded: {:?}", &result);
                 Ok(result)
@@ -387,20 +387,20 @@ pub fn create_table(
                         scope_id: 1,
                         created_by: user_id,
                     })
-                    .get_result::<Entity>(&conn)?;
+                    .get_result::<Entity>(conn)?;
 
                 let result = insert_into(table_schema::table)
                     .values(&NewTableSchema {
                         entity_id: entity.entity_id,
                         name: table_name.to_string(),
                     })
-                    .get_result::<TableSchema>(&conn)?;
+                    .get_result::<TableSchema>(conn)?;
 
                 println!("new table addedd: {:?}", &result);
                 Ok(result)
             })?;
 
-        let previous_modifications = get_modification_commits(&conn, &table_schema)?;
+        let previous_modifications = get_modification_commits(conn, &table_schema)?;
         let (previouse_schema_state, previous_modification) = unroll_modification_commits(previous_modifications)
             .or_else(|err| {
                 Err(Error::SerializationError(Box::new(err.compat())))
@@ -408,7 +408,7 @@ pub fn create_table(
         let new_modification: data::SchemaModification = post_table.action;
 
         let new_schema_state = update_migration(
-            &conn,
+            conn,
             table_name.to_string(),
             previouse_schema_state,
             previous_modification,
@@ -426,7 +426,7 @@ pub fn create_table(
                 modification: json_schema_action,
                 modified_by: user_id,
             })
-            .get_result::<TableSchemaHistory>(&conn)?;
+            .get_result::<TableSchemaHistory>(conn)?;
 
         println!("table_schema:         {:?}", table_schema);
         println!("table_schema_history: {:?}", table_schema_history);
@@ -449,19 +449,19 @@ pub fn create_table(
 
 
 pub fn get_tables(
-    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
     detailed: bool,
     show_deleted: bool,
 ) -> Result<api::GetTablesResult, api::Error> {
 
     let result = conn.transaction::<Vec<data::DetailedTable>, diesel::result::Error, _>(|| {
         let table_schemas: Vec<TableSchema> = table_schema::table
-            .load::<TableSchema>(&conn)?;
+            .load::<TableSchema>(conn)?;
         println!("table schemas: {:?}", table_schemas);
 
         let tables: Vec<data::DetailedTable> = table_schemas.iter()
             .map(|table_schema| {
-                get_single_table(&conn, &table_schema)
+                get_single_table(conn, &table_schema)
             })
             .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
 
@@ -488,7 +488,7 @@ pub fn get_tables(
 }
 
 pub fn get_table(
-    conn: PooledConnection<ConnectionManager<PgConnection>>,
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String,
     detailed: bool,
 ) -> Result<api::GetTableResult, api::Error> {
@@ -496,18 +496,21 @@ pub fn get_table(
     let result = conn.transaction::<data::DetailedTable, diesel::result::Error, _>(|| {
         let table_schema: TableSchema = table_schema::table
             .filter(table_schema::name.eq(table_name))
-            .get_result::<TableSchema>(&conn)?;
+            .get_result::<TableSchema>(conn)?;
         println!("table schema: {:?}", table_schema);
 
 
-        let table: data::DetailedTable = get_single_table(&conn, &table_schema)?;
+        let table: data::DetailedTable = get_single_table(conn, &table_schema)?;
 
         Ok(table)
 
     });
 
     result
-        .or_else(|err| Err(api::Error::DatabaseError(err)))
+        .or_else(|err| match err {
+            diesel::result::Error::NotFound => Err(api::Error::TableNotFound),
+            _ => Err(api::Error::DatabaseError(err)),
+        })
         .and_then(|table| {
             let get_table_result = match detailed {
                 true => api::GetTableResult::DetailedTable(table),
