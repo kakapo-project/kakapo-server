@@ -61,6 +61,7 @@ class Entities extends Component {
 
     return (
       <Segment basic>
+        <Button circular positive icon='plus' floated='right' size='massive' />
         <Transition.Group as={Grid} animation='scale' duration={400} container doubling columns={4} >
           { entities
               .filter( entity => selectedRenderEntities.includes(entity.type))
