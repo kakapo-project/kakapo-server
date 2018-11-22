@@ -36,8 +36,6 @@ mod auth;
 use log::LevelFilter;
 use env_logger::{Builder, Target};
 use clap::{Arg, App, SubCommand};
-use std::env;
-use dotenv::dotenv;
 
 /// Internal dependencies
 use view::server;
@@ -79,8 +77,6 @@ fn main() {
     */
 
     server::serve();
-
-    println!("Started http server: 127.0.0.1:8080");
 
     /// loop
     sys.run();

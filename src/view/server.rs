@@ -9,6 +9,8 @@ use actix_web::{
     Json, Path, Query, ResponseError, Responder, State, ws,
 };
 
+use actix_web::middleware::cors::Cors;
+
 use dotenv::{dotenv};
 use env_logger::{Builder, Target};
 
@@ -324,28 +326,35 @@ pub fn serve() {
 
         App::with_state(state)
             .middleware(middleware::Logger::default())
+            .configure(|app| Cors::for_app(app)
+                .allowed_origin("http://localhost:3000") //TODO: for development
+                .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+                .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                .allowed_header(http::header::CONTENT_TYPE)
+                .max_age(3600)
+                .resource("/api/manage/table", |r| {
+                    r.method(http::Method::GET).with(get_tables);
+                    r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
+                })
+                .resource("/api/manage/table/{table_name}", |r| {
+                    r.method(http::Method::GET).with(get_table);
+                    r.method(http::Method::PUT).with(put_table);
+                    r.method(http::Method::DELETE).with(delete_table);
+                })
+                .resource("/api/table/{table_name}", |r| {
+                    r.method(http::Method::GET).with(get_table_data);
+                    r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg),)| config(cfg));
+                })
+                .resource("/api/table/{table_name}/{id}", |r| {
+                    r.method(http::Method::PUT).with(put_table_data);
+                    r.method(http::Method::DELETE).with(delete_table_data);
+                })
+                .resource("/api/listen/table/{table_name}", |r| {
+                    r.method(http::Method::GET).f(websocket_table_listener)
+                })
+                .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)
-            })
-            .resource("/api/manage/table", |r| {
-                r.method(http::Method::GET).with(get_tables);
-                r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
-            })
-            .resource("/api/manage/table/{table_name}", |r| {
-                r.method(http::Method::GET).with(get_table);
-                r.method(http::Method::PUT).with(put_table);
-                r.method(http::Method::DELETE).with(delete_table);
-            })
-            .resource("/api/table/{table_name}", |r| {
-                r.method(http::Method::GET).with(get_table_data);
-                r.method(http::Method::POST).with(post_table_data);
-            })
-            .resource("/api/table/{table_name}/{id}", |r| {
-                r.method(http::Method::PUT).with(put_table_data);
-                r.method(http::Method::DELETE).with(delete_table_data);
-            })
-            .resource("/api/listen/table/{table_name}", |r| {
-                r.method(http::Method::GET).f(websocket_table_listener)
             })
             .default_resource(|r| r.h(NormalizePath::default()))
             .handler(
@@ -361,4 +370,5 @@ pub fn serve() {
         .shutdown_timeout(1)
         .start();
 
+    println!("Started http server: 127.0.0.1:8080");
 }

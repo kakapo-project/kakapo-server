@@ -36,6 +36,9 @@ Oct 28, Backend
  Devops
  - Different functions
     - Auth controller: main entry point takes the input, authenticates and passes to **Accessor**
+        - also does the websocket/pub-sub management
     - Accessor: handler for each user, one accessor per connected user
     - Docker Manager: not a docker instance, creates accessors on demand
-    - Publisher: manages the pub-sub, each accessor websocket subscribes to publisher
+    - Redis
+    - Postgres
+    - Frontend

@@ -3,83 +3,42 @@
 import React, { Component } from 'react'
 import { Button, Card, Container, Header, Grid, Icon, Image, Menu, Segment, Sidebar, Transition } from 'semantic-ui-react'
 
+import { API_URL } from './config'
 class Entities extends Component {
 
+  state = {
+    entities: []
+  }
+
   getEntities() {
-    return [
-      {
-        name: 'characters',
-        type: 'table',
-        icon: 'users',
-        lastUpdated: 'yesterday',
-        description: 'The list of characters in our game',
-        isBookmarked: true,
-      },
-      {
-        name: 'weapons',
-        type: 'table',
-        icon: 'bomb',
-        lastUpdated: 'yesterday',
-        description: 'The list of weapons in our game',
-        isBookmarked: false,
-      },
-      {
-        name: 'quests',
-        type: 'table',
-        icon: 'exclamation',
-        lastUpdated: 'yesterday',
-        description: 'The list of quests',
-        isBookmarked: false,
-      },
-      {
-        name: 'npcs',
-        type: 'table',
-        icon: 'male',
-        lastUpdated: 'yesterday',
-        description: 'Users',
-        isBookmarked: false,
-      },
-      {
-        name: 'guilds',
-        type: 'table',
-        icon: 'shield',
-        lastUpdated: 'yesterday',
-        description: 'Guilds that the users belongs to',
-        isBookmarked: false,
-      },
-      {
-        name: 'select_characters',
-        type: 'query',
-        icon: 'chevron down',
-        lastUpdated: 'get all character',
-        description: 'The list of quests',
-        isBookmarked: true,
-      },
-      {
-        name: 'insert_characters',
-        type: 'query',
-        icon: 'chevron up',
-        lastUpdated: 'yesterday',
-        description: 'Add new character',
-        isBookmarked: false,
-      },
-      {
-        name: 'run_analytics',
-        type: 'script',
-        icon: 'search',
-        lastUpdated: 'yesterday',
-        description: 'Run weekly script',
-        isBookmarked: false,
-      },
-      {
-        name: 'user_quests',
-        type: 'view',
-        icon: 'pointing right',
-        lastUpdated: 'yesterday',
-        description: 'Join user and quests',
-        isBookmarked: false,
-      },
-    ]
+    return this.state.entities
+  }
+
+  setEntitites(entities) {
+    this.setState({ entities: entities })
+  }
+
+  componentDidMount() {
+    fetch(`${API_URL}/manage/table`)
+      .then(response => {
+        return response.json()
+      })
+      .then(data => {
+        console.log(data)
+        let entities = data.map(x => ({
+          name: x.name,
+          type: 'table',
+          icon: 'search',
+          lastUpdated: 'yesterday',
+          description: x.description,
+          isBookmarked: false,
+        }))
+
+        this.setEntitites(entities)
+      })
+      .catch(err => {
+        console.log('err: ', err.message)
+      })
   }
 
   renderIcon(entity) {
