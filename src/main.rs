@@ -6,6 +6,7 @@ extern crate actix_web;
 extern crate byteorder;
 extern crate bytes;
 extern crate chrono;
+extern crate clap;
 extern crate dotenv;
 #[macro_use]
 extern crate diesel;
@@ -34,12 +35,32 @@ mod auth;
 /// Extenal dependencies
 use log::LevelFilter;
 use env_logger::{Builder, Target};
+use clap::{Arg, App, SubCommand};
+use std::env;
+use dotenv::dotenv;
 
 /// Internal dependencies
 use view::server;
 use model::connection;
 
 fn main() {
+
+    let matches = App::new("Kakapo")
+        .version("0.1.0")
+        .author("Atta Z. <atta.h.zadeh@gmail.com>")
+        .about("Database utility and Crud app creator")
+        .arg(Arg::with_name("Verbosity")
+            .short("v")
+            .long("verbose")
+            .help("Sets the level of verbosity"))
+        .arg(Arg::with_name("Reconfigure")
+            .long("reconfigure")
+            .help("Set up the initial configuration again"))
+        .arg(Arg::with_name("No Auth")
+            .long("no-auth")
+            .help("Do not authenticate user, [WARNING: don't use this in production]"))
+        .get_matches();
+
     std::env::set_var("RUST_LOG", "actix_web=info");
     Builder::new()
         .target(Target::Stdout)

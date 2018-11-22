@@ -9,6 +9,7 @@ use actix_web::{
     Json, Path, Query, ResponseError, Responder, State, ws,
 };
 
+use dotenv::{dotenv};
 use env_logger::{Builder, Target};
 
 use futures::{future::{Future, result}, stream::once};
@@ -25,9 +26,11 @@ use serde;
 use serde_derive;
 use serde_json;
 
-use std::{error::Error, path::PathBuf};
+use std::error::Error;
 use std::result::Result;
 use std::result::Result::Ok;
+use std::path::PathBuf;
+use std::env;
 
 use super::handlers;
 use super::session::TableSession;
@@ -43,6 +46,12 @@ impl ResponseError for api::Error {
             .content_type("application/json")
             .body(serde_json::to_string(&json!({ "error": self.description().to_string() })).unwrap())
     }
+}
+
+fn get_www_path() -> String {
+    dotenv().expect("could not parse dotenv file");
+    let www_path = env::var("WWW_PATH").expect("WWW_PATH must be set");
+    www_path
 }
 
 fn http_response<M: Message<Result = Result<serde_json::Value, api::Error>>>
@@ -283,7 +292,10 @@ fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse,
 
 
 fn index(state: State<AppState>) -> Result<NamedFile, ActixError> {
-    Ok(NamedFile::open("./www/index.html")?)
+    let www_path = get_www_path();
+    let mut path = PathBuf::from(www_path);
+    path.push("index.html");
+    Ok(NamedFile::open(path)?)
 }
 
 fn config(cfg: &mut JsonConfig<AppState>) -> () {
@@ -308,6 +320,7 @@ pub fn serve() {
 
     actix_web::server::new(move || {
         let state = AppState::new(connection.clone(), "Kakapo");
+        let www_path = get_www_path();
 
         App::with_state(state)
             .middleware(middleware::Logger::default())
@@ -337,7 +350,7 @@ pub fn serve() {
             .default_resource(|r| r.h(NormalizePath::default()))
             .handler(
                 "/",
-                fs::StaticFiles::new("./www/")
+                fs::StaticFiles::new(PathBuf::from(www_path))
                     .unwrap()
                     .show_files_listing())
         })
