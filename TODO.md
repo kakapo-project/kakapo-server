@@ -1,7 +1,7 @@
 
 * Dependency inversion for items in `handlers.rs`
 
-Oct 26, Grid Frontend
+Grid Frontend
 - Grid is the frontend for views and tables
 
 - Figure out what other sql function we want to have
@@ -16,12 +16,12 @@ Oct 26, Grid Frontend
 - add button to grid for creating new tables and queries
 - Render background, figure out teletyping
 - Fix slow rendering (too many cells are being rendered)
+- For creating new table: add option for advanced sql features
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
 
-Oct 28, Backend
-- Figure out websocket
+Backend
 - Hook up table creation to websocket
 - Hook up table get data to websocket
 - Hook up table create row to websocket
@@ -34,7 +34,7 @@ Oct 28, Backend
 - plugins:
   - S3
   - airflow
- 
+ - Hook read all tables to websockets
  
  Devops
  - Different functions

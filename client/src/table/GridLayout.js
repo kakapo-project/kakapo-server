@@ -12,17 +12,6 @@ import DataGrid from '../data-grid'
 class GridLayout extends Component {
 
   state = {
-    columnDefs: [
-        {headerName: "Make", field: "make"},
-        {headerName: "Model", field: "model"},
-        {headerName: "Price", field: "price"}
-
-    ],
-    rowData: [
-        {make: "Toyota", model: "Celica", price: 35000},
-        {make: "Ford", model: "Mondeo", price: 32000},
-        {make: "Porsche", model: "Boxter", price: 72000}
-    ]
   }
 
   rows = getRows()
@@ -275,13 +264,7 @@ class GridLayout extends Component {
   render() {
 
     return (
-      <div
-        className="ag-theme-balham"
-        style={{
-          height: '100%',
-          width: '100%',
-        }}
-      >
+      <div>
           <DataGrid
             columns={this.renderColumns()}
             rows={this.renderRows()}

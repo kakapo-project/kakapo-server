@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react'
 import { Button, Card, Container, Dropdown, Header, Grid, Icon, Image, Input, Menu, Modal, Segment, Sidebar, Transition } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
 
 import { CreateEntities } from './CreateEntities'
 
@@ -59,6 +60,19 @@ class Entities extends Component {
     }
   }
 
+  getEntityLink(entity) {
+    switch (entity.type) {
+      case 'query':
+        return `/`
+      case 'view':
+        return '/'
+      case 'table':
+        return `/tables/${entity.name}`
+      case 'script':
+        return '/'
+    }
+  }
+
   render() {
     let selectedRenderEntities = this.props.select
 
@@ -74,7 +88,11 @@ class Entities extends Component {
               .filter( entity => selectedRenderEntities.includes(entity.type))
               .map( (entity, idx) =>
             <Grid.Column key={idx}>
-              <Card>
+              <Card
+                link
+                as={Link}
+                to={this.getEntityLink(entity)}
+              >
                 <Segment textAlign='center' basic>{this.renderIcon(entity)}</Segment>
                 <Card.Content>
                   <Card.Header>{entity.name}</Card.Header>

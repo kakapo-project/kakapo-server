@@ -38,6 +38,8 @@ class Tables extends Component {
   }
 
   render() {
+    const { name } = this.props.match.params
+    console.log('table name: ', name)
     return (
       <div>
         <Header

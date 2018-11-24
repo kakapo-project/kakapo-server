@@ -1,6 +1,7 @@
 
 import React, { Component } from 'react'
 import { Button, Divider, Icon, Image, Menu, Search, Segment, Sidebar } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
 
 import logo from './logo.svg'
 class Header extends Component {
@@ -15,8 +16,25 @@ class Header extends Component {
     return (
       <Segment inverted attached='top' basic style={{border: 0, height: '5em', textAlign: 'bottom'}}>
         <Menu inverted pointing secondary style={{height: '3.1em'}}>
-          <Menu.Item as='a' style={{marginBottom: '-1.35em', marginLeft: '1.65em'}}>
-            <Image src={logo} style={{width: 45, height: 'auto'}} />
+          <style>
+            {`
+              a.home-button {
+                margin-bottom: -1.6em !important;
+                margin-left: 1.42em !important;
+                margin-right: 0.1em !important;
+                width: 6.0em !important;
+                height: auto !important;
+              }
+              a.home-button:hover {
+                margin-bottom: -1.7em !important;
+                margin-left: 1.32em !important;
+                margin-right: 0.0em !important;
+                width: 6.2em !important;
+              }
+            `}
+          </style>
+          <Menu.Item as={Link} className='home-button' to='/'>
+            <Image src={logo} />
           </Menu.Item>
           { this.props.editor && (
             <Menu secondary>
