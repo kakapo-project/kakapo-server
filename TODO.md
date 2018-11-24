@@ -17,6 +17,9 @@ Oct 26, Grid Frontend
 - Render background, figure out teletyping
 - Fix slow rendering (too many cells are being rendered)
 
+Bugs:
+- creating a new table with an old table name, will attempt to append the columns
+
 Oct 28, Backend
 - Figure out websocket
 - Hook up table creation to websocket

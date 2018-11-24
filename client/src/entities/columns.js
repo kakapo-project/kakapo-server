@@ -1,11 +1,11 @@
 
 
-const DEFAULT_TYPE = 'Text'
+const DEFAULT_TYPE = 'string'
 
 const ALL_TYPES = [
-  'Text',
-  'Number',
-  'JSON'
+  'string',
+  'integer',
+  'json'
 ]
 
 export { DEFAULT_TYPE, ALL_TYPES }

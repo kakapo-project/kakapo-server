@@ -20,27 +20,30 @@ class Entities extends Component {
     this.setState({ entities: entities })
   }
 
-  componentDidMount() {
+  pullData() {
     fetch(`${API_URL}/manage/table`)
-      .then(response => {
-        return response.json()
-      })
-      .then(data => {
-        console.log(data)
-        let entities = data.map(x => ({
-          name: x.name,
-          type: 'table',
-          icon: 'search',
-          lastUpdated: 'yesterday',
-          description: x.description,
-          isBookmarked: false,
-        }))
+    .then(response => {
+      return response.json()
+    })
+    .then(data => {
+      let entities = data.map(x => ({
+        name: x.name,
+        type: 'table',
+        icon: 'search',
+        lastUpdated: 'yesterday',
+        description: x.description,
+        isBookmarked: false,
+      }))
 
-        this.setEntitites(entities)
-      })
-      .catch(err => {
-        console.log('err: ', err.message)
-      })
+      this.setEntitites(entities)
+    })
+    .catch(err => {
+      console.log('err: ', err.message)
+    })
+  }
+
+  componentDidMount() {
+    this.pullData()
   }
 
   renderIcon(entity) {
@@ -64,7 +67,7 @@ class Entities extends Component {
     return (
       <Segment basic>
 
-        <CreateEntities />
+        <CreateEntities onCreated={() => this.pullData()}/>
 
         <Transition.Group as={Grid} animation='scale' duration={400} container doubling columns={4} >
           { entities

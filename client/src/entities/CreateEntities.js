@@ -57,14 +57,28 @@ const ColumnItem = (props) => (
   </Grid.Row>
 )
 
+const ErrorMsg = (props) => (
+  <Modal size='tiny' open={console.log('error props: ', props) || (props.error !== null)} onClose={() => props.onClose()}>
+    <Modal.Header>Error Occurred</Modal.Header>
+    <Modal.Content>
+      <p>{props.error}</p>
+    </Modal.Content>
+    <Modal.Actions>
+      <Button negative onClick={() => props.onClose()}>Continue</Button>
+    </Modal.Actions>
+  </Modal>
+)
+
 const getAllKeys = (obj) => Object.keys(obj).map(x => parseInt(x))
 
 class CreateEntities extends Component {
 
   initialState = {
+    name: null,
     columns: { 0: null },
     creatingEntities: false,
     primaryKey: 0,
+    error: null,
   }
 
   state = { ...this.initialState }
@@ -73,9 +87,96 @@ class CreateEntities extends Component {
     this.setState({ creatingEntities: true })
   }
 
-  handleCreatedEntities() {
-    console.log(this.state)
-    this.setState({ ...this.initialState })
+  handleCreationError(errorMsg) {
+    errorMsg = errorMsg || 'Unknown error occurred'
+    console.log(`err: ${errorMsg}`)
+    this.setState({ error: errorMsg })
+  }
+
+  closeErrorMessage() {
+    this.setState({ error: null })
+  }
+
+  commitChanges(callback, errorCallback) {
+    let data = this.state
+    if (!data.name) {
+      errorCallback('No table name given')
+      return
+    }
+    let columnsObj = data.columns
+    let primaryKeyColumn = columnsObj[data.primaryKey]
+    if (!primaryKeyColumn || !primaryKeyColumn.name) {
+      errorCallback('Primary key is empty')
+      return
+    }
+
+    let columnIdx = getAllKeys(columnsObj)
+    columnIdx.sort()
+    let columns = columnIdx
+      .map(idx => columnsObj[idx])
+      .filter(x => x !== null)
+    for (let column of columns) {
+      if (!column.name) {
+        errorCallback('column is empty')
+        return
+      }
+    }
+    //parse data
+    let postData = {
+      name: `${data.name}`,
+      description: '',
+      action: {
+        type: 'create',
+        columns: columns.map(x => (
+          {
+            name: x.name,
+            dataType: x.typeName || DEFAULT_TYPE
+          }
+        )),
+        constraint: [
+          {
+            key: primaryKeyColumn.name
+          }
+        ]
+      }
+    }
+
+    //send
+    fetch(`${API_URL}/manage/table`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify(postData),
+    })
+      .then(response => {
+        return response.json()
+      })
+      .then(data => {
+        console.log('finished sending data')
+        console.log(data)
+        if (data.error) { //For some reason it returned an error message, but it was a 200 http code
+          errorCallback(data.error)
+        } else {
+          callback()
+        }
+      })
+      .catch(data => {
+        errorCallback(data && data.error)
+      })
+  }
+
+  handleCreatedEntities(commitChanges = false) {
+    if (commitChanges) {
+      this.commitChanges(() => {
+        this.setState({ ...this.initialState })
+        this.props.onCreated()
+      }, (err) => {
+        this.handleCreationError(err)
+      })
+    } else {
+      this.setState({ ...this.initialState })
+    }
   }
 
   isCreatingEntites() {
@@ -191,6 +292,14 @@ class CreateEntities extends Component {
     this.setState({ columns: columns, primaryKey: primaryKey })
   }
 
+  getTableName() {
+    return this.state.name
+  }
+
+  setTableName(name) {
+    this.setState({ name: name })
+  }
+
   render() {
 
     return (
@@ -209,10 +318,23 @@ class CreateEntities extends Component {
       >
         <Header icon='database' content='Create New Table' />
         <Modal.Content>
-          <Button
-            positive
-            onClick={e =>this.addColumn()}
-          >Add Column</Button>
+          <ErrorMsg error={this.state.error} onClose={() => this.closeErrorMessage()}/>
+          <Grid>
+            <Grid.Column floated='left' width={10}>
+              <Button
+                positive
+                onClick={e =>this.addColumn()}
+              >Add Column</Button>
+            </Grid.Column>
+            <Grid.Column width={6}>
+              <Input
+                placeholder='Table Name'
+                fluid
+                value={this.getTableName()}
+                onChange={(e, data) => this.setTableName(data.value)}
+                />
+            </Grid.Column>
+          </Grid>
           <Divider hidden/>
           <Grid>
             {
@@ -232,13 +354,14 @@ class CreateEntities extends Component {
             }
           </Grid>
 
+          <Divider hidden/>
+          <Divider />
+          <Divider hidden/>
 
-        </Modal.Content>
-        <Modal.Actions>
-          <Button color='green' onClick={e => this.handleCreatedEntities()} inverted>
+          <Button color='green' onClick={e => this.handleCreatedEntities(true)} inverted floated='right'>
             <Icon name='checkmark' />Create
           </Button>
-        </Modal.Actions>
+        </Modal.Content>
       </Modal>
     )
   }
