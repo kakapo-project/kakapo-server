@@ -128,12 +128,22 @@ struct GetTable {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct GetTableData {
+struct GetTableDataQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<usize>,
+    #[serde(default)]
+    pub format: api::TableDataFormat,
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct InsertTableDataQuery {
+    #[serde(default)]
+    pub format: api::TableDataFormat,
+}
+
 
 
 fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncResponse {
@@ -179,22 +189,24 @@ fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse
     )).responder()
 }
 
-fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableData>)) -> AsyncResponse {
+fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
     http_response(&state,handlers::GetTableData {
         name: path.to_string(),
         start: query.start,
         end: query.end,
+        format: query.format,
     })
 }
 
-fn post_table_data((state, path, json): (State<AppState>, Path<String>, Json<api::TableData>)) -> AsyncResponse {
+fn post_table_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::TableData>, Query<InsertTableDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     //TODO: on duplicate - update (default), ignore, fail
     //TODO: implement
     http_response(&state,handlers::InsertTableData {
         name: path.to_string(),
         data: json.into_inner(),
+        format: query.format,
     })
 }
 
@@ -232,18 +244,21 @@ impl TableSession {
                     name: self.table_name.to_string(),
                     start: begin,
                     end: end,
+                    format: api::FlatTableDataFormat,
                 })
             },
             api::TableSessionRequest::Create(row) => {
                 websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
-                    data: row.into_table_data()
+                    data: row.into_table_data(),
+                    format: api::FlatTableDataFormat,
                 })
             },
             api::TableSessionRequest::Update(row) => {
                 websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
-                    data: row.into_table_data()
+                    data: row.into_table_data(),
+                    format: api::FlatTableDataFormat,
                 })
             },
             api::TableSessionRequest::Delete(index) => {
@@ -343,7 +358,7 @@ pub fn serve() {
                 })
                 .resource("/api/table/{table_name}", |r| {
                     r.method(http::Method::GET).with(get_table_data);
-                    r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg),)| config(cfg));
+                    r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg, _),)| config(cfg));
                 })
                 .resource("/api/table/{table_name}/{id}", |r| {
                     r.method(http::Method::PUT).with(put_table_data);

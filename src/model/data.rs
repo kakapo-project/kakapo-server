@@ -6,6 +6,12 @@ use chrono::prelude::*;
 use chrono::DateTime;
 
 use serde_json;
+use serde::Serialize;
+use serde::Serializer;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::de;
+use std::fmt;
 
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -47,6 +53,61 @@ pub enum RowData {
     }
 }
 
+//TODO: Add output format: indexed, rows (default), flat rows, columns, schema
+#[derive(Clone, Copy, Debug)]
+pub enum TableDataFormat {
+    Rows,
+    FlatRows,
+}
+
+impl Serialize for TableDataFormat {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        match self {
+            TableDataFormat::Rows => serializer.serialize_str("rows"),
+            TableDataFormat::FlatRows => serializer.serialize_str("flatRows"),
+        }
+    }
+}
+
+
+struct TableDataFormatVisitor;
+
+impl<'de> de::Visitor<'de> for TableDataFormatVisitor {
+    type Value = TableDataFormat;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("expecting `rows` or `flatRows`")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+    {
+        match value {
+            "rows" => Ok(TableDataFormat::Rows),
+            "flatRows" => Ok(TableDataFormat::FlatRows),
+            _ => Err(E::custom(format!("unrecognized variant")))
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TableDataFormat {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TableDataFormatVisitor)
+    }
+}
+
+impl Default for TableDataFormat {
+    fn default() -> Self {
+        TableDataFormat::Rows
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -94,6 +155,38 @@ impl TableData {
                 TableData::RowsData(rows_data)
             },
             TableData::RowsData(_) => self,
+        }
+    }
+
+    pub fn into_rows_flat_data(self) -> TableData {
+        match self {
+            TableData::RowsFlatData { .. } => self,
+            TableData::RowsData(rows) => { //This is actually slow
+                let mut columns = BTreeMap::new();
+                for row in rows.iter() {
+                    for row_column in row.keys() {
+                        columns.insert(row_column.to_owned(), ());
+                    }
+                }
+                let mut data = vec![];
+                //TODO: handle case for missing values, right now it just puts null, but it should handle it as different
+                for row in rows.iter() {
+                    let mut new_row = vec![];
+                    for key in columns.keys() {
+                        let new_value = match row.get(key) {
+                            Some(value) => value.to_owned(),
+                            None => Value::Null,
+                        };
+                        new_row.push(new_value);
+                    }
+                    data.push(new_row);
+                }
+
+                TableData::RowsFlatData {
+                    columns: columns.keys().cloned().collect::<Vec<String>>(),
+                    data: data,
+                }
+            },
         }
     }
 

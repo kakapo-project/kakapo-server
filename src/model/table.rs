@@ -50,15 +50,18 @@ fn get_table(
 pub fn get_table_data(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String,
+    format: api::TableDataFormat,
     //TODO: Better SQL query functionality, i.e. filter, ...
-    //TODO: Add output format: indexed, rows (default), columns, schema
 ) -> Result<api::GetTableDataResult, api::Error> {
 
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
 
         let table = get_table(conn, table_name)?;
         let data = database::get_all_rows(conn, &table)?;
-        let formatted_data = data.into_rows_data(); //TODO: this is where the magic happens to transform into different output format types
+        let formatted_data = match format {
+            data::TableDataFormat::Rows => data.into_rows_data(),
+            data::TableDataFormat::FlatRows => data.into_rows_flat_data(),
+        };
 
         let table_with_data = data::TableWithData {
             table: table,
@@ -82,13 +85,17 @@ pub fn insert_table_data(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String,
     table_data: api::TableData,
+    format: api::TableDataFormat,
     //TODO: Add output format: indexed, rows (default), columns, schema
 ) -> Result<api::InsertTableDataResult, api::Error> {
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
 
         let table = get_table(conn, table_name)?;
         let data = database::upsert_rows(conn, &table, table_data)?;
-        let formatted_data = data.into_rows_data(); //TODO: this is where the magic happens to transform into different output format types
+        let formatted_data = match format {
+            data::TableDataFormat::Rows => data.into_rows_data(),
+            data::TableDataFormat::FlatRows => data.into_rows_flat_data(),
+        };
 
         Ok(formatted_data)
     }).or_else(|err| Err(api::Error::DatabaseError(err)))?;

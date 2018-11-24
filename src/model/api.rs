@@ -15,6 +15,9 @@ pub struct PostTable {
 }
 
 pub type TableData = data::TableData;
+pub type TableDataFormat = data::TableDataFormat;
+
+pub const FlatTableDataFormat: TableDataFormat = data::TableDataFormat::FlatRows;
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]

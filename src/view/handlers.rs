@@ -75,13 +75,14 @@ pub struct GetTableData {
     pub name: String,
     pub start: Option<usize>,
     pub end: Option<usize>,
+    pub format: api::TableDataFormat,
 }
 
 impl Handler<GetTableData> for DatabaseExecutor {
     type Result = <GetTableData as Message>::Result;
 
     fn handle(&mut self, msg: GetTableData, _: &mut Self::Context) -> Self::Result {
-        let result = table::get_table_data(&self.get_connection(), msg.name)?;
+        let result = table::get_table_data(&self.get_connection(), msg.name, msg.format)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -92,13 +93,14 @@ impl Handler<GetTableData> for DatabaseExecutor {
 pub struct InsertTableData {
     pub name: String,
     pub data: api::TableData,
+    pub format: api::TableDataFormat,
 }
 
 impl Handler<InsertTableData> for DatabaseExecutor {
     type Result = <InsertTableData as Message>::Result;
 
     fn handle(&mut self, msg: InsertTableData, _: &mut Self::Context) -> Self::Result {
-        let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data)?;
+        let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data, msg.format)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
