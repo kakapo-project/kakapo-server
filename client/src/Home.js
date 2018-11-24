@@ -4,7 +4,7 @@ import Tab, { Button, Icon, Image, Menu, Search, Segment, Sidebar } from 'semant
 import Login from './Login.js'
 
 import Header from './Header.js'
-import Entities from './Entities.js'
+import Entities from './entities/Entities.js'
 import Settings from './Settings.js'
 
 const Tabs = Object.freeze({
@@ -79,7 +79,7 @@ class Home extends Component {
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5em)'}}>
           <Sidebar
             as={Menu}
-            animation='push scale down'
+            animation='scale down'
             icon='labeled'
             inverted
             vertical

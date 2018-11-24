@@ -1,13 +1,15 @@
 
 
 import React, { Component } from 'react'
-import { Button, Card, Container, Header, Grid, Icon, Image, Menu, Segment, Sidebar, Transition } from 'semantic-ui-react'
+import { Button, Card, Container, Dropdown, Header, Grid, Icon, Image, Input, Menu, Modal, Segment, Sidebar, Transition } from 'semantic-ui-react'
 
-import { API_URL } from './config'
+import { CreateEntities } from './CreateEntities'
+
+import { API_URL } from '../config'
 class Entities extends Component {
 
   state = {
-    entities: []
+    entities: [],
   }
 
   getEntities() {
@@ -61,26 +63,28 @@ class Entities extends Component {
 
     return (
       <Segment basic>
-        <Button circular positive icon='plus' floated='right' size='massive' />
+
+        <CreateEntities />
+
         <Transition.Group as={Grid} animation='scale' duration={400} container doubling columns={4} >
           { entities
               .filter( entity => selectedRenderEntities.includes(entity.type))
               .map( (entity, idx) =>
             <Grid.Column key={idx}>
-                <Card>
-                  <Segment textAlign='center' basic>{this.renderIcon(entity)}</Segment>
-                  <Card.Content>
-                    <Card.Header>{entity.name}</Card.Header>
-                    <Card.Meta>last updated {entity.lastUpdated}</Card.Meta>
-                    <Card.Description>{entity.description}</Card.Description>
-                  </Card.Content>
-                  <Card.Content extra>
-                    <a>
-                      <Icon name='favorite' color={(entity.isBookmarked)? 'yellow': 'grey'}/>
-                      Bookmark
-                    </a>
-                  </Card.Content>
-                </Card>
+              <Card>
+                <Segment textAlign='center' basic>{this.renderIcon(entity)}</Segment>
+                <Card.Content>
+                  <Card.Header>{entity.name}</Card.Header>
+                  <Card.Meta>last updated {entity.lastUpdated}</Card.Meta>
+                  <Card.Description>{entity.description}</Card.Description>
+                </Card.Content>
+                <Card.Content extra>
+                  <a>
+                    <Icon name='favorite' color={(entity.isBookmarked)? 'yellow': 'grey'}/>
+                    Bookmark
+                  </a>
+                </Card.Content>
+              </Card>
             </Grid.Column>
           )}
         </Transition.Group>
