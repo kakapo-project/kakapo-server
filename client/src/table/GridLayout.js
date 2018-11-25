@@ -57,10 +57,6 @@ class GridLayout extends Component {
     }
   }
 
-  renderIndexForRowWithNoKey() {
-    return '<i aria-hidden="true" class="question icon">'
-  }
-
   isColumnContextMenu(idx) {
     return (
       this.state.contextMenu &&
@@ -91,6 +87,11 @@ class GridLayout extends Component {
     }
   }
 
+  addRow(afterIdx) {
+    this.props.addRow(afterIdx)
+    this.setState({ contextMenu: null })
+  }
+
   renderColumns() {
     let columns = this.getColumns()
     return columns.map((column, idx) =>
@@ -114,10 +115,6 @@ class GridLayout extends Component {
       >
         <div>
           <Button.Group vertical labeled icon>
-            <Button icon='copy' content='Copy' />
-            <Button icon='paste' content='Paste' />
-            <Button icon='cut' content='Cut' />
-            <Divider />
             <Button icon='sort' content='Sort' />
             <Button icon='filter' content='Filter' />
             <Button icon='arrows alternate horizontal' content='Expand' />
@@ -153,7 +150,7 @@ class GridLayout extends Component {
             <Button icon='paste' content='Paste' />
             <Button icon='cut' content='Cut' />
             <Divider />
-            <Button icon='add' content='Add Row' />
+            <Button icon='add' content='Add Row' onClick={() => this.addRow(idx)}/>
             <Button icon='clone' content='Duplicate Row' />
             <Button icon='trash' content='Delete Row' />
           </Button.Group>
@@ -299,7 +296,6 @@ class GridLayout extends Component {
   }
 
   onBlurTable() {
-    console.log('blurred')
     if (!this.state.contextMenu) { //only blur if the context menu is not open
       this.setState({
         mouseUp: null,
@@ -308,7 +304,6 @@ class GridLayout extends Component {
         contextMenu: null
       })
     }
-
   }
 
   render() {

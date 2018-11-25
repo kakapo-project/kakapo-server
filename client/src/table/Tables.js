@@ -159,8 +159,18 @@ class Tables extends Component {
 
       let indices = data.map((_, idx) => idx + 1)
 
-      this.setState({ data: data, columns: columns, indices: indices })
+      this.setState({ data: data, indices: indices, columns: columns })
     }
+  }
+
+  addRow(afterIdx) {
+    console.log('adding row after idx: ', afterIdx)
+    let { indices, data } = this.state
+    console.log('indices: ', indices)
+    indices.splice(afterIdx + 1, 0, '-')
+    data.splice(afterIdx + 1, 0, data[0].map(x => ''))
+    console.log('indices: ', indices)
+    this.setState({ data: data, indices: indices })
   }
 
   componentDidMount() {
@@ -205,7 +215,12 @@ class Tables extends Component {
                     <Icon name='add' style={{marginRight: 0}}/>
                   </Label>
                 </Segment>
-                <GridLayout data={this.state.data} columns={this.state.columns} indices={this.state.indices} />
+                <GridLayout
+                  data={this.state.data}
+                  columns={this.state.columns}
+                  indices={this.state.indices}
+                  addRow={(afterIdx) => this.addRow(afterIdx)}
+                />
               </Segment>
             </Segment>
           </Sidebar.Pusher>

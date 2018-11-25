@@ -18,6 +18,7 @@ Grid Frontend
 - Fix slow rendering (too many cells are being rendered) -- figured out that this is due to development flags in react...
 - For creating new table: add option for advanced sql features (i.e. precision for integer)
 - rename string to Text, and integer -> Number
+- holding shift for multiple selections
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
