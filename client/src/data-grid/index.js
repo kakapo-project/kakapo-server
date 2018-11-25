@@ -2,6 +2,10 @@ import React, { Component } from 'react'
 import { Icon, Label, Menu, Table } from 'semantic-ui-react'
 
 
+const RenderedRow = (props) => {
+
+}
+
 class DataGrid extends Component {
   render() {
     let { columns, rows, getData} = this.props
@@ -41,30 +45,13 @@ class DataGrid extends Component {
 
         <Table.Body>
           {
-            rows.map(x =>
-              <Table.Row key={x.key}>
-                {x}
-                {columns.map(col => getData(parseInt(x.key), parseInt(col.key))) /* FIXME: why the parseInt?*/ }
+            rows.map((rowKey, rowIdx) =>
+              <Table.Row key={rowIdx}>
+                {rowKey}
+                {columns.map((_, colIdx) => getData(rowIdx, colIdx)) }
               </Table.Row>
             )
           }
-          {/*
-          <Table.Row>
-            <Table.Cell>First</Table.Cell>
-            <Table.Cell>Cell</Table.Cell>
-            <Table.Cell>Cell</Table.Cell>
-          </Table.Row>
-          <Table.Row>
-            <Table.Cell>Cell</Table.Cell>
-            <Table.Cell>Cell</Table.Cell>
-            <Table.Cell>Cell</Table.Cell>
-          </Table.Row>
-          <Table.Row>
-            <Table.Cell>Cell</Table.Cell>
-            <Table.Cell>Cell</Table.Cell>
-            <Table.Cell>Cell</Table.Cell>
-          </Table.Row>
-          */}
         </Table.Body>
       </Table>
     )

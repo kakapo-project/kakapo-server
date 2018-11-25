@@ -343,6 +343,7 @@ pub fn serve() {
             .middleware(middleware::Logger::default())
             .configure(|app| Cors::for_app(app)
                 .allowed_origin("http://localhost:3000") //TODO: for development
+                .allowed_origin("http://localhost:8080")
                 .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)

@@ -4,6 +4,8 @@ import {
   Card,
   Container,
   Divider,
+  Dimmer,
+  Loader,
   Grid,
   Icon,
   Image,
@@ -96,6 +98,7 @@ class Tables extends Component {
   state = {
     sidebarOpen: false,
     data: null,
+    columns: null,
     error: null,
   }
 
@@ -149,8 +152,14 @@ class Tables extends Component {
 
     socket.onmessage = (event) => {
       console.log('got the data')
-      console.log(event.data);
-      this.setState({ data: event.data })
+
+      let rawData = JSON.parse(event.data)
+      let data = rawData.data
+      let columns = rawData.columns
+
+      let indices = data.map((_, idx) => idx + 1)
+
+      this.setState({ data: data, columns: columns, indices: indices })
     }
   }
 
@@ -173,6 +182,9 @@ class Tables extends Component {
           <TableSidebase visible={this.state.sidebarOpen} />
 
           <Sidebar.Pusher>
+            <Dimmer active={this.state.data === null}>
+              <Loader size='big'>Loading</Loader>
+            </Dimmer>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
               <Segment padded style={{ height: '100%', overflowY: 'scroll', overflowX: 'hidden'}}>
                 <Segment>
@@ -195,7 +207,7 @@ class Tables extends Component {
                     <Icon name='add' style={{marginRight: 0}}/>
                   </Label>
                 </Segment>
-                <GridLayout data={this.state.data}/>
+                <GridLayout data={this.state.data} columns={this.state.columns} indices={this.state.indices} />
               </Segment>
             </Segment>
           </Sidebar.Pusher>

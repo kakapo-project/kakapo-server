@@ -5,8 +5,6 @@ import ReactDOM from 'react-dom'
 import { Button, Divider, Header, Icon, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
 import ContextMenu from './ContextMenu.js';
 
-import { getColumns, getRows, getIndices } from './actions.js'
-
 import DataGrid from '../data-grid'
 
 class GridLayout extends Component {
@@ -14,8 +12,15 @@ class GridLayout extends Component {
   state = {
   }
 
-  rows = getRows()
-  columns = getColumns()
+  getColumns() {
+    let columns = this.props.columns
+    return columns.map(x => ({
+      name: x,
+      dataType: 'String', //TODO
+      isForeignKey: false,
+      isPrimaryKey: false,
+    }))
+  }
 
   renderTypeSymbol(type) {
     switch (type) {
@@ -57,8 +62,8 @@ class GridLayout extends Component {
   }
 
   renderColumns() {
-
-    return this.columns.map((column, idx) =>
+    let columns = this.getColumns()
+    return columns.map((column, idx) =>
       <ContextMenu
         key={idx}
         trigger={
@@ -88,13 +93,11 @@ class GridLayout extends Component {
           </Button.Group>
         </div>
       </ContextMenu>
-
-
     )
   }
 
   renderRows() {
-    let indices = getIndices()
+    let indices = this.props.indices
     return indices.map((x, idx) =>
       <ContextMenu
         key={idx}
@@ -127,8 +130,7 @@ class GridLayout extends Component {
   }
 
   renderData(rowKey, colKey) {
-    let data = this.rows[rowKey][colKey]
-    let dataType = this.columns[colKey].dataType
+    let data = this.props.data[rowKey][colKey]
     return (
       <ContextMenu
         key={colKey}
@@ -140,7 +142,7 @@ class GridLayout extends Component {
               onMouseUp={(e) => this.onMouseUp(e, rowKey, colKey)}
               style={{
                 backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white',
-                textAlign: (dataType === 'Integer') ? 'right' : 'left'
+                textAlign: 'left', //(dataType === 'Integer') ? 'right' : 'left'
               }}
           >
             {`${data}`}
@@ -263,13 +265,17 @@ class GridLayout extends Component {
 
   render() {
 
+    if (this.props.data === null || this.props.columns === null) {
+      return <div />
+    }
+
     return (
       <div>
-          <DataGrid
-            columns={this.renderColumns()}
-            rows={this.renderRows()}
-            getData={(rowKey, colKey) => this.renderData(rowKey, colKey)}
-          />
+        <DataGrid
+          columns={this.renderColumns()}
+          rows={this.renderRows()}
+          getData={(rowKey, colKey) => this.renderData(rowKey, colKey)}
+        />
       </div>
     )
   }

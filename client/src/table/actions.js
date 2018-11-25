@@ -106,7 +106,10 @@ export function getColumns() {
     }
   }
 
-  return Object.values(columnsByName)
+  let finalColumns = Object.values(columnsByName)
+  console.log('finalColumns: ', finalColumns)
+
+  return finalColumns
 }
 
 

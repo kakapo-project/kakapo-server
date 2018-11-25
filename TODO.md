@@ -15,8 +15,9 @@ Grid Frontend
 - show red for unique or foreign key error, and yellow for unique key error
 - add button to grid for creating new tables and queries
 - Render background, figure out teletyping
-- Fix slow rendering (too many cells are being rendered)
-- For creating new table: add option for advanced sql features
+- Fix slow rendering (too many cells are being rendered) -- figured out that this is due to development flags in react...
+- For creating new table: add option for advanced sql features (i.e. precision for integer)
+- rename string to Text, and integer -> Number
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
@@ -27,7 +28,6 @@ Backend
 - Hook up table create row to websocket
 - Hook up table updates to websocket
 - Hook up table delete to websocket
-- When queries are run, there is no way of determining the type of object, therefore we need to add `PQfType` to diesel to do the dynamic type inference
 - Figure out docker
 - Figure out authentication
 - Excel + CSV maker
@@ -35,7 +35,8 @@ Backend
   - S3
   - airflow
  - Hook read all tables to websockets
- 
+ - implment get by chunksize
+
  Devops
  - Different functions
     - Auth controller: main entry point takes the input, authenticates and passes to **Accessor**
