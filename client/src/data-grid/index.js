@@ -10,7 +10,7 @@ class DataGrid extends Component {
   render() {
     let { columns, rows, getData} = this.props
     return (
-      <Table celled style={{userSelect: 'none'}}>
+      <Table celled fixed style={{userSelect: 'none'}}>
         <style>
           {`
             .ui.table thead th:first-child {

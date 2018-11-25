@@ -33,6 +33,7 @@ class Entities extends Component {
   }
 
   pullData() {
+    console.log('pulling data')
     fetch(`${API_URL}/manage/table`)
     .then(response => {
       return response.json()

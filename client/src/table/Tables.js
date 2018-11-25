@@ -164,12 +164,9 @@ class Tables extends Component {
   }
 
   addRow(afterIdx) {
-    console.log('adding row after idx: ', afterIdx)
     let { indices, data } = this.state
-    console.log('indices: ', indices)
-    indices.splice(afterIdx + 1, 0, '-')
+    indices.splice(afterIdx + 1, 0, <Icon name='minus' /> )
     data.splice(afterIdx + 1, 0, data[0].map(x => ''))
-    console.log('indices: ', indices)
     this.setState({ data: data, indices: indices })
   }
 

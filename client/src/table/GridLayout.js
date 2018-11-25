@@ -2,10 +2,13 @@
 import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 
-import { Button, Divider, Header, Icon, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
+import { Button, Divider, Header, Icon, Input, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
 import ContextMenu from './ContextMenu.js';
 
 import DataGrid from '../data-grid'
+
+import _ from 'lodash'
+
 
 class GridLayout extends Component {
 
@@ -160,8 +163,25 @@ class GridLayout extends Component {
     )
   }
 
+  isBoxSelected(rowKey, colKey) {
+    return (
+      this.state.boxSelected &&
+      (this.state.boxSelected[0] == rowKey) &&
+      (this.state.boxSelected[1] == colKey)
+    )
+  }
+
   renderData(rowKey, colKey) {
     let data = this.props.data[rowKey][colKey]
+    let isDataSelected = this.isBoxSelected(rowKey, colKey)
+    let style = {
+      backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white',
+      textAlign: 'left', //(dataType === 'Integer') ? 'right' : 'left'
+    }
+    if (isDataSelected) {
+      style.padding = 0
+    }
+
     return (
       <ContextMenu
         key={colKey}
@@ -171,12 +191,13 @@ class GridLayout extends Component {
               onMouseDown={(e) => this.onMouseDown(e, rowKey, colKey)}
               onMouseOver={(e) => this.onMouseOver(e, rowKey, colKey)}
               onMouseUp={(e) => this.onMouseUp(e, rowKey, colKey)}
-              style={{
-                backgroundColor: this.isSelected(rowKey, colKey)? '#EFEFEF': 'white',
-                textAlign: 'left', //(dataType === 'Integer') ? 'right' : 'left'
-              }}
+              style={style}
           >
-            {`${data}`}
+            { isDataSelected ?
+              <Input ref={(c) => c && c.focus()} value={data} style={{width: '100%'}}/>
+              :
+              `${data}`
+            }
           </Table.Cell>
         }
         position='bottom center'
@@ -195,6 +216,22 @@ class GridLayout extends Component {
     )
   }
 
+  doubleClickHandler(cb, ...args) {
+    if (!this._delayedClick) {
+      this._delayedClick = _.debounce(() => {
+        this._clickedOnce = false
+      }, 300)
+    }
+    if (this._clickedOnce) {
+      this._delayedClick.cancel()
+      this._clickedOnce = false
+      cb(...args)
+    } else {
+      this._delayedClick()
+      this._clickedOnce = true
+    }
+  }
+
   onMouseDown(event, rowKey, colKey) {
     if (event.button !== 0) {
       this.setState({
@@ -204,7 +241,14 @@ class GridLayout extends Component {
         contextMenu: [ rowKey, colKey ],
       })
     } else {
-      this.setState({
+
+      let newState = {}
+
+      this.doubleClickHandler((rowKey, colKey) => {
+        newState = { ...newState, boxSelected: [rowKey, colKey] }
+      }, rowKey, colKey)
+
+      newState = {
         mouseDown: [
           (rowKey === null) ? 0 : rowKey,
           (colKey === null) ? 0 : colKey,
@@ -215,7 +259,11 @@ class GridLayout extends Component {
         ],
         mouseUp: null,
         contextMenu: null,
-      })
+        boxSelected: this.isBoxSelected(rowKey, colKey) ? [ rowKey, colKey ] : null,
+        ...newState,
+      }
+
+      this.setState(newState)
     }
   }
 
@@ -301,7 +349,8 @@ class GridLayout extends Component {
         mouseUp: null,
         mouseOn: null,
         mouseDown: null,
-        contextMenu: null
+        contextMenu: null,
+        boxSelected: null,
       })
     }
   }

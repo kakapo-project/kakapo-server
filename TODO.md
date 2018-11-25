@@ -19,6 +19,8 @@ Grid Frontend
 - For creating new table: add option for advanced sql features (i.e. precision for integer)
 - rename string to Text, and integer -> Number
 - holding shift for multiple selections
+- do debounce on all inputs
+- double click not working correctly, it should only double click if it is on different table cells
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns

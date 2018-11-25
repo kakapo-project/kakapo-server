@@ -22,23 +22,25 @@ const Selections = Object.freeze({
 class Home extends Component {
 
   state = {
-    tab: 0,
+    tab: Tabs.entities,
     selections: [Selections.tables],
     compress: false,
   }
 
   setTab(tab) {
-    this.setState({
-      ...this.state,
-      tab,
-    })
+    if (this.state.tab === Tabs.settings) {
+      //unload settings tab if already selected
+      this.setState({ tab: Tabs.entities })
+    } else {
+      this.setState({ tab: tab })
+    }
   }
 
   setEntitySelection(selection) {
 
     let newSelections = [...this.state.selections]
     if (newSelections.includes(selection)) {
-      newSelections = newSelections.filter(x => x != selection)
+      newSelections = newSelections.filter(x => x !== selection)
     } else {
       newSelections = newSelections.concat([selection])
     }
@@ -69,6 +71,10 @@ class Home extends Component {
     }
   }
 
+  isEntityActive(selection) {
+    return this.state.selections.includes(selection)
+  }
+
   render() {
     return (
       <div>
@@ -89,7 +95,7 @@ class Home extends Component {
           >
             <Menu.Item
                 as='a'
-                active={this.state.selections.includes(Selections.tables)}
+                active={this.isEntityActive(Selections.tables)}
                 style={{marginTop: '4vh'}}
                 onClick={e => this.setEntitySelection(Selections.tables)}>
               <Icon name='database' />
@@ -97,28 +103,28 @@ class Home extends Component {
             </Menu.Item>
             <Menu.Item
                 as='a'
-                active={this.state.selections.includes(Selections.views)}
+                active={this.isEntityActive(Selections.views)}
                 onClick={e => this.setEntitySelection(Selections.views)}>
               <Icon name='eye' />
               Views
             </Menu.Item>
             <Menu.Item
                 as='a'
-                active={this.state.selections.includes(Selections.queries)}
+                active={this.isEntityActive(Selections.queries)}
                 onClick={e => this.setEntitySelection(Selections.queries)}>
               <Icon name='find' />
               Queries
             </Menu.Item>
             <Menu.Item
                 as='a'
-                active={this.state.selections.includes(Selections.scripts)}
+                active={this.isEntityActive(Selections.scripts)}
                 onClick={e => this.setEntitySelection(Selections.scripts)}>
               <Icon name='code' />
               Scripts
             </Menu.Item>
             <Menu.Item
                 as='a'
-                active={this.state.tab == Tabs.settings}
+                active={this.state.tab === Tabs.settings}
                 style={{marginTop: '30vh'}}
                 onClick={e => this.setTab(Tabs.settings)}>
               <Icon name='setting' />
