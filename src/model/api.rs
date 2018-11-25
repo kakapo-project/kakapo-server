@@ -85,9 +85,15 @@ pub enum TableSessionRequest {
         #[serde(rename = "chunkSize")]
         chunk_size: usize,
     },
-    Update(data::RowData),
-    Create(data::RowData),
-    Delete(data::IndexableValue),
+    Update {
+        data: data::RowData,
+    },
+    Create {
+        data: data::RowData,
+    },
+    Delete {
+        data: data::IndexableValue,
+    },
 
 }
 

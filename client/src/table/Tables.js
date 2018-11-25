@@ -130,36 +130,59 @@ class Tables extends Component {
   setupConnection() {
     const { name } = this.props.match.params
     const url = `${WS_URL}/table/${name}`
-    let socket = new WebSocket(url);
-    console.log('socket: ', socket)
+    this.socket = new WebSocket(url);
+    console.log('socket: ', this.socket)
 
     let sendData = {
       action: 'getTableData',
       begin: 0,
       chunkSize: 100
     }
-    socket.onopen = (event) => {
-      socket.send(JSON.stringify(sendData))
+    this.socket.onopen = (event) => {
+      this.socket.send(JSON.stringify(sendData))
     }
 
-    socket.onerror = (event) => {
+    this.socket.onerror = (event) => {
       this.raiseError('Could not setup connection')
     }
 
-    socket.onclose = (event) => {
+    this.socket.onclose = (event) => {
       console.error('WebSocket closed: ', event)
     }
 
-    socket.onmessage = (event) => {
-      console.log('got the data')
-
+    this.socket.onmessage = (event) => {
       let rawData = JSON.parse(event.data)
+      console.log('got the data', rawData)
+      let oldData = this.state.data || []
+      let oldDataKeys = this.state.keys || new Set()
       let data = rawData.data
       let columns = rawData.columns
 
-      let indices = data.map((_, idx) => idx + 1)
+      const findIndex = (key) => oldData.findIndex(x => key === x[0] /*TODO: find the key*/)
 
-      this.setState({ data: data, indices: indices, columns: columns })
+      data.map((x) => {
+        let key = x[0] //TODO: find the key
+        console.log('key: ', key)
+        if (oldDataKeys.has(key)) {
+          //update
+          let index = findIndex(key) //O(n)
+          oldData[index] = x
+        } else {
+          //insert
+          oldData.push(x)
+        }
+
+        oldDataKeys.add(key)
+      })
+
+      let indices = oldData.map((_, idx) => idx + 1)
+
+      this.setState({
+        data: oldData,
+        indices: indices,
+        keys: oldDataKeys,
+        columns: columns
+      })
     }
   }
 
@@ -168,6 +191,23 @@ class Tables extends Component {
     indices.splice(afterIdx + 1, 0, <Icon name='minus' /> )
     data.splice(afterIdx + 1, 0, data[0].map(x => ''))
     this.setState({ data: data, indices: indices })
+  }
+
+  updateValue(input, rowKey, colKey) {
+    //TODO: delete row if the key is changed
+    let data = {}
+    data['name'] = this.state.data[rowKey][0] //TODO: how to find the primary key?
+    this.state.columns.map((x, idx) => {
+      if (colKey === idx) {
+        data[x] = input
+      }
+    })
+    let sendData = {
+      action: 'update',
+      data: data
+    }
+    console.log('sending data: ', sendData)
+    this.socket.send(JSON.stringify(sendData))
   }
 
   componentDidMount() {
@@ -217,6 +257,7 @@ class Tables extends Component {
                   columns={this.state.columns}
                   indices={this.state.indices}
                   addRow={(afterIdx) => this.addRow(afterIdx)}
+                  updateValue={(input, rowKey, colKey) => this.updateValue(input, rowKey, colKey)}
                 />
               </Segment>
             </Segment>

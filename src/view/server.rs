@@ -247,21 +247,21 @@ impl TableSession {
                     format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
-            api::TableSessionRequest::Create(row) => {
+            api::TableSessionRequest::Create { data } => {
                 websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
-                    data: row.into_table_data(),
+                    data: data.into_table_data(),
                     format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
-            api::TableSessionRequest::Update(row) => {
+            api::TableSessionRequest::Update { data } => {
                 websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
-                    data: row.into_table_data(),
+                    data: data.into_table_data(),
                     format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
-            api::TableSessionRequest::Delete(index) => {
+            api::TableSessionRequest::Delete { data } => {
                 //TODO: implement me
                 websocket_response(ctx, handlers::GetTable {
                     name: self.table_name.to_string(),

@@ -95,6 +95,187 @@ class GridLayout extends Component {
     this.setState({ contextMenu: null })
   }
 
+  isBoxSelected(rowKey, colKey) {
+    return (
+      this.state.boxSelected &&
+      (this.state.boxSelected[0] == rowKey) &&
+      (this.state.boxSelected[1] == colKey)
+    )
+  }
+
+
+  doubleClickHandler(cb, ...args) {
+    if (!this._delayedClick) {
+      this._delayedClick = _.debounce(() => {
+        this._clickedOnce = false
+      }, 300)
+    }
+    if (this._clickedOnce) {
+      this._delayedClick.cancel()
+      this._clickedOnce = false
+      cb(...args)
+    } else {
+      this._delayedClick()
+      this._clickedOnce = true
+    }
+  }
+
+  onMouseDown(event, rowKey, colKey) {
+    if (event.button !== 0) {
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+        contextMenu: [ rowKey, colKey ],
+      })
+    } else {
+
+      let newState = {}
+
+      this.doubleClickHandler((rowKey, colKey) => {
+        newState = { ...newState, boxSelected: [rowKey, colKey] }
+      }, rowKey, colKey)
+
+      let isBoxSelected = this.isBoxSelected(rowKey, colKey)
+      let inputValueStateChange = {}
+      if (!isBoxSelected) {
+        inputValueStateChange = this.getInputValueStateChange()
+      }
+
+      newState = {
+        mouseDown: [
+          (rowKey === null) ? 0 : rowKey,
+          (colKey === null) ? 0 : colKey,
+        ],
+        mouseOn: [
+          (rowKey === null) ? Number.MAX_SAFE_INTEGER  : rowKey,
+          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+        ],
+        mouseUp: null,
+        contextMenu: null,
+        ...inputValueStateChange,
+        ...newState,
+      }
+
+      this.setState(newState)
+    }
+  }
+
+  onMouseOver(event, rowKey, colKey) {
+    if (event.button !== 0) {
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+      })
+    } else {
+      if (!this.state.mouseUp) {
+        this.setState({
+          mouseOn: [
+            (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+            (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+          ],
+        })
+      }
+    }
+  }
+
+  onMouseUp(event, rowKey, colKey) {
+    if (event.button !== 0) {
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+      })
+    } else {
+      this.setState({
+        mouseUp: [
+          (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+        ],
+        mouseOn: null,
+      })
+    }
+  }
+
+  changeInputValue(data, rowKey, colKey) {
+    this.setState({ inputValue: data })
+  }
+
+  isSelected(rowKey, colKey) {
+    let initial = this.state.mouseDown
+    if (!initial) {
+      return false
+    }
+
+    let final = this.state.mouseOn || this.state.mouseUp
+
+    if (
+      initial[0] >= rowKey && final[0] <= rowKey &&
+      initial[1] >= colKey && final[1] <= colKey
+    ) {
+      return true
+    }
+
+    if (
+      initial[0] >= rowKey && final[0] <= rowKey &&
+      initial[1] <= colKey && final[1] >= colKey
+    ) {
+      return true
+    }
+
+    if (
+      initial[0] <= rowKey && final[0] >= rowKey &&
+      initial[1] >= colKey && final[1] <= colKey
+    ) {
+      return true
+    }
+
+    if (
+      initial[0] <= rowKey && final[0] >= rowKey &&
+      initial[1] <= colKey && final[1] >= colKey
+    ) {
+      return true
+    }
+
+    return false
+  }
+
+  getInputValueStateChange() {
+
+    if (this.isInputValueSet()) {
+      this.props.updateValue(
+        this.state.inputValue,
+        this.state.boxSelected[0],
+        this.state.boxSelected[1],
+      )
+    }
+
+    return {
+      boxSelected: null,
+      inputValue: null,
+    }
+  }
+
+  isInputValueSet() {
+    return (this.state.inputValue === '') || this.state.inputValue
+  }
+
+  onBlurTable() {
+    if (!this.state.contextMenu) { //only blur if the context menu is not open
+
+      let inputValueStateChange = this.getInputValueStateChange()
+
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+        contextMenu: null,
+        ...inputValueStateChange,
+      })
+    }
+  }
+
   renderColumns() {
     let columns = this.getColumns()
     return columns.map((column, idx) =>
@@ -163,14 +344,6 @@ class GridLayout extends Component {
     )
   }
 
-  isBoxSelected(rowKey, colKey) {
-    return (
-      this.state.boxSelected &&
-      (this.state.boxSelected[0] == rowKey) &&
-      (this.state.boxSelected[1] == colKey)
-    )
-  }
-
   renderData(rowKey, colKey) {
     let data = this.props.data[rowKey][colKey]
     let isDataSelected = this.isBoxSelected(rowKey, colKey)
@@ -194,7 +367,12 @@ class GridLayout extends Component {
               style={style}
           >
             { isDataSelected ?
-              <Input ref={(c) => c && c.focus()} value={data} style={{width: '100%'}}/>
+              <Input
+                ref={(c) => c && c.focus()}
+                value={this.isInputValueSet() ? this.state.inputValue : data}
+                style={{width: '100%'}}
+                onChange={(e, data) => this.changeInputValue(data.value, rowKey, colKey)}
+              />
               :
               `${data}`
             }
@@ -214,145 +392,6 @@ class GridLayout extends Component {
       </ContextMenu>
 
     )
-  }
-
-  doubleClickHandler(cb, ...args) {
-    if (!this._delayedClick) {
-      this._delayedClick = _.debounce(() => {
-        this._clickedOnce = false
-      }, 300)
-    }
-    if (this._clickedOnce) {
-      this._delayedClick.cancel()
-      this._clickedOnce = false
-      cb(...args)
-    } else {
-      this._delayedClick()
-      this._clickedOnce = true
-    }
-  }
-
-  onMouseDown(event, rowKey, colKey) {
-    if (event.button !== 0) {
-      this.setState({
-        mouseUp: null,
-        mouseOn: null,
-        mouseDown: null,
-        contextMenu: [ rowKey, colKey ],
-      })
-    } else {
-
-      let newState = {}
-
-      this.doubleClickHandler((rowKey, colKey) => {
-        newState = { ...newState, boxSelected: [rowKey, colKey] }
-      }, rowKey, colKey)
-
-      newState = {
-        mouseDown: [
-          (rowKey === null) ? 0 : rowKey,
-          (colKey === null) ? 0 : colKey,
-        ],
-        mouseOn: [
-          (rowKey === null) ? Number.MAX_SAFE_INTEGER  : rowKey,
-          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-        ],
-        mouseUp: null,
-        contextMenu: null,
-        boxSelected: this.isBoxSelected(rowKey, colKey) ? [ rowKey, colKey ] : null,
-        ...newState,
-      }
-
-      this.setState(newState)
-    }
-  }
-
-  onMouseOver(event, rowKey, colKey) {
-    if (event.button !== 0) {
-      this.setState({
-        mouseUp: null,
-        mouseOn: null,
-        mouseDown: null,
-      })
-    } else {
-      if (!this.state.mouseUp) {
-        this.setState({
-          mouseOn: [
-            (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
-            (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-          ],
-        })
-      }
-    }
-  }
-
-  onMouseUp(event, rowKey, colKey) {
-    if (event.button !== 0) {
-      this.setState({
-        mouseUp: null,
-        mouseOn: null,
-        mouseDown: null,
-      })
-    } else {
-      this.setState({
-        mouseUp: [
-          (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
-          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-        ],
-        mouseOn: null,
-      })
-    }
-  }
-
-  isSelected(rowKey, colKey) {
-    let initial = this.state.mouseDown
-    if (!initial) {
-      return false
-    }
-
-    let final = this.state.mouseOn || this.state.mouseUp
-
-    if (
-      initial[0] >= rowKey && final[0] <= rowKey &&
-      initial[1] >= colKey && final[1] <= colKey
-    ) {
-      return true
-    }
-
-    if (
-      initial[0] >= rowKey && final[0] <= rowKey &&
-      initial[1] <= colKey && final[1] >= colKey
-    ) {
-      return true
-    }
-
-    if (
-      initial[0] <= rowKey && final[0] >= rowKey &&
-      initial[1] >= colKey && final[1] <= colKey
-    ) {
-      return true
-    }
-
-    if (
-      initial[0] <= rowKey && final[0] >= rowKey &&
-      initial[1] <= colKey && final[1] >= colKey
-    ) {
-      return true
-    }
-
-    return false
-  }
-
-  onBlurTable() {
-    if (!this.state.contextMenu) { //only blur if the context menu is not open
-      this.setState({
-        mouseUp: null,
-        mouseOn: null,
-        mouseDown: null,
-        contextMenu: null,
-        boxSelected: null,
-      })
-    }
   }
 
   render() {
