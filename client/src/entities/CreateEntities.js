@@ -2,6 +2,7 @@
 
 import React, { Component } from 'react'
 import { Button, Card, Container, Divider, Dropdown, Header, Grid, Icon, Image, Input, Menu, Modal, Segment, Sidebar, Transition } from 'semantic-ui-react'
+import ErrorMsg from '../ErrorMsg'
 
 import { API_URL } from '../config'
 import { DEFAULT_TYPE, ALL_TYPES } from './columns'
@@ -57,17 +58,6 @@ const ColumnItem = (props) => (
   </Grid.Row>
 )
 
-const ErrorMsg = (props) => (
-  <Modal size='tiny' open={console.log('error props: ', props) || (props.error !== null)} onClose={() => props.onClose()}>
-    <Modal.Header>Error Occurred</Modal.Header>
-    <Modal.Content>
-      <p>{props.error}</p>
-    </Modal.Content>
-    <Modal.Actions>
-      <Button negative onClick={() => props.onClose()}>Continue</Button>
-    </Modal.Actions>
-  </Modal>
-)
 
 const getAllKeys = (obj) => Object.keys(obj).map(x => parseInt(x))
 
@@ -318,7 +308,7 @@ class CreateEntities extends Component {
       >
         <Header icon='database' content='Create New Table' />
         <Modal.Content>
-          <ErrorMsg error={this.state.error} onClose={() => this.closeErrorMessage()}/>
+          <ErrorMsg error={this.state.error} onClose={(type) => this.closeErrorMessage()}/>
           <Grid>
             <Grid.Column floated='left' width={10}>
               <Button

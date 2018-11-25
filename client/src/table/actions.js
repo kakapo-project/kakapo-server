@@ -46,7 +46,7 @@ export function getData() {
     ]
   }
 
-  let data = [...Array(100).keys()].map(x => (
+  let data = [...Array(3).keys()].map(x => (
     {
       'id': x,
       'name': 'I.P. Freely',

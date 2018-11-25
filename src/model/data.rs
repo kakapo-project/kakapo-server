@@ -73,32 +73,31 @@ impl Serialize for TableDataFormat {
 }
 
 
-struct TableDataFormatVisitor;
-
-impl<'de> de::Visitor<'de> for TableDataFormatVisitor {
-    type Value = TableDataFormat;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("expecting `rows` or `flatRows`")
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-    {
-        match value {
-            "rows" => Ok(TableDataFormat::Rows),
-            "flatRows" => Ok(TableDataFormat::FlatRows),
-            _ => Err(E::custom(format!("unrecognized variant")))
-        }
-    }
-}
-
 impl<'de> Deserialize<'de> for TableDataFormat {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
     {
+        struct TableDataFormatVisitor;
+
+        impl<'de> de::Visitor<'de> for TableDataFormatVisitor {
+            type Value = TableDataFormat;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("expecting `rows` or `flatRows`")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+            {
+                match value {
+                    "rows" => Ok(TableDataFormat::Rows),
+                    "flatRows" => Ok(TableDataFormat::FlatRows),
+                    _ => Err(E::custom(format!("unrecognized variant")))
+                }
+            }
+        }
         deserializer.deserialize_str(TableDataFormatVisitor)
     }
 }

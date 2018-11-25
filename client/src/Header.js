@@ -18,22 +18,23 @@ class Header extends Component {
         <Menu inverted pointing secondary style={{height: '3.1em'}}>
           <style>
             {`
-              a.home-button {
-                margin-bottom: -1.6em !important;
-                margin-left: 1.42em !important;
-                margin-right: 0.1em !important;
-                width: 6.0em !important;
-                height: auto !important;
+              #home-button {
+                margin-bottom: -1.6em;
+                margin-left: 1.42em;
+                margin-right: 0.2em;
+                width: 6.0em;
+                height: auto;
+                transition: all .15s ease;
               }
-              a.home-button:hover {
-                margin-bottom: -1.7em !important;
-                margin-left: 1.32em !important;
-                margin-right: 0.0em !important;
-                width: 6.2em !important;
+              #home-button:hover {
+                margin-bottom: -1.8em;
+                margin-left: 1.22em;
+                margin-right: 0.0em;
+                width: 6.4em;
               }
             `}
           </style>
-          <Menu.Item as={Link} className='home-button' to='/'>
+          <Menu.Item id='home-button' as={Link} to='/'>
             <Image src={logo} />
           </Menu.Item>
           { this.props.editor && (

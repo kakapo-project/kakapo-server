@@ -19,6 +19,8 @@ import {
 import GridLayout from './GridLayout.js'
 
 import Header from '../Header.js'
+import ErrorMsg from '../ErrorMsg'
+
 
 import { WS_URL } from '../config'
 
@@ -94,6 +96,7 @@ class Tables extends Component {
   state = {
     sidebarOpen: false,
     data: null,
+    error: null,
   }
 
 
@@ -104,10 +107,28 @@ class Tables extends Component {
     })
   }
 
-  componentDidMount() {
+  raiseError(msg) {
+    this.setState({ error: msg })
+  }
+
+  errorMsgTypes = ['Retry', 'Go Back']
+  closeErrorMessage(type) {
+    switch (type) {
+      case this.errorMsgTypes[0]:
+        this.setupConnection()
+        this.setState({ error: null })
+        return
+      case this.errorMsgTypes[1]:
+        this.props.history.push('/')
+        return
+    }
+  }
+
+  setupConnection() {
     const { name } = this.props.match.params
     const url = `${WS_URL}/table/${name}`
     let socket = new WebSocket(url);
+    console.log('socket: ', socket)
 
     let sendData = {
       action: 'getTableData',
@@ -115,14 +136,26 @@ class Tables extends Component {
       chunkSize: 100
     }
     socket.onopen = (event) => {
-      socket.send(JSON.stringify(sendData));
+      socket.send(JSON.stringify(sendData))
+    }
+
+    socket.onerror = (event) => {
+      this.raiseError('Could not setup connection')
+    }
+
+    socket.onclose = (event) => {
+      console.error('WebSocket closed: ', event)
     }
 
     socket.onmessage = (event) => {
-      console.log('got Some data')
+      console.log('got the data')
       console.log(event.data);
+      this.setState({ data: event.data })
     }
+  }
 
+  componentDidMount() {
+    this.setupConnection()
   }
 
   render() {
@@ -135,6 +168,7 @@ class Tables extends Component {
           sidebarOpen={this.state.sidebarOpen}
           onToggle={() => this.toggleSidebar()}
         />
+        <ErrorMsg error={this.state.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/>
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
           <TableSidebase visible={this.state.sidebarOpen} />
 

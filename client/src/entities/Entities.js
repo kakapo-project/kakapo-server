@@ -4,6 +4,7 @@ import React, { Component } from 'react'
 import { Button, Card, Container, Dropdown, Header, Grid, Icon, Image, Input, Menu, Modal, Segment, Sidebar, Transition } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
+import ErrorMsg from '../ErrorMsg'
 import { CreateEntities } from './CreateEntities'
 
 import { API_URL } from '../config'
@@ -11,6 +12,7 @@ class Entities extends Component {
 
   state = {
     entities: [],
+    error: null,
   }
 
   getEntities() {
@@ -19,6 +21,15 @@ class Entities extends Component {
 
   setEntitites(entities) {
     this.setState({ entities: entities })
+  }
+
+  raiseError(msg) {
+    this.setState({ error: msg })
+  }
+
+  clearError() {
+    this.pullData()
+    this.setState({ error: null })
   }
 
   pullData() {
@@ -40,6 +51,7 @@ class Entities extends Component {
     })
     .catch(err => {
       console.log('err: ', err.message)
+      this.raiseError(err.message)
     })
   }
 
@@ -81,6 +93,7 @@ class Entities extends Component {
     return (
       <Segment basic>
 
+        <ErrorMsg error={this.state.error} onClose={() => this.clearError()} types={['Retry']} />
         <CreateEntities onCreated={() => this.pullData()}/>
 
         <Transition.Group as={Grid} animation='scale' duration={400} container doubling columns={4} >
