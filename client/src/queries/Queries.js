@@ -37,7 +37,7 @@ class Queries extends Component {
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
           <Sidebar
             as={Menu}
-            animation='push overlay'
+            animation='overlay'
             icon='labeled'
             inverted
             direction='right'

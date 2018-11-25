@@ -244,21 +244,21 @@ impl TableSession {
                     name: self.table_name.to_string(),
                     start: begin,
                     end: end,
-                    format: api::FlatTableDataFormat,
+                    format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
             api::TableSessionRequest::Create(row) => {
                 websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
                     data: row.into_table_data(),
-                    format: api::FlatTableDataFormat,
+                    format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
             api::TableSessionRequest::Update(row) => {
                 websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
                     data: row.into_table_data(),
-                    format: api::FlatTableDataFormat,
+                    format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
             api::TableSessionRequest::Delete(index) => {
@@ -342,8 +342,8 @@ pub fn serve() {
         App::with_state(state)
             .middleware(middleware::Logger::default())
             .configure(|app| Cors::for_app(app)
-                .allowed_origin("http://localhost:3000") //TODO: for development
-                .allowed_origin("http://localhost:8080")
+                //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
+                //.allowed_origin("http://localhost:8080")
                 .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)

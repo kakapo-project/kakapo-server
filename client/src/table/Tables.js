@@ -29,7 +29,7 @@ import { WS_URL } from '../config'
 const TableSidebase = (props) => (
   <Sidebar
     as={Menu}
-    animation='push overlay'
+    animation='overlay'
     icon='labeled'
     inverted
     direction='right'
@@ -168,8 +168,6 @@ class Tables extends Component {
   }
 
   render() {
-    const { name } = this.props.match.params
-    console.log('table name: ', name)
     return (
       <div>
         <Header

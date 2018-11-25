@@ -61,6 +61,36 @@ class GridLayout extends Component {
     return '<i aria-hidden="true" class="question icon">'
   }
 
+  isColumnContextMenu(idx) {
+    return (
+      this.state.contextMenu &&
+      this.state.contextMenu[0] === null &&
+      this.state.contextMenu[1] === idx
+    )
+  }
+
+  isIndexContextMenu(idx) {
+    return (
+      this.state.contextMenu &&
+      this.state.contextMenu[0] === idx &&
+      this.state.contextMenu[1] === null
+    )
+  }
+
+  isDataContextMenu(rowIdx, colIdx) {
+    return (
+      this.state.contextMenu &&
+      this.state.contextMenu[0] === rowIdx &&
+      this.state.contextMenu[1] === colIdx
+    )
+  }
+
+  clearContextMenu(e) {
+    if (e.button === 0) {
+      this.setState({ contextMenu: null })
+    }
+  }
+
   renderColumns() {
     let columns = this.getColumns()
     return columns.map((column, idx) =>
@@ -79,6 +109,8 @@ class GridLayout extends Component {
           </Table.HeaderCell>
         }
         position='bottom left'
+        open={this.isColumnContextMenu(idx)}
+        onClose={(e) => this.clearContextMenu(e)}
       >
         <div>
           <Button.Group vertical labeled icon>
@@ -112,6 +144,8 @@ class GridLayout extends Component {
           </Table.Cell>
         }
         position='right center'
+        open={this.isIndexContextMenu(idx)}
+        onClose={(e) => this.clearContextMenu(e)}
       >
         <div>
           <Button.Group vertical labeled icon>
@@ -149,6 +183,8 @@ class GridLayout extends Component {
           </Table.Cell>
         }
         position='bottom center'
+        open={this.isDataContextMenu(rowKey, colKey)}
+        onClose={(e) => this.clearContextMenu(e)}
       >
         <div>
           <Button.Group vertical labeled icon>
@@ -162,66 +198,65 @@ class GridLayout extends Component {
     )
   }
 
-  clearState(state = this.state) {
-    let newState = {...state, mouseUp: null, mouseOn: null, mouseDown: null, contextMenu: null}
-    this.setState(newState)
-    return newState
-  }
-
-  onMouseDown(event, rowKey, colKey, state = this.state) {
+  onMouseDown(event, rowKey, colKey) {
     if (event.button !== 0) {
-      return this.clearState(state)
-    }
-
-    let newState = {
-      ...state,
-      mouseDown: [
-        (rowKey === null) ? 0 : rowKey,
-        (colKey === null) ? 0 : colKey,
-      ],
-      mouseOn: [
-        (rowKey === null) ? Number.MAX_SAFE_INTEGER  : rowKey,
-        (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-      ],
-      mouseUp: null
-    }
-    this.setState(newState)
-    return newState
-  }
-
-  onMouseOver(event, rowKey, colKey, state = this.state) {
-    if (event.button !== 0) {
-      return this.clearState(state)
-    }
-
-    if (!this.state.mouseUp) {
-      state.mouseOn = [
-        (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
-        (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-      ]
-      this.setState(state)
-      return state
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+        contextMenu: [ rowKey, colKey ],
+      })
     } else {
-      return state
+      this.setState({
+        mouseDown: [
+          (rowKey === null) ? 0 : rowKey,
+          (colKey === null) ? 0 : colKey,
+        ],
+        mouseOn: [
+          (rowKey === null) ? Number.MAX_SAFE_INTEGER  : rowKey,
+          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+        ],
+        mouseUp: null,
+        contextMenu: null,
+      })
     }
   }
 
-  onMouseUp(event, rowKey, colKey, state = this.state) {
+  onMouseOver(event, rowKey, colKey) {
     if (event.button !== 0) {
-      let newState =  this.clearState(state)
-      return newState
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+      })
+    } else {
+      if (!this.state.mouseUp) {
+        this.setState({
+          mouseOn: [
+            (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+            (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+          ],
+        })
+      }
     }
+  }
 
-    let newState = {
-      ...state,
-      mouseUp: [
-        (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
-        (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
-      ],
-      mouseOn: null
+  onMouseUp(event, rowKey, colKey) {
+    if (event.button !== 0) {
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+      })
+    } else {
+      this.setState({
+        mouseUp: [
+          (rowKey === null) ? Number.MAX_SAFE_INTEGER : rowKey,
+          (colKey === null) ? Number.MAX_SAFE_INTEGER : colKey,
+        ],
+        mouseOn: null,
+      })
     }
-    this.setState(newState)
-    return newState
   }
 
   isSelected(rowKey, colKey) {
@@ -263,14 +298,42 @@ class GridLayout extends Component {
     return false
   }
 
+  onBlurTable() {
+    console.log('blurred')
+    if (!this.state.contextMenu) { //only blur if the context menu is not open
+      this.setState({
+        mouseUp: null,
+        mouseOn: null,
+        mouseDown: null,
+        contextMenu: null
+      })
+    }
+
+  }
+
   render() {
 
     if (this.props.data === null || this.props.columns === null) {
       return <div />
     }
 
+    //This is a hack for getting onBlur to work for divs
+    const onBlur = (e) => {
+      var currentTarget = e.currentTarget;
+
+      setTimeout(() => {
+        if (!currentTarget.contains(document.activeElement)) {
+          this.onBlurTable()
+        }
+      }, 0);
+    }
+
     return (
-      <div>
+      <div
+        tabIndex='1'
+        onBlur={(e) => onBlur(e)}
+        style={{ outline: 'none' }}
+      >
         <DataGrid
           columns={this.renderColumns()}
           rows={this.renderRows()}

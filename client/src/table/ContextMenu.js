@@ -11,7 +11,7 @@ import _ from 'lodash'
 class ContextPortal extends Portal {
 
   handleContextMenu = (e, ...rest) => {
-    const { trigger, closeOnTriggerClick, openOnTriggerClick } = this.props
+    const { trigger } = this.props
     const { open } = this.state
 
     e.preventDefault()
@@ -19,15 +19,15 @@ class ContextPortal extends Portal {
     // Call original event handler
     _.invoke(trigger, 'props.onClick', e, ...rest)
 
-    if (open && closeOnTriggerClick) {
+    if (open) {
       this.close(e)
-    } else if (!open && openOnTriggerClick) {
+    } else if (!open) {
       this.open(e)
     }
   }
 
   handleTriggerClick = (e, ...rest) => {
-    const { trigger, closeOnTriggerClick, openOnTriggerClick } = this.props
+    const { trigger } = this.props
     const { open } = this.state
 
     e.preventDefault()
@@ -35,7 +35,7 @@ class ContextPortal extends Portal {
     // Call original event handler
     _.invoke(trigger, 'props.onClick', e, ...rest)
 
-    if (open && closeOnTriggerClick) {
+    if (open) {
       this.close(e)
     }
   }
