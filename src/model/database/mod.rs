@@ -289,10 +289,7 @@ pub fn upsert_rows(
         .collect::<Vec<String>>();
     let key = table.get_key().ok_or(generate_error("no key"))?;
     let key_column_name = format!("\"{}\"", key);
-    let column_names_without_key: Vec<String> = column_names.iter()
-        .filter(|&x| x.to_owned() != key_column_name)
-        .cloned()
-        .collect();
+
 
     let mut rows: Vec<Vec<Value>> = vec![];
     for item in to_insert.into_rows_data_vec() {
@@ -301,6 +298,19 @@ pub fn upsert_rows(
         //    ON CONFLICT (col_1_pk) DO UPDATE SET col_2 = EXCLUDED.col_2, col_3 = EXCLUDED.col_3;
         //TODO: insert multiple values at once
         let row_column_names: Vec<String> = item.keys().cloned().map(|x| format!("\"{}\"", x)).collect(); //TODO: SQL INJECTION!!!!!!!!!!!!!!!!!!!
+        let column_names_without_key: Vec<String> = row_column_names.iter()
+            .filter(|&x| x.to_owned() != key_column_name)
+            .cloned()
+            .collect();
+        let column_names_only_key: Vec<String> = row_column_names.iter()
+            .filter(|&x| x.to_owned() == key_column_name)
+            .cloned()
+            .collect();
+
+        if column_names_only_key.len() != 1 {
+            return Err(generate_error("no primary key given for data insertion"));
+        }
+
         let values: Vec<Value> = item.values().cloned().collect();
 
         let query_insert_into = format!(
