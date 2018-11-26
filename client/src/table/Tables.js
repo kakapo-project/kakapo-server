@@ -183,9 +183,11 @@ class Tables extends Component {
         }
         case 'getTableData':
         case 'update':
+        case 'create':
           let data = rawData.data
           let columns = rawData.columns
           console.log('columns: ', columns)
+          console.log('data: ', data)
           let keyIndex = columns.findIndex(x => x === this.state.tableInfoKey)
           if (keyIndex.length === -1) {
             this.raiseError('Unknown error: Database did not return the proper columns')
@@ -223,30 +225,101 @@ class Tables extends Component {
     }
   }
 
+  getNewRows() {
+    return this.state.newRows || []
+  }
+
   addRow(afterIdx) {
     let { indices, data } = this.state
     indices.splice(afterIdx + 1, 0, <Icon name='minus' /> )
     data.splice(afterIdx + 1, 0, data[0].map(x => ''))
-    this.setState({ data: data, indices: indices })
+
+    let newRows = this.getNewRows()
+    newRows = newRows.map(x => {
+      if (x > afterIdx) {
+        return x + 1
+      } else {
+        return x
+      }
+    })
+    newRows.push(afterIdx + 1)
+    console.log('newRows: ', newRows)
+    this.setState({
+      data: data,
+      indices: indices,
+      newRows: newRows,
+    })
+  }
+
+  parseColumn(data, colName) {
+    let table = this.state.tableInfoColumns
+    console.log(table)
+    if (colName === 'age') {
+      if (!data) {
+        return null
+      } else {
+        return parseInt(data)
+      }
+    } else {
+      return data
+    }
   }
 
   updateValue(input, rowKey, colKey) {
     //TODO: delete row if the key is changed
+    let newRows = this.getNewRows()
     let data = {}
     let key = this.state.tableInfoKey
     let keyIndex = this.state.keyIndex
-    data[key] = this.state.data[rowKey][keyIndex]
-    this.state.columns.map((x, idx) => {
-      if (colKey === idx) {
-        data[x] = input
+
+    console.log('newRows: ', newRows)
+    console.log('rowKey: ', rowKey)
+    if (newRows.includes(rowKey)) {
+      if (colKey === keyIndex) {
+        let newData = this.state.data
+        let newKeys = this.state.keys
+
+        this.state.columns.map((x, idx) => {
+          if (colKey === idx) {
+            data[x] = this.parseColumn(input, x)
+            newKeys.add(data[x])
+          } else {
+            data[x] = this.parseColumn(this.state.data[rowKey][idx], x)
+          }
+        })
+
+
+        newData[rowKey][colKey] = input
+        this.setState({ data: newData, keys: newKeys })
+
+        let sendData = {
+          action: 'create',
+          data: data
+        }
+        console.log('sending data: ', sendData)
+        this.socket.send(JSON.stringify(sendData))
+      } else {
+        let newData = this.state.data
+        newData[rowKey][colKey] = input
+        this.setState({ data: newData })
       }
-    })
-    let sendData = {
-      action: 'update',
-      data: data
+
+    } else {
+
+      data[key] = this.state.data[rowKey][keyIndex]
+      this.state.columns.map((x, idx) => {
+        if (colKey === idx) {
+          data[x] = this.parseColumn(input, x)
+        }
+      })
+
+      let sendData = {
+        action: 'update',
+        data: data
+      }
+      console.log('sending data: ', sendData)
+      this.socket.send(JSON.stringify(sendData))
     }
-    console.log('sending data: ', sendData)
-    this.socket.send(JSON.stringify(sendData))
   }
 
   componentDidMount() {

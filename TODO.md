@@ -26,6 +26,7 @@ Bugs:
 - creating a new table with an old table name, will attempt to append the columns
 - minor: adding a row should defocus the value input field
 - until the data is updated, the user's input value change should be reflected
+- sending integers not working
 
 Backend
 - Hook up table creation to websocket
@@ -43,9 +44,7 @@ Backend
  - implment get by chunksize
 
 Bugs:
-- send error if no key is defined in insert
-- It shouldn't update value as null if value is not given
-- send the action type in websocket output
+- sending integer as string puts in garbage
 
  Devops
  - Different functions

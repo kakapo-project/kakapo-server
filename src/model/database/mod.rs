@@ -323,13 +323,18 @@ pub fn upsert_rows(
                 .collect::<Vec<String>>()
                 .join(", ")
         );
-        let query_on_conflict = format!(
-            "ON CONFLICT ({}) DO UPDATE SET {}",
-            key_column_name,
-            column_names_without_key.iter().map(|x| format!("{} = EXCLUDED.{}", x, x))
-                .collect::<Vec<String>>()
-                .join(", ")
-        );
+
+        let query_on_conflict = if column_names_without_key.len() > 0 {
+            format!(
+                "ON CONFLICT ({}) DO UPDATE SET {}",
+                key_column_name,
+                column_names_without_key.iter().map(|x| format!("{} = EXCLUDED.{}", x, x))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        } else {
+            "".to_string()
+        };
         let query_returning = format!(
             "RETURNING {}",
             column_names.join(", ")
