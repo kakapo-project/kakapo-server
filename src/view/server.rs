@@ -246,7 +246,7 @@ impl TableSession {
                     detailed: false,
                 })
             },
-            api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
+            api::TableSessionRequest::GetTableData { begin, end } => {
                 websocket_response(ctx, "getTableData", handlers::GetTableData {
                     name: self.table_name.to_string(),
                     start: begin,

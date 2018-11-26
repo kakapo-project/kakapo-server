@@ -133,13 +133,17 @@ class Tables extends Component {
     this.socket = new WebSocket(url);
     console.log('socket: ', this.socket)
 
-    let sendData = {
+    let sendGetTable = {
+      action: 'getTable',
+    }
+    let sendGetTableData = {
       action: 'getTableData',
       begin: 0,
-      chunkSize: 100
+      end: 500,
     }
+
     this.socket.onopen = (event) => {
-      this.socket.send(JSON.stringify(sendData))
+      this.socket.send(JSON.stringify(sendGetTable))
     }
 
     this.socket.onerror = (event) => {
@@ -151,23 +155,47 @@ class Tables extends Component {
     }
 
     this.socket.onmessage = (event) => {
-      let rawData = JSON.parse(event.data)
+      let incomingData = JSON.parse(event.data)
       let oldData = this.state.data || []
       let oldDataKeys = this.state.keys || new Set()
 
-      let action = rawData.action
-      rawData = rawData.data
+      let action = incomingData.action
+      let rawData = incomingData.data
 
       switch (action) {
+        case 'getTable': {
+          let schema = rawData.schema
+          let columns = schema.columns
+          let constraint = schema.constraint
+
+          let key = constraint.map(x => x.key).map(x => x)
+          if (key.length !== 1) {
+            this.raiseError('This table does not have any keys')
+            return
+          }
+          console.log('table: ', rawData)
+          this.setState({
+            tableInfoColumns: columns,
+            tableInfoKey: key[0],
+          })
+          this.socket.send(JSON.stringify(sendGetTableData))
+          return
+        }
         case 'getTableData':
         case 'update':
           let data = rawData.data
           let columns = rawData.columns
+          console.log('columns: ', columns)
+          let keyIndex = columns.findIndex(x => x === this.state.tableInfoKey)
+          if (keyIndex.length === -1) {
+            this.raiseError('Unknown error: Database did not return the proper columns')
+            return
+          }
 
-          const findIndex = (key) => oldData.findIndex(x => key === x[0] /*TODO: find the key*/)
+          const findIndex = (key) => oldData.findIndex(x => key === x[keyIndex])
 
           data.map((x) => {
-            let key = x[0] //TODO: find the key
+            let key = x[keyIndex]
             console.log('key: ', key)
             if (oldDataKeys.has(key)) {
               //update
@@ -187,8 +215,10 @@ class Tables extends Component {
             data: oldData,
             indices: indices,
             keys: oldDataKeys,
-            columns: columns
+            columns: columns,
+            keyIndex: keyIndex,
           })
+          return
       }
     }
   }
@@ -203,7 +233,9 @@ class Tables extends Component {
   updateValue(input, rowKey, colKey) {
     //TODO: delete row if the key is changed
     let data = {}
-    data['name'] = this.state.data[rowKey][0] //TODO: how to find the primary key?
+    let key = this.state.tableInfoKey
+    let keyIndex = this.state.keyIndex
+    data[key] = this.state.data[rowKey][keyIndex]
     this.state.columns.map((x, idx) => {
       if (colKey === idx) {
         data[x] = input

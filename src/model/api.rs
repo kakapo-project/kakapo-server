@@ -82,8 +82,6 @@ pub enum TableSessionRequest {
         begin: Option<usize>,
         #[serde(skip_serializing_if = "Option::is_none")]
         end: Option<usize>,
-        #[serde(rename = "chunkSize")]
-        chunk_size: usize,
     },
     Update {
         data: data::RowData,
