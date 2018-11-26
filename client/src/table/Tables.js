@@ -152,37 +152,44 @@ class Tables extends Component {
 
     this.socket.onmessage = (event) => {
       let rawData = JSON.parse(event.data)
-      console.log('got the data', rawData)
       let oldData = this.state.data || []
       let oldDataKeys = this.state.keys || new Set()
-      let data = rawData.data
-      let columns = rawData.columns
 
-      const findIndex = (key) => oldData.findIndex(x => key === x[0] /*TODO: find the key*/)
+      let action = rawData.action
+      rawData = rawData.data
 
-      data.map((x) => {
-        let key = x[0] //TODO: find the key
-        console.log('key: ', key)
-        if (oldDataKeys.has(key)) {
-          //update
-          let index = findIndex(key) //O(n)
-          oldData[index] = x
-        } else {
-          //insert
-          oldData.push(x)
-        }
+      switch (action) {
+        case 'getTableData':
+        case 'update':
+          let data = rawData.data
+          let columns = rawData.columns
 
-        oldDataKeys.add(key)
-      })
+          const findIndex = (key) => oldData.findIndex(x => key === x[0] /*TODO: find the key*/)
 
-      let indices = oldData.map((_, idx) => idx + 1)
+          data.map((x) => {
+            let key = x[0] //TODO: find the key
+            console.log('key: ', key)
+            if (oldDataKeys.has(key)) {
+              //update
+              let index = findIndex(key) //O(n)
+              oldData[index] = x
+            } else {
+              //insert
+              oldData.push(x)
+            }
 
-      this.setState({
-        data: oldData,
-        indices: indices,
-        keys: oldDataKeys,
-        columns: columns
-      })
+            oldDataKeys.add(key)
+          })
+
+          let indices = oldData.map((_, idx) => idx + 1)
+
+          this.setState({
+            data: oldData,
+            indices: indices,
+            keys: oldDataKeys,
+            columns: columns
+          })
+      }
     }
   }
 

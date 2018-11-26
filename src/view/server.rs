@@ -81,8 +81,11 @@ where
 }
 
 
-fn websocket_response<M: Message<Result = Result<serde_json::Value, api::Error>>>
-    (ctx: &mut ws::WebsocketContext<TableSession, AppState>, msg: M)
+fn websocket_response<M: Message<Result = Result<serde_json::Value, api::Error>>>(
+    ctx: &mut ws::WebsocketContext<TableSession, AppState>,
+    action_name: &str,
+    msg: M
+)
 where
     M: Send + 'static,
     M::Result: Send,
@@ -96,7 +99,11 @@ where
         .and_then(|res| {
             let unwrapped_result = res?;
             println!("final result: {:?}", &unwrapped_result);
-            let ok_result = serde_json::to_string(&unwrapped_result)
+            let response = json!({
+                "action": action_name,
+                "data": unwrapped_result
+            });
+            let ok_result = serde_json::to_string(&response)
                 .or_else(|err| Err(api::Error::SerializationError))?;
 
             ctx.text(ok_result);
@@ -234,13 +241,13 @@ impl TableSession {
     fn handle_action(&self, ctx: &mut <Self as Actor>::Context, table_session_request: api::TableSessionRequest) {
         match table_session_request {
             api::TableSessionRequest::GetTable => {
-                websocket_response(ctx, handlers::GetTable {
+                websocket_response(ctx, "getTable", handlers::GetTable {
                     name: self.table_name.to_string(),
                     detailed: false,
                 })
             },
             api::TableSessionRequest::GetTableData { begin, end, chunk_size } => {
-                websocket_response(ctx, handlers::GetTableData {
+                websocket_response(ctx, "getTableData", handlers::GetTableData {
                     name: self.table_name.to_string(),
                     start: begin,
                     end: end,
@@ -248,14 +255,14 @@ impl TableSession {
                 })
             },
             api::TableSessionRequest::Create { data } => {
-                websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
+                websocket_response(ctx, "create", handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
                     data: data.into_table_data(),
                     format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
             api::TableSessionRequest::Update { data } => {
-                websocket_response(ctx, handlers::InsertTableData { //TODO: this is upsert
+                websocket_response(ctx, "update", handlers::InsertTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
                     data: data.into_table_data(),
                     format: api::FLAT_TABLE_DATA_FORMAT,
@@ -263,7 +270,7 @@ impl TableSession {
             },
             api::TableSessionRequest::Delete { data } => {
                 //TODO: implement me
-                websocket_response(ctx, handlers::GetTable {
+                websocket_response(ctx, "delete",handlers::GetTable {
                     name: self.table_name.to_string(),
                     detailed: false,
                 })
