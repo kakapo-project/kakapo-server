@@ -253,8 +253,8 @@ class Tables extends Component {
 
   parseColumn(data, colName) {
     let table = this.state.tableInfoColumns
-    console.log(table)
-    if (colName === 'age') {
+    let column = table.filter(x => x.name === colName)[0] //TODO: error checking
+    if (column.dataType === 'integer') {
       if (!data) {
         return null
       } else {

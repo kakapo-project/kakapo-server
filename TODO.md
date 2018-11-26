@@ -27,6 +27,7 @@ Bugs:
 - minor: adding a row should defocus the value input field
 - until the data is updated, the user's input value change should be reflected
 - sending integers not working
+- adding a new row with an old key should give an error?
 
 Backend
 - Hook up table creation to websocket
