@@ -7,15 +7,19 @@ use model::{api, connection, connection::DatabaseExecutor};
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db_connection: Addr<DatabaseExecutor>,
+    db_connections: Vec<Addr<DatabaseExecutor>>,
     pub app_name: String,
 }
 
 impl AppState {
-    pub fn new(connection: Addr<DatabaseExecutor>, app_name: &str) -> Self {
+    pub fn new(connections: Vec<Addr<DatabaseExecutor>>, app_name: &str) -> Self {
         AppState {
-            db_connection: connection,
+            db_connections: connections,
             app_name: app_name.to_string(),
         }
+    }
+
+    pub fn connect<'a>(&'a self, idx: usize) -> &'a Addr<DatabaseExecutor> {
+        &self.db_connections[idx]
     }
 }

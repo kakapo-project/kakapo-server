@@ -45,7 +45,7 @@ Backend
  - implment get by chunksize
 
 Bugs:
-- sending integer as string puts in garbage
+- sending integer as string puts in garbage, or nothing
 
  Devops
  - Different functions
@@ -56,3 +56,16 @@ Bugs:
     - Redis
     - Postgres
     - Frontend
+
+
+Actual TODOS:
+- Setup queries
+- Delete implementation
+- differentiate: update, insert, upsert
+- differentiate boolean, integer, string, json in the front end
+- Build the docker setup
+- scripts support
+- upload data from csv
+- authentication
+- upload files
+- api documentation

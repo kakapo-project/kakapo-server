@@ -63,7 +63,7 @@ where
     M::Result: Send,
     DatabaseExecutor: Handler<M>,
 {
-    let conn = &state.db_connection;
+    let conn = &state.connect(0);
     conn
         .send(msg)
         .from_err()
@@ -92,7 +92,7 @@ where
     DatabaseExecutor: Handler<M>,
 {
     ctx.state()
-        .db_connection
+        .connect(0)
         .send(msg)
         .wait()
         .or_else(|err| Err(api::Error::TooManyConnections))
@@ -339,7 +339,15 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 
 pub fn serve() {
 
-    let connection = connection::create();
+    dotenv().ok();
+
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+
+    let connection = vec![
+        connection::create(&database_url),
+        //TODO: a connection for each user
+    ];
 
 
     actix_web::server::new(move || {
