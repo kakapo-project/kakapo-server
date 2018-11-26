@@ -23,7 +23,7 @@ use super::data;
 use super::err::StateError;
 
 use auth;
-use super::schema::{entity, table_schema, table_schema_history};
+use super::schema::{entity, table_schema, table_schema_history, query, query_history};
 use super::connection::DatabaseExecutor;
 
 use super::dbdata::*;
@@ -523,5 +523,57 @@ pub fn get_table(
             };
             Ok(get_table_result)
         })
+
+}
+
+
+pub fn create_query(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    post_table: api::PostQuery
+) -> Result<api::CreateTableResult, api::Error> {
+
+    Err(api::Error::UnknownError)
+}
+
+
+
+
+pub fn get_queries(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    show_deleted: bool,
+) -> Result<api::GetQueriesResult, api::Error> {
+
+    let result = conn.transaction::<Vec<data::Query>, diesel::result::Error, _>(|| {
+        let queries = query::table
+            .load::<DataQuery>(conn)?;
+        println!("table schemas: {:?}", queries);
+
+        /*
+
+        let parsed_queries = table_schemas.iter()
+            .map(|table_schema| {
+                let table_history_items: Vec<TableSchemaHistory> = table_schema_history::table
+                    .filter(table_schema_history::table_schema_id.eq(table_schema.table_schema_id))
+                    .order_by(table_schema_history::modified_at.asc())
+                    .load::<TableSchemaHistory>(conn)?;
+            })
+            .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
+
+        */
+
+        Ok(
+            vec![
+                data::Query {
+                    name: "terst".to_string(), //TODO: make sure this is an alphanumeric
+                    description: "terst".to_string(),
+                    statement: "terst".to_string(),
+                }
+            ]
+        )
+    });
+
+    result
+        .or_else(|err| Err(api::Error::DatabaseError(err)))
+        .and_then(|queries| Ok(api::GetQueriesResult(queries)))
 
 }

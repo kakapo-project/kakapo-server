@@ -31,6 +31,21 @@ impl Handler<CreateTable> for DatabaseExecutor {
     }
 }
 
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct CreateQuery {
+    pub reqdata: api::PostQuery,
+}
+
+impl Handler<CreateQuery> for DatabaseExecutor {
+    type Result = <CreateQuery as Message>::Result;
+
+    fn handle(&mut self, msg: CreateQuery, _: &mut Self::Context) -> Self::Result {
+        let result = manage::create_query(&self.get_connection(), msg.reqdata)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
 // Get All Table
 #[derive(Clone, Message)]
 #[rtype(result="Result<serde_json::Value, api::Error>")]
@@ -44,6 +59,21 @@ impl Handler<GetTables> for DatabaseExecutor {
 
     fn handle(&mut self, msg: GetTables, _: &mut Self::Context) -> Self::Result {
         let result = manage::get_tables(&self.get_connection(), msg.detailed, msg.show_deleted)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct GetQueries {
+    pub show_deleted: bool,
+}
+
+impl Handler<GetQueries> for DatabaseExecutor {
+    type Result = <GetQueries as Message>::Result;
+
+    fn handle(&mut self, msg: GetQueries, _: &mut Self::Context) -> Self::Result {
+        let result = manage::get_queries(&self.get_connection(), msg.show_deleted)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }

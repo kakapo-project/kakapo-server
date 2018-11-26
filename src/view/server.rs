@@ -128,6 +128,14 @@ struct GetTables {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
+struct GetQueries {
+    #[serde(default)]
+    pub show_deleted: bool,
+}
+
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct GetTable {
     #[serde(default)]
     pub detailed: bool,
@@ -161,6 +169,12 @@ fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncRespo
     })
 }
 
+fn get_queries((state, query): (State<AppState>, Query<GetQueries>)) -> AsyncResponse {
+    println!("received message: {:?}", &query);
+    http_response(&state,handlers::GetQueries {
+        show_deleted: query.show_deleted,
+    })
+}
 
 
 fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
@@ -169,6 +183,14 @@ fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncR
         reqdata: json.into_inner()
     })
 }
+
+fn post_queries((state, json): (State<AppState>, Json<api::PostQuery>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::CreateQuery {
+        reqdata: json.into_inner()
+    })
+}
+
 
 fn get_table((state, path, query): (State<AppState>, Path<String>, Query<GetTable>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
@@ -336,7 +358,6 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 }
 
 
-
 pub fn serve() {
 
     dotenv().ok();
@@ -372,6 +393,15 @@ pub fn serve() {
                     r.method(http::Method::PUT).with(put_table);
                     r.method(http::Method::DELETE).with(delete_table);
                 })
+                .resource("/api/manage/query", |r| {
+                    r.method(http::Method::GET).with(get_queries);
+                    r.method(http::Method::POST).with_config(post_queries, |((_, cfg),)| config(cfg));
+                })
+                /*.resource("/api/manage/query/{query_name}", |r| {
+                    r.method(http::Method::GET).with(get_query);
+                    r.method(http::Method::PUT).with(put_query);
+                    r.method(http::Method::DELETE).with(delete_query);
+                })*/
                 .resource("/api/table/{table_name}", |r| {
                     r.method(http::Method::GET).with(get_table_data);
                     r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg, _),)| config(cfg));

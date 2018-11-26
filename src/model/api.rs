@@ -14,6 +14,16 @@ pub struct PostTable {
     pub action: data::SchemaModification,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PostQuery {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub sql: String,
+}
+
+
 pub type TableData = data::TableData;
 pub type TableDataFormat = data::TableDataFormat;
 
@@ -32,6 +42,9 @@ pub enum GetTableResult {
     Table(data::Table), //unrolls
     DetailedTable(data::DetailedTable), //full history
 }
+
+#[derive(Debug, Serialize)]
+pub struct GetQueriesResult(pub Vec<data::Query>);
 
 #[derive(Debug, Serialize)]
 pub struct CreateTableResult(pub data::Table);

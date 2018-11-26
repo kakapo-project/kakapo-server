@@ -348,3 +348,11 @@ pub struct TableWithData {
     pub table: Table,
     pub data: TableData,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Query {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub statement: String,
+}
