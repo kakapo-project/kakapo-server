@@ -529,10 +529,70 @@ pub fn get_table(
 
 pub fn create_query(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    post_table: api::PostQuery
-) -> Result<api::CreateTableResult, api::Error> {
+    post_query: api::PostQuery
+) -> Result<api::CreateQueryResult, api::Error> {
 
-    Err(api::Error::UnknownError)
+
+    let result = conn.transaction::<_, diesel::result::Error, _>(|| {
+
+        let user_id = auth::get_current_user();
+        let query_name = post_query.name;
+
+        let data_query: DataQuery = query::table
+            .filter(query::name.eq(query_name.to_string()))
+            .get_result::<DataQuery>(conn)
+            .and_then(|result| {
+                println!("query already loaded: {:?}", &result);
+                Ok(result)
+            })
+            .or_else::<Error, _>(|error| {
+                println!("A");
+
+                let entity = insert_into(entity::table)
+                    .values(&NewEntity {
+                        scope_id: 1,
+                        created_by: user_id,
+                    })
+                    .get_result::<Entity>(conn)?;
+
+                println!("B");
+
+                let result = insert_into(query::table)
+                    .values(&NewDataQuery {
+                        entity_id: entity.entity_id,
+                        name: query_name.to_string(),
+                    })
+                    .get_result::<DataQuery>(conn)?;
+
+                println!("new table addedd: {:?}", &result);
+                Ok(result)
+            })?;
+
+        let query_history = insert_into(query_history::table)
+            .values(&NewDataQueryHistory {
+                query_id: data_query.query_id,
+                description: post_query.description.to_string(),
+                statement: post_query.statement.to_string(),
+                query_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
+                modified_by: user_id,
+            })
+            .get_result::<DataQueryHistory>(conn)?;
+
+        println!("query:         {:?}", data_query);
+        println!("query_history: {:?}", query_history);
+
+        let query = data::Query {
+            name: data_query.name,
+            description: query_history.description,
+            statement: query_history.statement,
+        };
+
+        Ok(query)
+    });
+
+    result
+        .or_else(|err| Err(api::Error::DatabaseError(err)))
+        .and_then(|query| Ok(api::CreateQueryResult(query)))
 }
 
 

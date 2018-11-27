@@ -42,7 +42,8 @@ Backend
   - S3
   - airflow
  - Hook read all tables to websockets
- - implment get by chunksize
+ - implment get by chunksize ? maybe
+ - fix code duplication in manage.rs: use inheritance to capture entity
 
 Bugs:
 - sending integer as string puts in garbage, or nothing

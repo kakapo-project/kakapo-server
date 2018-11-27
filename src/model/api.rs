@@ -20,7 +20,7 @@ pub struct PostQuery {
     pub name: String,
     #[serde(default)]
     pub description: String,
-    pub sql: String,
+    pub statement: String,
 }
 
 
@@ -48,6 +48,9 @@ pub struct GetQueriesResult(pub Vec<data::Query>);
 
 #[derive(Debug, Serialize)]
 pub struct CreateTableResult(pub data::Table);
+
+#[derive(Debug, Serialize)]
+pub struct CreateQueryResult(pub data::Query);
 
 #[derive(Debug, Serialize)]
 pub struct GetTableDataResult(pub data::TableData);  //TODO: just need the data, give the user the option to have the schema as well maybe?
