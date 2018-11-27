@@ -548,28 +548,27 @@ pub fn get_queries(
             .load::<DataQuery>(conn)?;
         println!("table schemas: {:?}", queries);
 
-        /*
+        let parsed_queries = queries.iter()
+            .map(|query| {
+                let query_history: DataQueryHistory = query_history::table
+                    .filter(query_history::query_id.eq(query.query_id))
+                    .order_by(query_history::modified_at.desc())
+                    .limit(1)
+                    .get_result::<DataQueryHistory>(conn)?;
 
-        let parsed_queries = table_schemas.iter()
-            .map(|table_schema| {
-                let table_history_items: Vec<TableSchemaHistory> = table_schema_history::table
-                    .filter(table_schema_history::table_schema_id.eq(table_schema.table_schema_id))
-                    .order_by(table_schema_history::modified_at.asc())
-                    .load::<TableSchemaHistory>(conn)?;
+                let query_item = data::Query {
+                    name: query.name.to_owned(),
+                    description: query_history.description,
+                    statement: query_history.statement,
+                };
+
+                Ok(query_item)
             })
-            .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
+            .collect::<Result<Vec<data::Query>, diesel::result::Error>>()?;
 
-        */
+        println!("parsed_queries: {:?}", parsed_queries);
 
-        Ok(
-            vec![
-                data::Query {
-                    name: "terst".to_string(), //TODO: make sure this is an alphanumeric
-                    description: "terst".to_string(),
-                    statement: "terst".to_string(),
-                }
-            ]
-        )
+        Ok(parsed_queries)
     });
 
     result
