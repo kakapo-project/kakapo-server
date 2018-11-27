@@ -47,6 +47,9 @@ pub enum GetTableResult {
 pub struct GetQueriesResult(pub Vec<data::Query>);
 
 #[derive(Debug, Serialize)]
+pub struct GetQueryResult(pub data::Query);
+
+#[derive(Debug, Serialize)]
 pub struct CreateTableResult(pub data::Table);
 
 #[derive(Debug, Serialize)]

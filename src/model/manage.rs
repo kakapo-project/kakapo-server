@@ -546,16 +546,12 @@ pub fn create_query(
                 Ok(result)
             })
             .or_else::<Error, _>(|error| {
-                println!("A");
-
                 let entity = insert_into(entity::table)
                     .values(&NewEntity {
                         scope_id: 1,
                         created_by: user_id,
                     })
                     .get_result::<Entity>(conn)?;
-
-                println!("B");
 
                 let result = insert_into(query::table)
                     .values(&NewDataQuery {
@@ -634,5 +630,46 @@ pub fn get_queries(
     result
         .or_else(|err| Err(api::Error::DatabaseError(err)))
         .and_then(|queries| Ok(api::GetQueriesResult(queries)))
+
+}
+
+
+pub fn get_query(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    query_name: String,
+) -> Result<api::GetQueryResult, api::Error> {
+
+    let result = conn.transaction::<data::Query, diesel::result::Error, _>(|| {
+        let query = query::table
+            .filter(query::name.eq(query_name))
+            .get_result::<DataQuery>(conn)?;
+
+        println!("query: {:?}", query);
+
+        //TODO: remove duplication
+        let query_history: DataQueryHistory = query_history::table
+            .filter(query_history::query_id.eq(query.query_id))
+            .order_by(query_history::modified_at.desc())
+            .limit(1)
+            .get_result::<DataQueryHistory>(conn)?;
+
+        let query_item = data::Query {
+            name: query.name.to_owned(),
+            description: query_history.description,
+            statement: query_history.statement,
+        };
+
+        println!("parsed_queries: {:?}", query_item);
+
+        Ok(query_item)
+
+    });
+
+    result
+        .or_else(|err| match err {
+            diesel::result::Error::NotFound => Err(api::Error::TableNotFound),
+            _ => Err(api::Error::DatabaseError(err)),
+        })
+        .and_then(|query| Ok(api::GetQueryResult(query)))
 
 }

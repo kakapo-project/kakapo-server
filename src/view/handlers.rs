@@ -95,6 +95,20 @@ impl Handler<GetTable> for DatabaseExecutor {
     }
 }
 
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct GetQuery {
+    pub name: String,
+}
+
+impl Handler<GetQuery> for DatabaseExecutor {
+    type Result = <GetQuery as Message>::Result;
+
+    fn handle(&mut self, msg: GetQuery, _: &mut Self::Context) -> Self::Result {
+        let result = manage::get_query(&self.get_connection(), msg.name)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
 
 //
 

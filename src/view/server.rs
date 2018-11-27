@@ -200,6 +200,12 @@ fn get_table((state, path, query): (State<AppState>, Path<String>, Query<GetTabl
     })
 }
 
+fn get_query((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+    http_response(&state,handlers::GetQuery {
+        name: path.to_string(),
+    })
+}
+
 fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
 
     result(Ok(
@@ -397,11 +403,11 @@ pub fn serve() {
                     r.method(http::Method::GET).with(get_queries);
                     r.method(http::Method::POST).with_config(post_queries, |((_, cfg),)| config(cfg));
                 })
-                /*.resource("/api/manage/query/{query_name}", |r| {
+                .resource("/api/manage/query/{query_name}", |r| {
                     r.method(http::Method::GET).with(get_query);
-                    r.method(http::Method::PUT).with(put_query);
-                    r.method(http::Method::DELETE).with(delete_query);
-                })*/
+                    //r.method(http::Method::PUT).with(put_query);
+                    //r.method(http::Method::DELETE).with(delete_query);
+                })
                 .resource("/api/table/{table_name}", |r| {
                     r.method(http::Method::GET).with(get_table_data);
                     r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg, _),)| config(cfg));
