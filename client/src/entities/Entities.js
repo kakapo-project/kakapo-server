@@ -11,16 +11,22 @@ import { API_URL } from '../config'
 class Entities extends Component {
 
   state = {
-    entities: [],
+    tables: [],
+    queries: [],
     error: null,
   }
 
   getEntities() {
-    return this.state.entities
+    return this.state.tables
+      .concat(this.state.queries)
   }
 
-  setEntitites(entities) {
-    this.setState({ entities: entities })
+  setTables(entities) {
+    this.setState({ tables: entities })
+  }
+
+  setQueries(entities) {
+    this.setState({ queries: entities })
   }
 
   raiseError(msg) {
@@ -33,7 +39,7 @@ class Entities extends Component {
   }
 
   pullData() {
-    console.log('pulling data')
+    //tables
     fetch(`${API_URL}/manage/table`)
     .then(response => {
       return response.json()
@@ -42,13 +48,35 @@ class Entities extends Component {
       let entities = data.map(x => ({
         name: x.name,
         type: 'table',
+        icon: 'database',
+        lastUpdated: 'yesterday',
+        description: x.description,
+        isBookmarked: false,
+      }))
+
+      this.setTables(entities)
+    })
+    .catch(err => {
+      console.log('err: ', err.message)
+      this.raiseError(err.message)
+    })
+
+    //queries
+    fetch(`${API_URL}/manage/query`)
+    .then(response => {
+      return response.json()
+    })
+    .then(data => {
+      let entities = data.map(x => ({
+        name: x.name,
+        type: 'query',
         icon: 'search',
         lastUpdated: 'yesterday',
         description: x.description,
         isBookmarked: false,
       }))
 
-      this.setEntitites(entities)
+      this.setQueries(entities)
     })
     .catch(err => {
       console.log('err: ', err.message)
@@ -76,7 +104,7 @@ class Entities extends Component {
   getEntityLink(entity) {
     switch (entity.type) {
       case 'query':
-        return `/`
+        return `/queries/${entity.name}`
       case 'view':
         return '/'
       case 'table':

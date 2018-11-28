@@ -35,7 +35,7 @@ use std::path::PathBuf;
 use std::env;
 
 use super::handlers;
-use super::session::TableSession;
+use super::session::{TableSession, QuerySession};
 use super::state::AppState;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
@@ -81,10 +81,13 @@ where
 }
 
 
-fn websocket_response<M: Message<Result = Result<serde_json::Value, api::Error>>>(
-    ctx: &mut ws::WebsocketContext<TableSession, AppState>,
+fn websocket_response<
+    S: Actor<Context = ws::WebsocketContext<S, AppState>>,
+    M: Message<Result = Result<serde_json::Value, api::Error>>
+>(
+    ctx: &mut ws::WebsocketContext<S, AppState>,
     action_name: &str,
-    msg: M
+    msg: M,
 )
 where
     M: Send + 'static,
@@ -144,6 +147,17 @@ struct GetTable {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct GetTableDataQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<usize>,
+    #[serde(default)]
+    pub format: api::TableDataFormat,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GetQueryDataQuery { //ha
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -215,7 +229,25 @@ fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) ->
     )).responder()
 }
 
+fn put_query((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
+
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
 fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
+fn delete_query((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
 
     result(Ok(
         HttpResponse::InternalServerError()
@@ -234,6 +266,17 @@ fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<Ge
     })
 }
 
+fn get_query_data((state, path, query): (State<AppState>, Path<String>, Query<GetQueryDataQuery>)) -> AsyncResponse {
+    println!("received message: {:?}", &query);
+    http_response(&state,handlers::PullQueryData {
+        name: path.to_string(),
+        start: query.start,
+        end: query.end,
+        format: query.format,
+        params: api::QueryParams::default(),
+    })
+}
+
 fn post_table_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::TableData>, Query<InsertTableDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     //TODO: on duplicate - update (default), ignore, fail
@@ -242,6 +285,17 @@ fn post_table_data((state, path, json, query): (State<AppState>, Path<String>, J
         name: path.to_string(),
         data: json.into_inner(),
         format: query.format,
+    })
+}
+
+fn post_query_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::QueryParams>, Query<GetQueryDataQuery>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::PullQueryData {
+        name: path.to_string(),
+        start: query.start,
+        end: query.end,
+        format: query.format,
+        params: json.into_inner(),
     })
 }
 
@@ -310,6 +364,36 @@ impl TableSession {
 }
 
 
+impl QuerySession {
+
+    fn handle_action(&self, ctx: &mut <Self as Actor>::Context, query_session_request: api::QuerySessionRequest) {
+        match query_session_request {
+            api::QuerySessionRequest::GetQuery => {
+                websocket_response(ctx, "getQuery", handlers::GetQuery {
+                    name: self.query_name.to_string(),
+                })
+            },
+            api::QuerySessionRequest::PostQuery { data } => {
+                websocket_response(ctx, "postQuery", handlers::CreateQuery { //TODO: should be UpdateQuery
+                    reqdata: data
+                })
+            },
+            api::QuerySessionRequest::RunQuery { begin, end, params } => {
+                websocket_response(ctx, "runQuery", handlers::PullQueryData {
+                    name: self.query_name.to_string(),
+                    start: begin,
+                    end: end,
+                    format: api::FLAT_TABLE_DATA_FORMAT,
+                    params: params,
+                })
+            },
+
+        };
+
+    }
+
+}
+
 impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
@@ -335,11 +419,44 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for TableSession {
     }
 }
 
+impl StreamHandler<ws::Message, ws::ProtocolError> for QuerySession {
+    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+        match msg {
+            ws::Message::Text(text) => {
+                // parse json
+                serde_json::from_str(&text)
+                    .or_else::<serde_json::error::Error, _>(|err| {
+                        println!("Error occured while parsing websocket request: {:?}", err);
+                        ctx.stop();
+                        //TODO: send error message
+                        Err(err)
+                    })
+                    .and_then(|query_session_request: api::QuerySessionRequest| {
+                        self.handle_action(ctx, query_session_request);
+                        Ok(())
+                    });
+            },
+            ws::Message::Close(_) => {
+                ctx.stop();
+            },
+            _ => {}
+        }
+    }
+}
+
+
 fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
     let path = Path::<String>::extract(req);
-    let table_name = path?.to_string();
+    let name = path?.to_string();
 
-    ws::start(req, TableSession::new(table_name))
+    ws::start(req, TableSession::new(name))
+}
+
+fn websocket_query_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
+    let path = Path::<String>::extract(req);
+    let name = path?.to_string();
+
+    ws::start(req, QuerySession::new(name))
 }
 
 
@@ -390,6 +507,7 @@ pub fn serve() {
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
+                // metadata
                 .resource("/api/manage/table", |r| {
                     r.method(http::Method::GET).with(get_tables);
                     r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
@@ -405,9 +523,10 @@ pub fn serve() {
                 })
                 .resource("/api/manage/query/{query_name}", |r| {
                     r.method(http::Method::GET).with(get_query);
-                    //r.method(http::Method::PUT).with(put_query);
-                    //r.method(http::Method::DELETE).with(delete_query);
+                    r.method(http::Method::PUT).with(put_query);
+                    r.method(http::Method::DELETE).with(delete_query);
                 })
+                //data
                 .resource("/api/table/{table_name}", |r| {
                     r.method(http::Method::GET).with(get_table_data);
                     r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg, _),)| config(cfg));
@@ -416,8 +535,16 @@ pub fn serve() {
                     r.method(http::Method::PUT).with(put_table_data);
                     r.method(http::Method::DELETE).with(delete_table_data);
                 })
+                .resource("/api/query/{query_name}", |r| {
+                    r.method(http::Method::GET).with(get_query_data);
+                    r.method(http::Method::POST).with_config(post_query_data, |((_, _, cfg, _),)| config(cfg));
+                })
+                //Websockets
                 .resource("/api/listen/table/{table_name}", |r| {
                     r.method(http::Method::GET).f(websocket_table_listener)
+                })
+                .resource("/api/listen/query/{query_name}", |r| {
+                    r.method(http::Method::GET).f(websocket_query_listener)
                 })
                 .register())
             .resource("/", |r| {

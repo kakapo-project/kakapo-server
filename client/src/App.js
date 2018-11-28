@@ -27,9 +27,9 @@ class App extends Component {
         </style>
         <Switch>
           <Route exact path='/' component={Home}/>
-          <Route path='/tables/:name' component={Tables}/>
-          <Route path='/queries' component={Queries}/>
           <Route path='/login' component={Login}/>
+          <Route path='/tables/:name' component={Tables}/>
+          <Route path='/queries/:name' component={Queries}/>
         </Switch>
       </main>
     )

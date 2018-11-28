@@ -18,6 +18,7 @@ use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 
 use serde_json;
 
+use super::data;
 use super::data::{RowData, Table, Value, DataType, TableData};
 use diesel::pg::Pg;
 use diesel::sql_types;
@@ -132,6 +133,21 @@ impl ResultWrapper {
 
 
         Ok(result)
+    }
+
+    pub fn get_column_names(&self) -> Result<Vec<String>, Error> {
+        let num_cols = self.num_cols();
+
+        let res: Result<Vec<String>, Error> =
+            (0..num_cols).map(|col_idx| {
+                let name_str = unsafe {
+                    let name_ptr = unsafe { pq_sys::PQfname(self.p(), col_idx as i32) };
+                    CString::from_raw(name_ptr)
+                };
+                name_str.into_string().or_else(|err| Err(generate_error("error parsing column name")))
+            }).collect::<Result<Vec<String>, Error>>();
+
+        res
     }
 
     pub fn get_rows_data(&self) -> Result<Vec<Vec<Value>>, Error> {
@@ -268,6 +284,34 @@ pub fn get_all_rows(
     let table_data = TableData::RowsFlatData {
         columns: columns.iter().map(|x| x.name.to_owned()).collect(),
         data: rows
+    };
+
+    Ok(table_data)
+}
+
+
+pub fn execute_query(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    query: &data::Query,
+    //TODO: params
+    //params: &data::QueryParams,
+) -> Result<TableData, Error> {
+
+    let db: &PgConnection = conn.deref();
+    let internal_conn = conn_ptr(&db);
+
+    let query_str = &query.statement;
+    println!("final query: {:?}", query);
+
+
+    let result = exec(&internal_conn, &query_str, vec![])?;
+    println!("Number of results: {}", result.num_rows());
+
+    let rows = result.get_rows_data()?;
+
+    let table_data = TableData::RowsFlatData {
+        columns: result.get_column_names()?,
+        data: rows,
     };
 
     Ok(table_data)

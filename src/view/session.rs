@@ -19,3 +19,21 @@ impl TableSession {
         }
     }
 }
+
+pub struct QuerySession {
+    pub query_name: String,
+    pub session_id: usize,
+}
+
+impl Actor for QuerySession {
+    type Context = ws::WebsocketContext<Self, AppState>;
+}
+
+impl QuerySession {
+    pub fn new(query_name: String) -> Self {
+        Self {
+            query_name: query_name,
+            session_id: 0,
+        }
+    }
+}

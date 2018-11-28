@@ -351,8 +351,30 @@ pub struct TableWithData {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct QueryWithData {
+    pub query: Query,
+    pub data: TableData,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Query {
     pub name: String, //TODO: make sure this is an alphanumeric
     pub description: String,
     pub statement: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum QueryParams {
+    //TODO: implement named parameters, unfortunately postgres doesn't have named parameters so...
+    //Named(BTreeMap<String, Value>),
+    Unnamed(Vec<Value>),
+}
+
+impl Default for QueryParams {
+    fn default() -> Self {
+        QueryParams::Unnamed(vec![])
+    }
 }

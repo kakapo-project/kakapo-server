@@ -9,7 +9,7 @@ use model::api;
 use model::connection::DatabaseExecutor;
 
 use model::manage;
-use model::table;
+use model::{table, query};
 use actix_broker::BrokerMsg;
 use view::state::AppState;
 use view::session::TableSession;
@@ -136,7 +136,7 @@ impl Handler<GetTableData> for DatabaseExecutor {
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct InsertTableData {
     pub name: String,
-    pub data: api::TableData,
+    pub data: api::TableData, //payload
     pub format: api::TableDataFormat,
 }
 
@@ -145,6 +145,25 @@ impl Handler<InsertTableData> for DatabaseExecutor {
 
     fn handle(&mut self, msg: InsertTableData, _: &mut Self::Context) -> Self::Result {
         let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data, msg.format)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct PullQueryData {
+    pub name: String,
+    pub params: api::QueryParams,
+    pub start: Option<usize>,
+    pub end: Option<usize>,
+    pub format: api::TableDataFormat,
+}
+
+impl Handler<PullQueryData> for DatabaseExecutor {
+    type Result = <PullQueryData as Message>::Result;
+
+    fn handle(&mut self, msg: PullQueryData, _: &mut Self::Context) -> Self::Result {
+        let result = query::run_query(&self.get_connection(), msg.name, msg.format, msg.params)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }

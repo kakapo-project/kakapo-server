@@ -14,7 +14,7 @@ pub struct PostTable {
     pub action: data::SchemaModification,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PostQuery {
     pub name: String,
@@ -26,6 +26,8 @@ pub struct PostQuery {
 
 pub type TableData = data::TableData;
 pub type TableDataFormat = data::TableDataFormat;
+pub type QueryParams = data::QueryParams;
+
 
 pub const FLAT_TABLE_DATA_FORMAT: TableDataFormat = data::TableDataFormat::FlatRows;
 
@@ -60,6 +62,9 @@ pub struct GetTableDataResult(pub data::TableData);  //TODO: just need the data,
 
 #[derive(Debug, Serialize)]
 pub struct InsertTableDataResult(pub data::TableData);
+
+#[derive(Debug, Serialize)]
+pub struct RunQueryResult(pub data::TableData);
 
 #[derive(Debug)]
 pub enum Error {
@@ -110,6 +115,25 @@ pub enum TableSessionRequest {
     },
     Delete {
         data: data::IndexableValue,
+    },
+
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "action")]
+pub enum QuerySessionRequest {
+    GetQuery,
+    PostQuery {
+        data: PostQuery
+    },
+    RunQuery {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        begin: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        end: Option<usize>,
+        #[serde(default)]
+        params: QueryParams,
     },
 
 }
