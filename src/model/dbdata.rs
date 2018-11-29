@@ -21,7 +21,7 @@ use failure::Fail;
 use super::api;
 use super::data;
 use super::err::StateError;
-use super::schema::{entity, table_schema, table_schema_history, query, query_history};
+use super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history};
 
 
 
@@ -72,6 +72,24 @@ pub struct NewDataQueryHistory {
     pub modified_by: i64,
 }
 
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "script"]
+pub struct NewDataScript {
+    pub entity_id: i64,
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "script_history"]
+pub struct NewDataScriptHistory {
+    pub script_id: i64,
+    pub description: String,
+    pub script_language: String,
+    pub script_text: String,
+    pub script_info: serde_json::Value,
+    pub modified_by: i64,
+}
+
 #[derive(Debug, Queryable)]
 pub struct Entity {
     pub entity_id: i64,
@@ -111,6 +129,25 @@ pub struct DataQueryHistory {
     pub description: String,
     pub statement: String,
     pub query_info: serde_json::Value,
+    pub modified_at: NaiveDateTime,
+    pub modified_by: i64,
+}
+
+#[derive(Debug, Queryable)]
+pub struct DataScript {
+    pub script_id: i64,
+    pub entity_id: i64,
+    pub name: String,
+}
+
+#[derive(Debug, Queryable)]
+pub struct DataScriptHistory {
+    pub script_history_id: i64,
+    pub script_id: i64,
+    pub description: String,
+    pub script_language: String,
+    pub script_text: String,
+    pub script_info: serde_json::Value,
     pub modified_at: NaiveDateTime,
     pub modified_by: i64,
 }

@@ -23,6 +23,15 @@ pub struct PostQuery {
     pub statement: String,
 }
 
+#[derive(Clone, Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PostScript {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub text: String,
+}
+
 
 pub type TableData = data::TableData;
 pub type TableDataFormat = data::TableDataFormat;
@@ -52,10 +61,20 @@ pub struct GetQueriesResult(pub Vec<data::Query>);
 pub struct GetQueryResult(pub data::Query);
 
 #[derive(Debug, Serialize)]
+pub struct GetScriptsResult(pub Vec<data::Script>);
+
+#[derive(Debug, Serialize)]
+pub struct GetScriptResult(pub data::Script);
+
+
+#[derive(Debug, Serialize)]
 pub struct CreateTableResult(pub data::Table);
 
 #[derive(Debug, Serialize)]
 pub struct CreateQueryResult(pub data::Query);
+
+#[derive(Debug, Serialize)]
+pub struct CreateScriptResult(pub data::Script);
 
 #[derive(Debug, Serialize)]
 pub struct GetTableDataResult(pub data::TableData);  //TODO: just need the data, give the user the option to have the schema as well maybe?
@@ -66,11 +85,16 @@ pub struct InsertTableDataResult(pub data::TableData);
 #[derive(Debug, Serialize)]
 pub struct RunQueryResult(pub data::TableData);
 
+#[derive(Debug, Serialize)]
+pub struct RunScriptResult(pub serde_json::Value);
+
 #[derive(Debug)]
 pub enum Error {
     DatabaseError(diesel::result::Error),
     InvalidStateError,
     TableNotFound,
+    QueryNotFound,
+    ScriptNotFound,
     TooManyConnections,
     SerializationError,
     UnknownError,
@@ -88,6 +112,8 @@ impl std::error::Error for Error {
             Error::DatabaseError(x) => x.description(),
             Error::InvalidStateError => "The state of the data is broken",
             Error::TableNotFound => "Table could not be found",
+            Error::QueryNotFound => "Query could not be found",
+            Error::ScriptNotFound => "Script could not be found",
             Error::TooManyConnections => "Too many connections, or too many requests",
             Error::SerializationError => "Could not serialize data",
             Error::UnknownError => "Unknown error",
@@ -134,6 +160,21 @@ pub enum QuerySessionRequest {
         end: Option<usize>,
         #[serde(default)]
         params: QueryParams,
+    },
+
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "action")]
+pub enum ScriptSessionRequest {
+    GetScript,
+    PostScript {
+        data: PostScript,
+    },
+    RunScript {
+        #[serde(default)]
+        params: serde_json::Value,
     },
 
 }

@@ -9,7 +9,7 @@ use model::api;
 use model::connection::DatabaseExecutor;
 
 use model::manage;
-use model::{table, query};
+use model::{table, query, script};
 use actix_broker::BrokerMsg;
 use view::state::AppState;
 use view::session::TableSession;
@@ -46,6 +46,22 @@ impl Handler<CreateQuery> for DatabaseExecutor {
     }
 }
 
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct CreateScript {
+    pub reqdata: api::PostScript,
+}
+
+impl Handler<CreateScript> for DatabaseExecutor {
+    type Result = <CreateScript as Message>::Result;
+
+    fn handle(&mut self, msg: CreateScript, _: &mut Self::Context) -> Self::Result {
+        let result = manage::create_script(&self.get_connection(), msg.reqdata)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+
 // Get All Table
 #[derive(Clone, Message)]
 #[rtype(result="Result<serde_json::Value, api::Error>")]
@@ -74,6 +90,20 @@ impl Handler<GetQueries> for DatabaseExecutor {
 
     fn handle(&mut self, msg: GetQueries, _: &mut Self::Context) -> Self::Result {
         let result = manage::get_queries(&self.get_connection(), msg.show_deleted)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct GetScripts;
+
+impl Handler<GetScripts> for DatabaseExecutor {
+    type Result = <GetScripts as Message>::Result;
+
+    fn handle(&mut self, msg: GetScripts, _: &mut Self::Context) -> Self::Result {
+        let result = manage::get_scripts(&self.get_connection())?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -109,6 +139,22 @@ impl Handler<GetQuery> for DatabaseExecutor {
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct GetScript {
+    pub name: String,
+}
+
+impl Handler<GetScript> for DatabaseExecutor {
+    type Result = <GetScript as Message>::Result;
+
+    fn handle(&mut self, msg: GetScript, _: &mut Self::Context) -> Self::Result {
+        let result = manage::get_script(&self.get_connection(), msg.name)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
 
 //
 
@@ -151,7 +197,7 @@ impl Handler<InsertTableData> for DatabaseExecutor {
 
 #[derive(Clone, Message)]
 #[rtype(result="Result<serde_json::Value, api::Error>")]
-pub struct PullQueryData {
+pub struct RunQuery {
     pub name: String,
     pub params: api::QueryParams,
     pub start: Option<usize>,
@@ -159,11 +205,27 @@ pub struct PullQueryData {
     pub format: api::TableDataFormat,
 }
 
-impl Handler<PullQueryData> for DatabaseExecutor {
-    type Result = <PullQueryData as Message>::Result;
+impl Handler<RunQuery> for DatabaseExecutor {
+    type Result = <RunQuery as Message>::Result;
 
-    fn handle(&mut self, msg: PullQueryData, _: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: RunQuery, _: &mut Self::Context) -> Self::Result {
         let result = query::run_query(&self.get_connection(), msg.name, msg.format, msg.params)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct RunScript {
+    pub name: String,
+    pub params: serde_json::Value,
+}
+
+impl Handler<RunScript> for DatabaseExecutor {
+    type Result = <RunScript as Message>::Result;
+
+    fn handle(&mut self, msg: RunScript, _: &mut Self::Context) -> Self::Result {
+        let result = script::run_script(&self.get_connection(), msg.name, msg.params)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }

@@ -364,6 +364,7 @@ pub struct Query {
     pub statement: String,
 }
 
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
@@ -377,4 +378,12 @@ impl Default for QueryParams {
     fn default() -> Self {
         QueryParams::Unnamed(vec![])
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Script {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub text: String,
 }

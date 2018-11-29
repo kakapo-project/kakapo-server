@@ -35,7 +35,7 @@ use std::path::PathBuf;
 use std::env;
 
 use super::handlers;
-use super::session::{TableSession, QuerySession};
+use super::session::{TableSession, QuerySession, ScriptSession};
 use super::state::AppState;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
@@ -191,6 +191,11 @@ fn get_queries((state, query): (State<AppState>, Query<GetQueries>)) -> AsyncRes
 }
 
 
+fn get_scripts(state: State<AppState>) -> AsyncResponse {
+    http_response(&state,handlers::GetScripts)
+}
+
+
 fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::CreateTable {
@@ -201,6 +206,13 @@ fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncR
 fn post_queries((state, json): (State<AppState>, Json<api::PostQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::CreateQuery {
+        reqdata: json.into_inner()
+    })
+}
+
+fn post_scripts((state, json): (State<AppState>, Json<api::PostScript>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::CreateScript {
         reqdata: json.into_inner()
     })
 }
@@ -220,6 +232,12 @@ fn get_query((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
     })
 }
 
+fn get_script((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+    http_response(&state,handlers::GetScript {
+        name: path.to_string(),
+    })
+}
+
 fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
 
     result(Ok(
@@ -230,6 +248,15 @@ fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) ->
 }
 
 fn put_query((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
+
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
+fn put_script((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
 
     result(Ok(
         HttpResponse::InternalServerError()
@@ -256,6 +283,15 @@ fn delete_query((state, path): (State<AppState>, Path<String>)) -> AsyncResponse
     )).responder()
 }
 
+fn delete_script((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
+
+    result(Ok(
+        HttpResponse::InternalServerError()
+            .content_type("application/json")
+            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
+    )).responder()
+}
+
 fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
     http_response(&state,handlers::GetTableData {
@@ -268,7 +304,7 @@ fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<Ge
 
 fn get_query_data((state, path, query): (State<AppState>, Path<String>, Query<GetQueryDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
-    http_response(&state,handlers::PullQueryData {
+    http_response(&state,handlers::RunQuery {
         name: path.to_string(),
         start: query.start,
         end: query.end,
@@ -290,11 +326,19 @@ fn post_table_data((state, path, json, query): (State<AppState>, Path<String>, J
 
 fn post_query_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::QueryParams>, Query<GetQueryDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
-    http_response(&state,handlers::PullQueryData {
+    http_response(&state,handlers::RunQuery {
         name: path.to_string(),
         start: query.start,
         end: query.end,
         format: query.format,
+        params: json.into_inner(),
+    })
+}
+
+fn post_script_data((state, path, json): (State<AppState>, Path<String>, Json<serde_json::Value>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::RunScript {
+        name: path.to_string(),
         params: json.into_inner(),
     })
 }
@@ -379,11 +423,38 @@ impl QuerySession {
                 })
             },
             api::QuerySessionRequest::RunQuery { begin, end, params } => {
-                websocket_response(ctx, "runQuery", handlers::PullQueryData {
+                websocket_response(ctx, "runQuery", handlers::RunQuery {
                     name: self.query_name.to_string(),
                     start: begin,
                     end: end,
                     format: api::FLAT_TABLE_DATA_FORMAT,
+                    params: params,
+                })
+            },
+
+        };
+
+    }
+
+}
+
+impl ScriptSession {
+
+    fn handle_action(&self, ctx: &mut <Self as Actor>::Context, script_session_request: api::ScriptSessionRequest) {
+        match script_session_request {
+            api::ScriptSessionRequest::GetScript => {
+                websocket_response(ctx, "getQuery", handlers::GetScript {
+                    name: self.script_name.to_string(),
+                })
+            },
+            api::ScriptSessionRequest::PostScript { data } => {
+                websocket_response(ctx, "postQuery", handlers::CreateScript { //TODO: should be UpdateQuery
+                    reqdata: data
+                })
+            },
+            api::ScriptSessionRequest::RunScript { params } => {
+                websocket_response(ctx, "runQuery", handlers::RunScript {
+                    name: self.script_name.to_string(),
                     params: params,
                 })
             },
@@ -444,6 +515,30 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for QuerySession {
     }
 }
 
+impl StreamHandler<ws::Message, ws::ProtocolError> for ScriptSession {
+    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+        match msg {
+            ws::Message::Text(text) => {
+                // parse json
+                serde_json::from_str(&text)
+                    .or_else::<serde_json::error::Error, _>(|err| {
+                        println!("Error occured while parsing websocket request: {:?}", err);
+                        ctx.stop();
+                        //TODO: send error message
+                        Err(err)
+                    })
+                    .and_then(|script_session_request: api::ScriptSessionRequest| {
+                        self.handle_action(ctx, script_session_request);
+                        Ok(())
+                    });
+            },
+            ws::Message::Close(_) => {
+                ctx.stop();
+            },
+            _ => {}
+        }
+    }
+}
 
 fn websocket_table_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
     let path = Path::<String>::extract(req);
@@ -457,6 +552,13 @@ fn websocket_query_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse,
     let name = path?.to_string();
 
     ws::start(req, QuerySession::new(name))
+}
+
+fn websocket_script_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse, ActixError> {
+    let path = Path::<String>::extract(req);
+    let name = path?.to_string();
+
+    ws::start(req, ScriptSession::new(name))
 }
 
 
@@ -526,6 +628,15 @@ pub fn serve() {
                     r.method(http::Method::PUT).with(put_query);
                     r.method(http::Method::DELETE).with(delete_query);
                 })
+                .resource("/api/manage/script", |r| {
+                    r.method(http::Method::GET).with(get_scripts);
+                    r.method(http::Method::POST).with_config(post_scripts, |((_, cfg),)| config(cfg));
+                })
+                .resource("/api/manage/script/{script_name}", |r| {
+                    r.method(http::Method::GET).with(get_script);
+                    r.method(http::Method::PUT).with(put_script);
+                    r.method(http::Method::DELETE).with(delete_script);
+                })
                 //data
                 .resource("/api/table/{table_name}", |r| {
                     r.method(http::Method::GET).with(get_table_data);
@@ -539,12 +650,18 @@ pub fn serve() {
                     r.method(http::Method::GET).with(get_query_data);
                     r.method(http::Method::POST).with_config(post_query_data, |((_, _, cfg, _),)| config(cfg));
                 })
+                .resource("/api/script/{script_name}", |r| {
+                    r.method(http::Method::POST).with_config(post_script_data, |((_, _, cfg),)| config(cfg));
+                })
                 //Websockets
                 .resource("/api/listen/table/{table_name}", |r| {
                     r.method(http::Method::GET).f(websocket_table_listener)
                 })
                 .resource("/api/listen/query/{query_name}", |r| {
                     r.method(http::Method::GET).f(websocket_query_listener)
+                })
+                .resource("/api/listen/script/{script_name}", |r| {
+                    r.method(http::Method::GET).f(websocket_script_listener)
                 })
                 .register())
             .resource("/", |r| {

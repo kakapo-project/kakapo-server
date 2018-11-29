@@ -77,7 +77,7 @@ pub fn run_query(
         Ok(query_with_data)
 
     }).or_else(|err| match err {
-        diesel::result::Error::NotFound => Err(api::Error::TableNotFound),
+        diesel::result::Error::NotFound => Err(api::Error::QueryNotFound),
         _ => Err(api::Error::DatabaseError(err)),
     })?;
 

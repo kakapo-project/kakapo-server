@@ -37,3 +37,21 @@ impl QuerySession {
         }
     }
 }
+
+pub struct ScriptSession {
+    pub script_name: String,
+    pub session_id: usize,
+}
+
+impl Actor for ScriptSession {
+    type Context = ws::WebsocketContext<Self, AppState>;
+}
+
+impl ScriptSession {
+    pub fn new(script_name: String) -> Self {
+        Self {
+            script_name: script_name,
+            session_id: 0,
+        }
+    }
+}
