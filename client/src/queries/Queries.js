@@ -12,6 +12,8 @@ import 'codemirror/addon/hint/sql-hint'
 import 'codemirror/lib/codemirror.css'
 import 'codemirror/theme/darcula.css'
 
+import GridLayout from '../table/GridLayout.js'
+
 import Header from '../Header.js'
 
 const QueriesSidebar = (props) => (
@@ -85,6 +87,8 @@ class Queries extends Component {
     sidebarOpen: false,
     localStatement: null,
     statement: '',
+    isRunningQuery: false,
+    isTableLoaded: false,
     error: null,
   }
 
@@ -126,8 +130,22 @@ class Queries extends Component {
           this.setState({
             statement: rawData.statement,
           })
+          return
         case 'runQuery': {
           console.log('runQuery: rawData: ', rawData)
+
+          let data = rawData.data
+          let columns = rawData.columns
+          let keys = data.map((x, idx) => idx)
+
+          this.setState({
+            data: data,
+            columns: columns,
+            keys: keys,
+            isRunningQuery: false,
+            isTableLoaded: true,
+          })
+          return
         }
       }
     }
@@ -172,6 +190,16 @@ class Queries extends Component {
     }
   }
 
+  runQuery() {
+    this.setState({ isRunningQuery: true })
+
+    let sendRunQuery = {
+      action: 'runQuery',
+      params: []
+    }
+    this.socket.send(JSON.stringify(sendRunQuery))
+  }
+
   componentDidMount() {
     this.setupConnection()
   }
@@ -185,7 +213,7 @@ class Queries extends Component {
       <div>
         <style>
           {`
-            .ReactCodeMirror > div.CodeMirror {
+            .react-codemirror2 > div.CodeMirror {
               border-radius: 5px;
             }
           `}
@@ -221,6 +249,44 @@ class Queries extends Component {
                     }}
                   />
                 </Form>
+                <Segment>
+                  <Grid columns='equal'>
+                    <Grid.Column width={4}>
+                      <Button
+                        color='black'
+                        icon
+                        size='large'
+                        floated='left'
+                        labelPosition='right'
+                        loading={this.state.isRunningQuery}
+                        onClick={(e) => this.runQuery()}
+                      >
+                        Run
+                        {this.state.isRunningQuery ? <></> :
+                          <Icon color='green' name='play' />
+                        }
+                      </Button>
+                    </Grid.Column>
+                    <Grid.Column>
+                    </Grid.Column>
+                    <Grid.Column width={4}>
+                      <Button icon circular color='black' size='large' floated='right'>
+                        <Icon  name='add' /> {/* TODO: parameters, technically, don't need the add */}
+                      </Button>
+                    </Grid.Column>
+                  </Grid>
+                  {this.state.isTableLoaded ?
+                     <GridLayout
+                      data={this.state.data}
+                      columns={this.state.columns}
+                      indices={this.state.keys}
+                      addRow={(afterIdx) => console.log('not implemented')}
+                      updateValue={(input, rowKey, colKey) => console.log('not implemented')}
+                    />
+                    : <></>
+                  }
+
+                </Segment>
               </Segment>
             </Segment>
           </Sidebar.Pusher>

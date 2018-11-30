@@ -49,6 +49,22 @@ Backend
 Bugs:
 - sending integer as string puts in garbage, or nothing
 - post query (/script) should only update current query, not insert other query or update
+- error handling query script
+- weird bug: garbage when running the following, notice the location of ORDER with respect to character
+```
+SELECT * FROM "character"
+ORDER BY "age" DESC
+LIMIT 3;
+```
+- segmentation fault on some queries log:
+```
+final result: QueryWithData { query: Query { name: "my_special_query", description: "", statement: "SELECT * FROM \"diesel_demo\".\"character\"\n  LIMIT 3;" }, data: RowsFlatData { columns: [], data: [] } }
+final result: Object({"columns": Array([]), "data": Array([])})
+query already loaded: DataQuery { query_id: 3, entity_id: 13, name: "my_special_query" }
+encountered error: DatabaseError(DatabaseError(ForeignKeyViolation, "insert or update on table \"query_history\" violates foreign key constraint \"query_history_modified_by_fkey\""))
+
+Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
+```
 
  Devops
  - Different functions
