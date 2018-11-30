@@ -48,6 +48,7 @@ Backend
 
 Bugs:
 - sending integer as string puts in garbage, or nothing
+- post query (/script) should only update current query, not insert other query or update
 
  Devops
  - Different functions

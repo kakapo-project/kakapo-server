@@ -443,17 +443,17 @@ impl ScriptSession {
     fn handle_action(&self, ctx: &mut <Self as Actor>::Context, script_session_request: api::ScriptSessionRequest) {
         match script_session_request {
             api::ScriptSessionRequest::GetScript => {
-                websocket_response(ctx, "getQuery", handlers::GetScript {
+                websocket_response(ctx, "getScript", handlers::GetScript {
                     name: self.script_name.to_string(),
                 })
             },
             api::ScriptSessionRequest::PostScript { data } => {
-                websocket_response(ctx, "postQuery", handlers::CreateScript { //TODO: should be UpdateQuery
+                websocket_response(ctx, "postScript", handlers::CreateScript { //TODO: should be UpdateQuery
                     reqdata: data
                 })
             },
             api::ScriptSessionRequest::RunScript { params } => {
-                websocket_response(ctx, "runQuery", handlers::RunScript {
+                websocket_response(ctx, "runScript", handlers::RunScript {
                     name: self.script_name.to_string(),
                     params: params,
                 })

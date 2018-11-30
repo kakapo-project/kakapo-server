@@ -91,13 +91,13 @@ class Entities extends Component {
   renderIcon(entity) {
     switch (entity.type) {
       case 'query':
-        return <Icon circular size='huge' color='scheme-green' name={entity.icon} style={{boxShadow: '0 0 0 0.1em rgba(0,83,34, 1) inset'}}/>
+        return <Icon circular size='huge' className='scheme-green' name={entity.icon} style={{boxShadow: '0 0 0 0.1em rgba(0,83,34, 1) inset'}}/>
       case 'view':
         return <Icon circular inverted size='huge' color='grey' name={entity.icon} />
       case 'table':
         return <Icon circular inverted size='huge' color='black' name={entity.icon} />
       case 'script':
-        return <Icon circular inverted size='huge' color='scheme-green' name={entity.icon} />
+        return <Icon circular inverted size='huge' className='scheme-green' name={entity.icon} />
     }
   }
 
