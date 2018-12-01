@@ -14,10 +14,13 @@ use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::sql_types::*;
 
 use failure::Fail;
+use serde_json;
 use std::io::Write;
 use std::io;
 use std::collections::BTreeMap;
 use std;
+use std::fs::File;
+use std::path::Path;
 use std::ops::Deref;
 
 use super::data;
@@ -94,8 +97,21 @@ fn setup_py(script_path: String, py: Python) -> PyResult<()> {
     return Ok(());
 }
 
-fn run_script_locally(py: Python, script: String) -> () {
-    println!("running script locally: {:?}", script);
+fn run_script_locally(py: Python, script_name: String) -> PyResult<String> {
+    let module = py.import(&script_name)?;
+    let json = py.import("json")?;
+    let py_result = module.call(py, "handle", NoArgs, None)?;
+
+    let locals = PyDict::new(py);
+    locals.set_item(py, "json", json)?;
+    locals.set_item(py, "result", py_result)?;
+
+    let result: String = py.eval("json.dumps(result)", None, Some(&locals))?.extract(py)?;
+    Ok(result)
+}
+
+fn handle_py_error() -> () {
+
 }
 
 pub fn run_script(
@@ -105,6 +121,7 @@ pub fn run_script(
     params: data::ScriptParam,
 ) -> Result<api::RunScriptResult, api::Error> {
 
+    //get table
     let script_item = conn.transaction::<data::Script, diesel::result::Error, _>(|| {
 
         let script_item = get_one_script(conn, script_name)?;
@@ -117,10 +134,18 @@ pub fn run_script(
         _ => Err(api::Error::DatabaseError(err)),
     })?;
 
+    //dump table to file: TODO: figure out how to make this more thread safe
+    let script_path = py_runner.get_script_path();
+    let file_path = Path::new(&script_path).join(&script_item.name).with_extension("py");
+    let mut file = File::create(file_path)
+        .or_else(|err| Err(api::Error::UnknownError))?;
+    file.write_all(script_item.text.as_bytes())
+        .or_else(|err| Err(api::Error::UnknownError))?;
+
     let gil = Python::acquire_gil();
     let py = gil.python();
 
-    setup_py(py_runner.get_script_path(), py).or_else(|mut err| {
+    setup_py(script_path, py).or_else(|mut err| {
         err.instance(py).extract(py)
             .or_else(|inner_err| {
                 Err(api::Error::UnknownError)
@@ -130,8 +155,18 @@ pub fn run_script(
             })
     })?;
 
-    run_script_locally(py, script_item.text);
+    let json_result = run_script_locally(py, script_item.name).or_else(|mut err| {
+        err.instance(py).extract(py)
+            .or_else(|inner_err| {
+                Err(api::Error::UnknownError)
+            })
+            .and_then(|message| {
+                Err(api::Error::ScriptError(message))
+            })
+    })?;
 
-    Ok(api::RunScriptResult(json!(null)))
+    let result = serde_json::to_value(json_result).or_else(|err| Err(api::Error::UnknownError))?;
+
+    Ok(api::RunScriptResult(result))
 }
 

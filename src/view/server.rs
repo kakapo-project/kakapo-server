@@ -32,7 +32,7 @@ use serde_json;
 use std::error::Error;
 use std::result::Result;
 use std::result::Result::Ok;
-use std::path::PathBuf;
+use std::path::Path as fsPath;
 use std::env;
 
 use super::handlers;
@@ -574,8 +574,7 @@ fn websocket_script_listener(req: &HttpRequest<AppState>) -> Result<HttpResponse
 
 fn index(state: State<AppState>) -> Result<NamedFile, ActixError> {
     let www_path = get_www_path();
-    let mut path = PathBuf::from(www_path);
-    path.push("index.html");
+    let path = fsPath::new(&www_path).join("index.html");
     Ok(NamedFile::open(path)?)
 }
 
@@ -682,7 +681,7 @@ pub fn serve() {
             .default_resource(|r| r.h(NormalizePath::default()))
             .handler(
                 "/",
-                fs::StaticFiles::new(PathBuf::from(www_path))
+                fs::StaticFiles::new(fsPath::new(&www_path))
                     .unwrap()
                     .show_files_listing())
         })
