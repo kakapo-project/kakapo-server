@@ -28,4 +28,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # sandbox
+
 sandbox/
+
+*.pyc
+__pycache__

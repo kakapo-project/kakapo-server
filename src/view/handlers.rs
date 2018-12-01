@@ -6,7 +6,7 @@ use actix_web::ws;
 use serde_json;
 
 use model::api;
-use model::connection::DatabaseExecutor;
+use model::connection::{executor::DatabaseExecutor, py::PyRunner};
 
 use model::manage;
 use model::{table, query, script};
@@ -218,14 +218,15 @@ impl Handler<RunQuery> for DatabaseExecutor {
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct RunScript {
     pub name: String,
-    pub params: serde_json::Value,
+    pub params: api::ScriptParam,
+    pub py_runner: PyRunner,
 }
 
 impl Handler<RunScript> for DatabaseExecutor {
     type Result = <RunScript as Message>::Result;
 
-    fn handle(&mut self, msg: RunScript, _: &mut Self::Context) -> Self::Result {
-        let result = script::run_script(&self.get_connection(), msg.name, msg.params)?;
+    fn handle(&mut self, msg: RunScript, ctx: &mut Self::Context) -> Self::Result {
+        let result = script::run_script(&self.get_connection(), msg.py_runner, msg.name, msg.params)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }

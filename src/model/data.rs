@@ -387,3 +387,5 @@ pub struct Script {
     pub description: String,
     pub text: String,
 }
+
+pub type ScriptParam = Option<serde_json::Value>;

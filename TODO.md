@@ -45,6 +45,7 @@ Backend
  - Hook read all tables to websockets
  - implment get by chunksize ? maybe
  - fix code duplication in manage.rs: use inheritance to capture entity
+ - script runner should ignore if no json is added for `/api/script/...`
 
 Bugs:
 - sending integer as string puts in garbage, or nothing
@@ -78,7 +79,6 @@ Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
 
 
 Actual TODOS:
-- Setup queries
 - Delete implementation
 - differentiate: update, insert, upsert
 - differentiate boolean, integer, string, json in the front end
@@ -88,3 +88,4 @@ Actual TODOS:
 - authentication
 - upload files
 - api documentation
+- packaging with ./configure && make && make install

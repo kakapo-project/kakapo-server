@@ -1,4 +1,3 @@
-
 /// Crates
 extern crate actix;
 extern crate actix_broker;
@@ -7,6 +6,7 @@ extern crate byteorder;
 extern crate bytes;
 extern crate chrono;
 extern crate clap;
+extern crate cpython;
 extern crate dotenv;
 #[macro_use]
 extern crate diesel;

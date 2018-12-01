@@ -11,6 +11,7 @@ use actix_web::{
 
 use actix_web::middleware::cors::Cors;
 
+use cpython::{Python, PyDict, PyErr, PyResult, NoArgs};
 use dotenv::{dotenv};
 use env_logger::{Builder, Target};
 
@@ -22,7 +23,7 @@ use json::JsonValue;
 
 use log::LevelFilter;
 
-use model::{api, connection, connection::DatabaseExecutor};
+use model::{api, connection, connection::executor::DatabaseExecutor};
 
 use serde;
 use serde_derive;
@@ -54,6 +55,12 @@ fn get_www_path() -> String {
     dotenv().expect("could not parse dotenv file");
     let www_path = env::var("WWW_PATH").expect("WWW_PATH must be set");
     www_path
+}
+
+fn get_script_path() -> String {
+    dotenv().expect("could not parse dotenv file");
+    let script_path = env::var("SCRIPTS_PATH").expect("SCRIPTS_PATH must be set");
+    script_path
 }
 
 fn http_response<M: Message<Result = Result<serde_json::Value, api::Error>>>
@@ -335,11 +342,12 @@ fn post_query_data((state, path, json, query): (State<AppState>, Path<String>, J
     })
 }
 
-fn post_script_data((state, path, json): (State<AppState>, Path<String>, Json<serde_json::Value>)) -> AsyncResponse {
+fn post_script_data((state, path, json): (State<AppState>, Path<String>, Json<api::ScriptParam>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::RunScript {
         name: path.to_string(),
         params: json.into_inner(),
+        py_runner: state.get_py_runner(),
     })
 }
 
@@ -453,9 +461,11 @@ impl ScriptSession {
                 })
             },
             api::ScriptSessionRequest::RunScript { params } => {
+                let py_runner = ctx.state().get_py_runner();
                 websocket_response(ctx, "runScript", handlers::RunScript {
                     name: self.script_name.to_string(),
                     params: params,
+                    py_runner: py_runner,
                 })
             },
 
@@ -591,14 +601,16 @@ pub fn serve() {
         .expect("DATABASE_URL must be set");
 
     let connection = vec![
-        connection::create(&database_url),
+        connection::executor::create(&database_url),
         //TODO: a connection for each user
     ];
 
 
     actix_web::server::new(move || {
-        let state = AppState::new(connection.clone(), "Kakapo");
+
         let www_path = get_www_path();
+        let script_path = get_script_path();
+        let state = AppState::new(connection.clone(), &script_path, "Kakapo");
 
         App::with_state(state)
             .middleware(middleware::Logger::default())

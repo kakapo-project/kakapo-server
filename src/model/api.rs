@@ -36,6 +36,7 @@ pub struct PostScript {
 pub type TableData = data::TableData;
 pub type TableDataFormat = data::TableDataFormat;
 pub type QueryParams = data::QueryParams;
+pub type ScriptParam = data::ScriptParam;
 
 
 pub const FLAT_TABLE_DATA_FORMAT: TableDataFormat = data::TableDataFormat::FlatRows;
@@ -91,6 +92,7 @@ pub struct RunScriptResult(pub serde_json::Value);
 #[derive(Debug)]
 pub enum Error {
     DatabaseError(diesel::result::Error),
+    ScriptError(String),
     InvalidStateError,
     TableNotFound,
     QueryNotFound,
@@ -110,6 +112,7 @@ impl std::error::Error for Error {
     fn description(&self) -> &str {
         match self {
             Error::DatabaseError(x) => x.description(),
+            Error::ScriptError(x) => &x[..],
             Error::InvalidStateError => "The state of the data is broken",
             Error::TableNotFound => "Table could not be found",
             Error::QueryNotFound => "Query could not be found",
@@ -174,7 +177,7 @@ pub enum ScriptSessionRequest {
     },
     RunScript {
         #[serde(default)]
-        params: serde_json::Value,
+        params: Option<serde_json::Value>,
     },
 
 }

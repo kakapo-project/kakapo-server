@@ -24,7 +24,7 @@ use super::err::StateError;
 
 use auth;
 use super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history};
-use super::connection::DatabaseExecutor;
+use super::connection::executor::DatabaseExecutor;
 
 use super::dbdata::*;
 
@@ -781,6 +781,33 @@ pub fn get_scripts(
 
 }
 
+//TODO: crate public
+pub fn get_one_script(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    script_name: String,
+) -> Result<data::Script, diesel::result::Error> {
+
+    let raw_script_data = script::table
+        .filter(script::name.eq(script_name))
+        .get_result::<DataScript>(conn)?;
+
+    println!("script: {:?}", raw_script_data);
+
+    //TODO: remove duplication
+    let script_history: DataScriptHistory = script_history::table
+        .filter(script_history::script_id.eq(raw_script_data.script_id))
+        .order_by(script_history::modified_at.desc())
+        .limit(1)
+        .get_result::<DataScriptHistory>(conn)?;
+
+    let script_item = data::Script {
+        name: raw_script_data.name.to_owned(),
+        description: script_history.description,
+        text: script_history.script_text,
+    };
+
+    Ok(script_item)
+}
 
 pub fn get_script(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
@@ -788,29 +815,11 @@ pub fn get_script(
 ) -> Result<api::GetScriptResult, api::Error> {
 
     let result = conn.transaction::<data::Script, diesel::result::Error, _>(|| {
-        let script = script::table
-            .filter(script::name.eq(script_name))
-            .get_result::<DataScript>(conn)?;
 
-        println!("script: {:?}", script);
-
-        //TODO: remove duplication
-        let script_history: DataScriptHistory = script_history::table
-            .filter(script_history::script_id.eq(script.script_id))
-            .order_by(script_history::modified_at.desc())
-            .limit(1)
-            .get_result::<DataScriptHistory>(conn)?;
-
-        let script_item = data::Script {
-            name: script.name.to_owned(),
-            description: script_history.description,
-            text: script_history.script_text,
-        };
-
+        let script_item = get_one_script(conn, script_name)?;
         println!("parsed_scripts: {:?}", script_item);
 
         Ok(script_item)
-
     });
 
     result
