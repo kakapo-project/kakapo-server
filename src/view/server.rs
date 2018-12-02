@@ -293,30 +293,24 @@ fn put_script((state, path, json): (State<AppState>, Path<String>, Json<api::Put
 }
 
 fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
-
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+    println!("deleting: {:?}", &path);
+    http_response(&state,handlers::DeleteTable {
+        name: path.to_string(),
+    })
 }
 
 fn delete_query((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
-
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+    println!("deleting: {:?}", &path);
+    http_response(&state,handlers::DeleteQuery {
+        name: path.to_string(),
+    })
 }
 
 fn delete_script((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
-
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+    println!("deleting: {:?}", &path);
+    http_response(&state,handlers::DeleteScript {
+        name: path.to_string(),
+    })
 }
 
 fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableDataQuery>)) -> AsyncResponse {

@@ -15,7 +15,7 @@ use view::state::AppState;
 use view::session::TableSession;
 
 
-// Create Table
+// Create Stuff
 #[derive(Clone, Message)]
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct CreateTable {
@@ -65,7 +65,7 @@ impl Handler<CreateScript> for DatabaseExecutor {
 }
 
 
-// Update Table
+// Update Stuff
 #[derive(Clone, Message)]
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct UpdateTable {
@@ -114,8 +114,54 @@ impl Handler<UpdateScript> for DatabaseExecutor {
     }
 }
 
+// Delete Stuff
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct DeleteTable {
+    pub name: String,
+}
 
-// Get All Table
+impl Handler<DeleteTable> for DatabaseExecutor {
+    type Result = <DeleteTable as Message>::Result;
+
+    fn handle(&mut self, msg: DeleteTable, _: &mut Self::Context) -> Self::Result {
+        let result = manage::create::delete_table(&self.get_connection(), msg.name)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct DeleteQuery {
+    pub name: String,
+}
+
+impl Handler<DeleteQuery> for DatabaseExecutor {
+    type Result = <DeleteQuery as Message>::Result;
+
+    fn handle(&mut self, msg: DeleteQuery, _: &mut Self::Context) -> Self::Result {
+        let result = manage::create::delete_query(&self.get_connection(), msg.name)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct DeleteScript {
+    pub name: String,
+}
+
+impl Handler<DeleteScript> for DatabaseExecutor {
+    type Result = <DeleteScript as Message>::Result;
+
+    fn handle(&mut self, msg: DeleteScript, _: &mut Self::Context) -> Self::Result {
+        let result = manage::create::delete_script(&self.get_connection(), msg.name)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+
+// Get All (for Query, Tables, Scripts)
 #[derive(Clone, Message)]
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct GetTables {

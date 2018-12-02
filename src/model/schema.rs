@@ -39,6 +39,7 @@ table! {
         description -> Varchar,
         statement -> Varchar,
         query_info -> Json,
+        is_deleted -> Bool,
         modified_at -> Timestamp,
         modified_by -> Int8,
     }
@@ -86,6 +87,7 @@ table! {
         script_language -> Varchar,
         script_text -> Varchar,
         script_info -> Json,
+        is_deleted -> Bool,
         modified_at -> Timestamp,
         modified_by -> Int8,
     }

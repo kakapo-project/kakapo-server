@@ -49,6 +49,7 @@ CREATE TABLE query_history (
     description             VARCHAR NOT NULL DEFAULT '',
     statement               VARCHAR NOT NULL,
     query_info              JSON NOT NULL DEFAULT '{}',
+    is_deleted              BOOLEAN NOT NULL DEFAULT FALSE,
     modified_at             TIMESTAMP NOT NULL DEFAULT NOW(),
     modified_by             BIGINT REFERENCES user_account NOT NULL
 );
@@ -66,6 +67,7 @@ CREATE TABLE script_history (
     script_language         VARCHAR NOT NULL,
     script_text             VARCHAR NOT NULL,
     script_info             JSON NOT NULL DEFAULT '{}',
+    is_deleted              BOOLEAN NOT NULL DEFAULT FALSE,
     modified_at             TIMESTAMP NOT NULL DEFAULT NOW(),
     modified_by             BIGINT REFERENCES user_account NOT NULL
 );

@@ -14,6 +14,33 @@ pub struct PostTable {
     pub action: data::SchemaModification,
 }
 
+pub struct NewTable {
+    pub name: String,
+    pub description: String,
+    pub action: data::SchemaModification,
+}
+
+
+impl PostTable {
+    pub fn into_new(self) -> NewTable {
+        NewTable {
+            name: self.name,
+            description: self.description,
+            action: self.action,
+        }
+    }
+}
+
+impl NewTable {
+    pub fn deletion(name: String) -> Self {
+        NewTable {
+            name: name,
+            description: "".to_string(),
+            action: data::SchemaModification::Delete,
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PostQuery {
@@ -21,6 +48,35 @@ pub struct PostQuery {
     #[serde(default)]
     pub description: String,
     pub statement: String,
+}
+
+pub struct NewQuery {
+    pub name: String,
+    pub description: String,
+    pub statement: String,
+    pub for_deletion: bool,
+}
+
+impl PostQuery {
+    pub fn into_new(self) -> NewQuery {
+        NewQuery {
+            name: self.name,
+            description: self.description,
+            statement: self.statement,
+            for_deletion: false,
+        }
+    }
+}
+
+impl NewQuery {
+    pub fn deletion(name: String) -> Self {
+        NewQuery {
+            name: name,
+            description: "".to_string(),
+            statement: "".to_string(),
+            for_deletion: true,
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -32,6 +88,35 @@ pub struct PostScript {
     pub text: String,
 }
 
+pub struct NewScript {
+    pub name: String,
+    pub description: String,
+    pub text: String,
+    pub for_deletion: bool,
+}
+
+impl PostScript {
+    pub fn into_new(self) -> NewScript {
+        NewScript {
+            name: self.name,
+            description: self.description,
+            text: self.text,
+            for_deletion: false,
+        }
+    }
+}
+
+impl NewScript {
+    pub fn deletion(name: String) -> Self {
+        NewScript {
+            name: name,
+            description: "".to_string(),
+            text: "".to_string(),
+            for_deletion: true,
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PutTable {
@@ -41,8 +126,8 @@ pub struct PutTable {
 }
 
 impl PutTable {
-    pub fn with_name(self, name: String) -> PostTable {
-        PostTable {
+    pub fn with_name(self, name: String) -> NewTable {
+        NewTable {
             name: name,
             description: self.description,
             action: self.action,
@@ -59,11 +144,12 @@ pub struct PutQuery {
 }
 
 impl PutQuery {
-    pub fn with_name(self, name: String) -> PostQuery {
-        PostQuery {
+    pub fn into_new(self, name: String) -> NewQuery {
+        NewQuery {
             name: name,
             description: self.description,
             statement: self.statement,
+            for_deletion: false,
         }
     }
 }
@@ -77,11 +163,12 @@ pub struct PutScript {
 }
 
 impl PutScript {
-    pub fn with_name(self, name: String) -> PostScript {
-        PostScript {
+    pub fn into_new(self, name: String) -> NewScript {
+        NewScript {
             name: name,
             description: self.description,
             text: self.text,
+            for_deletion: false,
         }
     }
 }

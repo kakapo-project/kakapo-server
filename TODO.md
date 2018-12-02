@@ -82,7 +82,6 @@ Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
 
 Actual TODOS:
 - Delete implementation
-- differentiate: update, insert, upsert
 - differentiate boolean, integer, string, json in the front end
 - Build the docker setup
 - scripts support

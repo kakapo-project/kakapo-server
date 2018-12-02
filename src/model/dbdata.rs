@@ -69,6 +69,7 @@ pub struct NewDataQueryHistory {
     pub description: String,
     pub statement: String,
     pub query_info: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_by: i64,
 }
 
@@ -87,6 +88,7 @@ pub struct NewDataScriptHistory {
     pub script_language: String,
     pub script_text: String,
     pub script_info: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_by: i64,
 }
 
@@ -129,6 +131,7 @@ pub struct DataQueryHistory {
     pub description: String,
     pub statement: String,
     pub query_info: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_at: NaiveDateTime,
     pub modified_by: i64,
 }
@@ -148,6 +151,7 @@ pub struct DataScriptHistory {
     pub script_language: String,
     pub script_text: String,
     pub script_info: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_at: NaiveDateTime,
     pub modified_by: i64,
 }

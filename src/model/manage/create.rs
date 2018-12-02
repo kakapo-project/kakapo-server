@@ -30,10 +30,10 @@ use super::super::dbdata::*;
 
 use super::utils::{get_modification_commits, unroll_modification_commits, update_migration, generate_error};
 
-pub fn create_table(
+pub fn create_table_internal(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     creation_method: api::CreationMethod,
-    post_table: api::PostTable
+    post_table: api::NewTable
 ) -> Result<api::CreateTableResult, api::Error> {
 
     let result = conn.transaction::<_, diesel::result::Error, _>(|| {
@@ -127,10 +127,10 @@ pub fn create_table(
 }
 
 
-pub fn create_query(
+pub fn create_query_internal(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     creation_method: api::CreationMethod,
-    post_query: api::PostQuery
+    post_query: api::NewQuery
 ) -> Result<api::CreateQueryResult, api::Error> {
 
 
@@ -185,6 +185,7 @@ pub fn create_query(
                     description: post_query.description.to_string(),
                     statement: post_query.statement.to_string(),
                     query_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
+                    is_deleted: post_query.for_deletion,
                     modified_by: user_id,
                 })
                 .get_result::<DataQueryHistory>(conn)?
@@ -208,10 +209,10 @@ pub fn create_query(
 }
 
 
-pub fn create_script(
+fn create_script_internal(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     creation_method: api::CreationMethod,
-    post_script: api::PostScript
+    post_script: api::NewScript
 ) -> Result<api::CreateScriptResult, api::Error> {
 
 
@@ -266,6 +267,7 @@ pub fn create_script(
                     script_language: "Python3".to_string(), //only python3 currently supported
                     script_text: post_script.text.to_string(),
                     script_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
+                    is_deleted: post_script.for_deletion,
                     modified_by: user_id,
                 })
                 .get_result::<DataScriptHistory>(conn)?
@@ -288,15 +290,42 @@ pub fn create_script(
         .and_then(|script| Ok(api::CreateScriptResult(script)))
 }
 
+pub fn create_table(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    creation_method: api::CreationMethod,
+    post_table: api::PostTable
+) -> Result<api::CreateTableResult, api::Error> {
+
+    create_table_internal(conn, creation_method, post_table.into_new())
+}
+
+
+pub fn create_query(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    creation_method: api::CreationMethod,
+    post_query: api::PostQuery
+) -> Result<api::CreateQueryResult, api::Error> {
+
+    create_query_internal(conn, creation_method, post_query.into_new())
+}
+
+
+pub fn create_script(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    creation_method: api::CreationMethod,
+    post_script: api::PostScript
+) -> Result<api::CreateScriptResult, api::Error> {
+
+    create_script_internal(conn, creation_method, post_script.into_new())
+}
+
 pub fn update_table(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     name: String,
     put_table: api::PutTable
 ) -> Result<api::CreateTableResult, api::Error> {
 
-    let post_table = put_table.with_name(name);
-
-    create_table(conn, data::CreationMethod::FailIfNotExists, post_table)
+    create_table_internal(conn, data::CreationMethod::FailIfNotExists, put_table.with_name(name))
 }
 
 
@@ -306,9 +335,7 @@ pub fn update_query(
     put_query: api::PutQuery
 ) -> Result<api::CreateQueryResult, api::Error> {
 
-    let post_query = put_query.with_name(name);
-
-    create_query(conn, data::CreationMethod::FailIfNotExists, post_query)
+    create_query_internal(conn, data::CreationMethod::FailIfNotExists, put_query.into_new(name))
 }
 
 pub fn update_script(
@@ -317,8 +344,36 @@ pub fn update_script(
     put_script: api::PutScript
 ) -> Result<api::CreateScriptResult, api::Error> {
 
-    let post_script = put_script.with_name(name);
-
-    create_script(conn, data::CreationMethod::FailIfNotExists, post_script)
+    create_script_internal(conn, data::CreationMethod::FailIfNotExists, put_script.into_new(name))
 }
 
+pub fn delete_table(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    name: String,
+) -> Result<(), api::Error> {
+
+    create_table_internal(conn, data::CreationMethod::FailIfNotExists, api::NewTable::deletion(name))?;
+
+    Ok(())
+}
+
+
+pub fn delete_query(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    name: String,
+) -> Result<(), api::Error> {
+
+    create_query_internal(conn, data::CreationMethod::FailIfNotExists, api::NewQuery::deletion(name))?;
+
+    Ok(())
+}
+
+pub fn delete_script(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    name: String,
+) -> Result<(), api::Error> {
+
+    create_script_internal(conn, data::CreationMethod::FailIfNotExists, api::NewScript::deletion(name))?;
+
+    Ok(())
+}
