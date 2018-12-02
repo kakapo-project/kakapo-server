@@ -129,7 +129,7 @@ where
 // getting
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct GetTables {
+struct GetTablesQuery {
     #[serde(default)]
     pub detailed: bool,
     #[serde(default)]
@@ -138,11 +138,31 @@ struct GetTables {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct GetQueries {
+struct GetQueriesQuery {
     #[serde(default)]
     pub show_deleted: bool,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct PostTablesQuery {
+    #[serde(default)]
+    pub on_duplicate: api::OnDuplicate,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct PostQueriesQuery {
+    #[serde(default)]
+    pub on_duplicate: api::OnDuplicate,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct PostScriptsQuery {
+    #[serde(default)]
+    pub on_duplicate: api::OnDuplicate,
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -182,7 +202,7 @@ struct InsertTableDataQuery {
 
 
 
-fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncResponse {
+fn get_tables((state, query): (State<AppState>, Query<GetTablesQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
     http_response(&state,handlers::GetTables {
         detailed: query.detailed,
@@ -190,7 +210,7 @@ fn get_tables((state, query): (State<AppState>, Query<GetTables>)) -> AsyncRespo
     })
 }
 
-fn get_queries((state, query): (State<AppState>, Query<GetQueries>)) -> AsyncResponse {
+fn get_queries((state, query): (State<AppState>, Query<GetQueriesQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
     http_response(&state,handlers::GetQueries {
         show_deleted: query.show_deleted,
@@ -203,24 +223,27 @@ fn get_scripts(state: State<AppState>) -> AsyncResponse {
 }
 
 
-fn post_tables((state, json): (State<AppState>, Json<api::PostTable>)) -> AsyncResponse {
+fn post_tables((state, json, query): (State<AppState>, Json<api::PostTable>, Query<PostTablesQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::CreateTable {
-        reqdata: json.into_inner()
+        reqdata: json.into_inner(),
+        method: query.into_inner().on_duplicate.into_method(),
     })
 }
 
-fn post_queries((state, json): (State<AppState>, Json<api::PostQuery>)) -> AsyncResponse {
+fn post_queries((state, json, query): (State<AppState>, Json<api::PostQuery>, Query<PostQueriesQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::CreateQuery {
-        reqdata: json.into_inner()
+        reqdata: json.into_inner(),
+        method: query.into_inner().on_duplicate.into_method(),
     })
 }
 
-fn post_scripts((state, json): (State<AppState>, Json<api::PostScript>)) -> AsyncResponse {
+fn post_scripts((state, json, query): (State<AppState>, Json<api::PostScript>, Query<PostScriptsQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::CreateScript {
-        reqdata: json.into_inner()
+        reqdata: json.into_inner(),
+        method: query.into_inner().on_duplicate.into_method(),
     })
 }
 
@@ -245,31 +268,28 @@ fn get_script((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
     })
 }
 
-fn put_table((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
-
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+fn put_table((state, path, json): (State<AppState>, Path<String>, Json<api::PutTable>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::UpdateTable {
+        name: path.to_string(),
+        reqdata: json.into_inner(),
+    })
 }
 
-fn put_query((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
-
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+fn put_query((state, path, json): (State<AppState>, Path<String>, Json<api::PutQuery>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::UpdateQuery {
+        name: path.to_string(),
+        reqdata: json.into_inner(),
+    })
 }
 
-fn put_script((state, path, json): (State<AppState>, Path<String>, Json<u32>)) -> AsyncResponse {
-
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+fn put_script((state, path, json): (State<AppState>, Path<String>, Json<api::PutScript>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::UpdateScript {
+        name: path.to_string(),
+        reqdata: json.into_inner()
+    })
 }
 
 fn delete_table((state, path): (State<AppState>, Path<String>)) -> AsyncResponse {
@@ -427,7 +447,8 @@ impl QuerySession {
             },
             api::QuerySessionRequest::PostQuery { data } => {
                 websocket_response(ctx, "postQuery", handlers::CreateQuery { //TODO: should be UpdateQuery
-                    reqdata: data
+                    reqdata: data,
+                    method: api::CreationMethod::default(),
                 })
             },
             api::QuerySessionRequest::RunQuery { begin, end, params } => {
@@ -457,7 +478,8 @@ impl ScriptSession {
             },
             api::ScriptSessionRequest::PostScript { data } => {
                 websocket_response(ctx, "postScript", handlers::CreateScript { //TODO: should be UpdateQuery
-                    reqdata: data
+                    reqdata: data,
+                    method: api::CreationMethod::default(),
                 })
             },
             api::ScriptSessionRequest::RunScript { params } => {
@@ -623,7 +645,7 @@ pub fn serve() {
                 // metadata
                 .resource("/api/manage/table", |r| {
                     r.method(http::Method::GET).with(get_tables);
-                    r.method(http::Method::POST).with_config(post_tables, |((_, cfg),)| config(cfg));
+                    r.method(http::Method::POST).with_config(post_tables, |((_, cfg, _),)| config(cfg));
                 })
                 .resource("/api/manage/table/{table_name}", |r| {
                     r.method(http::Method::GET).with(get_table);
@@ -632,7 +654,7 @@ pub fn serve() {
                 })
                 .resource("/api/manage/query", |r| {
                     r.method(http::Method::GET).with(get_queries);
-                    r.method(http::Method::POST).with_config(post_queries, |((_, cfg),)| config(cfg));
+                    r.method(http::Method::POST).with_config(post_queries, |((_, cfg, _),)| config(cfg));
                 })
                 .resource("/api/manage/query/{query_name}", |r| {
                     r.method(http::Method::GET).with(get_query);
@@ -641,7 +663,7 @@ pub fn serve() {
                 })
                 .resource("/api/manage/script", |r| {
                     r.method(http::Method::GET).with(get_scripts);
-                    r.method(http::Method::POST).with_config(post_scripts, |((_, cfg),)| config(cfg));
+                    r.method(http::Method::POST).with_config(post_scripts, |((_, cfg, _),)| config(cfg));
                 })
                 .resource("/api/manage/script/{script_name}", |r| {
                     r.method(http::Method::GET).with(get_script);

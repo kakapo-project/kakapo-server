@@ -13,6 +13,46 @@ use serde::Deserializer;
 use serde::de;
 use std::fmt;
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum OnDuplicate {
+    Update,
+    Ignore,
+    Fail,
+}
+
+impl Default for OnDuplicate {
+    fn default() -> Self {
+        OnDuplicate::Update
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum CreationMethod {
+    Update,
+    IgnoreIfExists,
+    FailIfExists,
+    FailIfNotExists,
+}
+
+
+impl Default for CreationMethod {
+    fn default() -> Self {
+        CreationMethod::Update
+    }
+}
+
+impl OnDuplicate {
+    pub fn into_method(self) -> CreationMethod {
+        match self {
+            OnDuplicate::Update => CreationMethod::Update,
+            OnDuplicate::Ignore => CreationMethod::IgnoreIfExists,
+            OnDuplicate::Fail => CreationMethod::FailIfExists,
+        }
+    }
+}
+
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -32,6 +32,62 @@ pub struct PostScript {
     pub text: String,
 }
 
+#[derive(Clone, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PutTable {
+    #[serde(default)]
+    pub description: String,
+    pub action: data::SchemaModification,
+}
+
+impl PutTable {
+    pub fn with_name(self, name: String) -> PostTable {
+        PostTable {
+            name: name,
+            description: self.description,
+            action: self.action,
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PutQuery {
+    #[serde(default)]
+    pub description: String,
+    pub statement: String,
+}
+
+impl PutQuery {
+    pub fn with_name(self, name: String) -> PostQuery {
+        PostQuery {
+            name: name,
+            description: self.description,
+            statement: self.statement,
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PutScript {
+    #[serde(default)]
+    pub description: String,
+    pub text: String,
+}
+
+impl PutScript {
+    pub fn with_name(self, name: String) -> PostScript {
+        PostScript {
+            name: name,
+            description: self.description,
+            text: self.text,
+        }
+    }
+}
+
+pub type OnDuplicate = data::OnDuplicate;
+pub type CreationMethod = data::CreationMethod;
 
 pub type TableData = data::TableData;
 pub type TableDataFormat = data::TableDataFormat;
@@ -40,6 +96,7 @@ pub type ScriptParam = data::ScriptParam;
 
 
 pub const FLAT_TABLE_DATA_FORMAT: TableDataFormat = data::TableDataFormat::FlatRows;
+
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]

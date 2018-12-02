@@ -15,6 +15,7 @@ use serde_json;
 
 use std::error;
 use std::collections::HashMap;
+use std::io;
 
 use failure::Fail;
 
@@ -28,6 +29,16 @@ use super::connection::executor::DatabaseExecutor;
 
 use super::dbdata::*;
 
+
+fn generate_error(fmt: &str) -> Error {
+    Error::SerializationError(
+        Box::new(
+            io::Error::new(
+                io::ErrorKind::Other, fmt
+            )
+        )
+    )
+}
 
 fn parse_table_history_items_to_modification_commits(
     table_history_items: &Vec<TableSchemaHistory>
@@ -366,6 +377,7 @@ pub fn get_single_table(
 
 pub fn create_table(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    creation_method: api::CreationMethod,
     post_table: api::PostTable
 ) -> Result<api::CreateTableResult, api::Error> {
 
@@ -446,89 +458,9 @@ pub fn create_table(
 }
 
 
-
-
-pub fn get_tables(
-    conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    detailed: bool,
-    show_deleted: bool,
-) -> Result<api::GetTablesResult, api::Error> {
-
-    let result = conn.transaction::<Vec<data::DetailedTable>, diesel::result::Error, _>(|| {
-        let table_schemas: Vec<TableSchema> = table_schema::table
-            .load::<TableSchema>(conn)?;
-        println!("table schemas: {:?}", table_schemas);
-
-        let tables: Vec<data::DetailedTable> = table_schemas.iter()
-            .map(|table_schema| {
-                get_single_table(conn, &table_schema)
-            })
-            .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
-
-        Ok(tables)
-    });
-
-    result
-        .or_else(|err| Err(api::Error::DatabaseError(err)))
-        .and_then(|tables| {
-            let get_table_result = match detailed {
-                true => api::GetTablesResult::DetailedTables(tables),
-                false => {
-                    let unrolled_tables = tables.iter()
-                        .map(|table| unroll_table(table.to_owned()))
-                        .collect::<Result<Vec<data::Table>, StateError>>()
-                        .or_else(|err| Err(api::Error::InvalidStateError))?;
-
-                    api::GetTablesResult::Tables(unrolled_tables)
-                }
-            };
-            Ok(get_table_result)
-        })
-
-}
-
-pub fn get_table(
-    conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    table_name: String,
-    detailed: bool,
-) -> Result<api::GetTableResult, api::Error> {
-
-    let result = conn.transaction::<data::DetailedTable, diesel::result::Error, _>(|| {
-        let table_schema: TableSchema = table_schema::table
-            .filter(table_schema::name.eq(table_name))
-            .get_result::<TableSchema>(conn)?;
-        println!("table schema: {:?}", table_schema);
-
-
-        let table: data::DetailedTable = get_single_table(conn, &table_schema)?;
-
-        Ok(table)
-
-    });
-
-    result
-        .or_else(|err| match err {
-            diesel::result::Error::NotFound => Err(api::Error::TableNotFound),
-            _ => Err(api::Error::DatabaseError(err)),
-        })
-        .and_then(|table| {
-            let get_table_result = match detailed {
-                true => api::GetTableResult::DetailedTable(table),
-                false => {
-                    let unrolled_table = unroll_table(table.to_owned())
-                        .or_else(|_| Err(api::Error::InvalidStateError))?;
-
-                    api::GetTableResult::Table(unrolled_table)
-                }
-            };
-            Ok(get_table_result)
-        })
-
-}
-
-
 pub fn create_query(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    creation_method: api::CreationMethod,
     post_query: api::PostQuery
 ) -> Result<api::CreateQueryResult, api::Error> {
 
@@ -592,6 +524,159 @@ pub fn create_query(
 }
 
 
+pub fn create_script(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    creation_method: api::CreationMethod,
+    post_script: api::PostScript
+) -> Result<api::CreateScriptResult, api::Error> {
+
+
+    let result = conn.transaction::<_, diesel::result::Error, _>(|| {
+
+        let user_id = auth::get_current_user();
+        let script_name = post_script.name;
+
+        let (data_script, exists) = script::table
+            .filter(script::name.eq(script_name.to_string()))
+            .get_result::<DataScript>(conn)
+            .and_then(|result| {
+                println!("script already loaded: {:?}", &result);
+                Ok((result, true))
+            })
+            .or_else::<Error, _>(|error| {
+                if creation_method == data::CreationMethod::FailIfNotExists {
+                    return Err(error);
+                }
+                let entity = insert_into(entity::table)
+                    .values(&NewEntity {
+                        scope_id: 1,
+                        created_by: user_id,
+                    })
+                    .get_result::<Entity>(conn)?;
+
+                let result = insert_into(script::table)
+                    .values(&NewDataScript {
+                        entity_id: entity.entity_id,
+                        name: script_name.to_string(),
+                    })
+                    .get_result::<DataScript>(conn)?;
+
+                println!("new table addedd: {:?}", &result);
+                Ok((result, false))
+            })?;
+
+        if exists && creation_method == data::CreationMethod::FailIfExists {
+            return Err(generate_error("script already loaded"));
+        }
+
+        let script_history = if exists && creation_method == data::CreationMethod::IgnoreIfExists {
+            script_history::table
+                .filter(script_history::script_id.eq(data_script.script_id))
+                .order_by(script_history::modified_at.desc())
+                .get_result::<DataScriptHistory>(conn)?
+        } else {
+            insert_into(script_history::table)
+                .values(&NewDataScriptHistory {
+                    script_id: data_script.script_id,
+                    description: post_script.description.to_string(),
+                    script_language: "Python3".to_string(), //only python3 currently supported
+                    script_text: post_script.text.to_string(),
+                    script_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
+                    modified_by: user_id,
+                })
+                .get_result::<DataScriptHistory>(conn)?
+        };
+
+        println!("script:         {:?}", data_script);
+        println!("script_history: {:?}", script_history);
+
+        let script = data::Script {
+            name: data_script.name,
+            description: script_history.description,
+            text: script_history.script_text,
+        };
+
+        Ok(script)
+    });
+
+    result
+        .or_else(|err| Err(api::Error::DatabaseError(err)))
+        .and_then(|script| Ok(api::CreateScriptResult(script)))
+}
+
+pub fn update_table(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    name: String,
+    put_table: api::PutTable
+) -> Result<api::CreateTableResult, api::Error> {
+
+    let post_table = put_table.with_name(name);
+
+    create_table(conn, data::CreationMethod::FailIfNotExists, post_table)
+}
+
+
+pub fn update_query(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    name: String,
+    put_query: api::PutQuery
+) -> Result<api::CreateQueryResult, api::Error> {
+
+    let post_query = put_query.with_name(name);
+
+    create_query(conn, data::CreationMethod::FailIfNotExists, post_query)
+}
+
+pub fn update_script(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    name: String,
+    put_script: api::PutScript
+) -> Result<api::CreateScriptResult, api::Error> {
+
+    let post_script = put_script.with_name(name);
+
+    create_script(conn, data::CreationMethod::FailIfNotExists, post_script)
+}
+
+
+pub fn get_tables(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    detailed: bool,
+    show_deleted: bool,
+) -> Result<api::GetTablesResult, api::Error> {
+
+    let result = conn.transaction::<Vec<data::DetailedTable>, diesel::result::Error, _>(|| {
+        let table_schemas: Vec<TableSchema> = table_schema::table
+            .load::<TableSchema>(conn)?;
+        println!("table schemas: {:?}", table_schemas);
+
+        let tables: Vec<data::DetailedTable> = table_schemas.iter()
+            .map(|table_schema| {
+                get_single_table(conn, &table_schema)
+            })
+            .collect::<Result<Vec<data::DetailedTable>, diesel::result::Error>>()?;
+
+        Ok(tables)
+    });
+
+    result
+        .or_else(|err| Err(api::Error::DatabaseError(err)))
+        .and_then(|tables| {
+            let get_table_result = match detailed {
+                true => api::GetTablesResult::DetailedTables(tables),
+                false => {
+                    let unrolled_tables = tables.iter()
+                        .map(|table| unroll_table(table.to_owned()))
+                        .collect::<Result<Vec<data::Table>, StateError>>()
+                        .or_else(|err| Err(api::Error::InvalidStateError))?;
+
+                    api::GetTablesResult::Tables(unrolled_tables)
+                }
+            };
+            Ok(get_table_result)
+        })
+
+}
 
 
 pub fn get_queries(
@@ -630,6 +715,84 @@ pub fn get_queries(
     result
         .or_else(|err| Err(api::Error::DatabaseError(err)))
         .and_then(|queries| Ok(api::GetQueriesResult(queries)))
+
+}
+
+
+pub fn get_scripts(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+) -> Result<api::GetScriptsResult, api::Error> {
+
+    let result = conn.transaction::<Vec<data::Script>, diesel::result::Error, _>(|| {
+        let scripts = script::table
+            .load::<DataScript>(conn)?;
+        println!("table schemas: {:?}", scripts);
+
+        let parsed_scripts = scripts.iter()
+            .map(|script| {
+                let script_history: DataScriptHistory = script_history::table
+                    .filter(script_history::script_id.eq(script.script_id))
+                    .order_by(script_history::modified_at.desc())
+                    .limit(1)
+                    .get_result::<DataScriptHistory>(conn)?;
+
+                let script_item = data::Script {
+                    name: script.name.to_owned(),
+                    description: script_history.description,
+                    text: script_history.script_text,
+                };
+
+                Ok(script_item)
+            })
+            .collect::<Result<Vec<data::Script>, diesel::result::Error>>()?;
+
+        println!("parsed_scripts: {:?}", parsed_scripts);
+
+        Ok(parsed_scripts)
+    });
+
+    result
+        .or_else(|err| Err(api::Error::DatabaseError(err)))
+        .and_then(|scripts| Ok(api::GetScriptsResult(scripts)))
+
+}
+
+pub fn get_table(
+    conn: &PooledConnection<ConnectionManager<PgConnection>>,
+    table_name: String,
+    detailed: bool,
+) -> Result<api::GetTableResult, api::Error> {
+
+    let result = conn.transaction::<data::DetailedTable, diesel::result::Error, _>(|| {
+        let table_schema: TableSchema = table_schema::table
+            .filter(table_schema::name.eq(table_name))
+            .get_result::<TableSchema>(conn)?;
+        println!("table schema: {:?}", table_schema);
+
+
+        let table: data::DetailedTable = get_single_table(conn, &table_schema)?;
+
+        Ok(table)
+
+    });
+
+    result
+        .or_else(|err| match err {
+            diesel::result::Error::NotFound => Err(api::Error::TableNotFound),
+            _ => Err(api::Error::DatabaseError(err)),
+        })
+        .and_then(|table| {
+            let get_table_result = match detailed {
+                true => api::GetTableResult::DetailedTable(table),
+                false => {
+                    let unrolled_table = unroll_table(table.to_owned())
+                        .or_else(|_| Err(api::Error::InvalidStateError))?;
+
+                    api::GetTableResult::Table(unrolled_table)
+                }
+            };
+            Ok(get_table_result)
+        })
 
 }
 
@@ -675,111 +838,8 @@ pub fn get_query(
 }
 
 
-pub fn create_script(
-    conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    post_script: api::PostScript
-) -> Result<api::CreateScriptResult, api::Error> {
 
 
-    let result = conn.transaction::<_, diesel::result::Error, _>(|| {
-
-        let user_id = auth::get_current_user();
-        let script_name = post_script.name;
-
-        let data_script: DataScript= script::table
-            .filter(script::name.eq(script_name.to_string()))
-            .get_result::<DataScript>(conn)
-            .and_then(|result| {
-                println!("script already loaded: {:?}", &result);
-                Ok(result)
-            })
-            .or_else::<Error, _>(|error| {
-                let entity = insert_into(entity::table)
-                    .values(&NewEntity {
-                        scope_id: 1,
-                        created_by: user_id,
-                    })
-                    .get_result::<Entity>(conn)?;
-
-                let result = insert_into(script::table)
-                    .values(&NewDataScript {
-                        entity_id: entity.entity_id,
-                        name: script_name.to_string(),
-                    })
-                    .get_result::<DataScript>(conn)?;
-
-                println!("new table addedd: {:?}", &result);
-                Ok(result)
-            })?;
-
-        let script_history = insert_into(script_history::table)
-            .values(&NewDataScriptHistory {
-                script_id: data_script.script_id,
-                description: post_script.description.to_string(),
-                script_language: "Python3".to_string(), //only python3 currently supported
-                script_text: post_script.text.to_string(),
-                script_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
-                modified_by: user_id,
-            })
-            .get_result::<DataScriptHistory>(conn)?;
-
-        println!("script:         {:?}", data_script);
-        println!("script_history: {:?}", script_history);
-
-        let script = data::Script {
-            name: data_script.name,
-            description: script_history.description,
-            text: script_history.script_text,
-        };
-
-        Ok(script)
-    });
-
-    result
-        .or_else(|err| Err(api::Error::DatabaseError(err)))
-        .and_then(|script| Ok(api::CreateScriptResult(script)))
-}
-
-
-
-
-pub fn get_scripts(
-    conn: &PooledConnection<ConnectionManager<PgConnection>>,
-) -> Result<api::GetScriptsResult, api::Error> {
-
-    let result = conn.transaction::<Vec<data::Script>, diesel::result::Error, _>(|| {
-        let scripts = script::table
-            .load::<DataScript>(conn)?;
-        println!("table schemas: {:?}", scripts);
-
-        let parsed_scripts = scripts.iter()
-            .map(|script| {
-                let script_history: DataScriptHistory = script_history::table
-                    .filter(script_history::script_id.eq(script.script_id))
-                    .order_by(script_history::modified_at.desc())
-                    .limit(1)
-                    .get_result::<DataScriptHistory>(conn)?;
-
-                let script_item = data::Script {
-                    name: script.name.to_owned(),
-                    description: script_history.description,
-                    text: script_history.script_text,
-                };
-
-                Ok(script_item)
-            })
-            .collect::<Result<Vec<data::Script>, diesel::result::Error>>()?;
-
-        println!("parsed_scripts: {:?}", parsed_scripts);
-
-        Ok(parsed_scripts)
-    });
-
-    result
-        .or_else(|err| Err(api::Error::DatabaseError(err)))
-        .and_then(|scripts| Ok(api::GetScriptsResult(scripts)))
-
-}
 
 //TODO: crate public
 pub fn get_one_script(
