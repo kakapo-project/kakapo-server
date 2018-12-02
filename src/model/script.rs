@@ -29,7 +29,7 @@ use super::api;
 
 use super::dbdata::*;
 use super::schema::{entity, query, query_history};
-use super::manage::{get_one_script};
+use super::manage::retrieve::{get_one_script};
 use super::database;
 use super::connection;
 

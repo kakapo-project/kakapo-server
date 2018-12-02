@@ -27,7 +27,7 @@ impl Handler<CreateTable> for DatabaseExecutor {
     type Result = <CreateTable as Message>::Result;
 
     fn handle(&mut self, msg: CreateTable, _: &mut Self::Context) -> Self::Result {
-        let result = manage::create_table(&self.get_connection(), msg.method, msg.reqdata)?;
+        let result = manage::create::create_table(&self.get_connection(), msg.method, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -43,7 +43,7 @@ impl Handler<CreateQuery> for DatabaseExecutor {
     type Result = <CreateQuery as Message>::Result;
 
     fn handle(&mut self, msg: CreateQuery, _: &mut Self::Context) -> Self::Result {
-        let result = manage::create_query(&self.get_connection(), msg.method, msg.reqdata)?;
+        let result = manage::create::create_query(&self.get_connection(), msg.method, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -59,7 +59,7 @@ impl Handler<CreateScript> for DatabaseExecutor {
     type Result = <CreateScript as Message>::Result;
 
     fn handle(&mut self, msg: CreateScript, _: &mut Self::Context) -> Self::Result {
-        let result = manage::create_script(&self.get_connection(), msg.method, msg.reqdata)?;
+        let result = manage::create::create_script(&self.get_connection(), msg.method, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -77,7 +77,7 @@ impl Handler<UpdateTable> for DatabaseExecutor {
     type Result = <UpdateTable as Message>::Result;
 
     fn handle(&mut self, msg: UpdateTable, _: &mut Self::Context) -> Self::Result {
-        let result = manage::update_table(&self.get_connection(), msg.name, msg.reqdata)?;
+        let result = manage::create::update_table(&self.get_connection(), msg.name, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -93,7 +93,7 @@ impl Handler<UpdateQuery> for DatabaseExecutor {
     type Result = <UpdateQuery as Message>::Result;
 
     fn handle(&mut self, msg: UpdateQuery, _: &mut Self::Context) -> Self::Result {
-        let result = manage::update_query(&self.get_connection(), msg.name, msg.reqdata)?;
+        let result = manage::create::update_query(&self.get_connection(), msg.name, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -109,7 +109,7 @@ impl Handler<UpdateScript> for DatabaseExecutor {
     type Result = <UpdateScript as Message>::Result;
 
     fn handle(&mut self, msg: UpdateScript, _: &mut Self::Context) -> Self::Result {
-        let result = manage::update_script(&self.get_connection(), msg.name, msg.reqdata)?;
+        let result = manage::create::update_script(&self.get_connection(), msg.name, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -127,7 +127,7 @@ impl Handler<GetTables> for DatabaseExecutor {
     type Result = <GetTables as Message>::Result;
 
     fn handle(&mut self, msg: GetTables, _: &mut Self::Context) -> Self::Result {
-        let result = manage::get_tables(&self.get_connection(), msg.detailed, msg.show_deleted)?;
+        let result = manage::retrieve::get_tables(&self.get_connection(), msg.detailed, msg.show_deleted)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -142,7 +142,7 @@ impl Handler<GetQueries> for DatabaseExecutor {
     type Result = <GetQueries as Message>::Result;
 
     fn handle(&mut self, msg: GetQueries, _: &mut Self::Context) -> Self::Result {
-        let result = manage::get_queries(&self.get_connection(), msg.show_deleted)?;
+        let result = manage::retrieve::get_queries(&self.get_connection(), msg.show_deleted)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -156,7 +156,7 @@ impl Handler<GetScripts> for DatabaseExecutor {
     type Result = <GetScripts as Message>::Result;
 
     fn handle(&mut self, msg: GetScripts, _: &mut Self::Context) -> Self::Result {
-        let result = manage::get_scripts(&self.get_connection())?;
+        let result = manage::retrieve::get_scripts(&self.get_connection())?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -173,7 +173,7 @@ impl Handler<GetTable> for DatabaseExecutor {
     type Result = <GetTable as Message>::Result;
 
     fn handle(&mut self, msg: GetTable, _: &mut Self::Context) -> Self::Result {
-        let result = manage::get_table(&self.get_connection(), msg.name, msg.detailed)?;
+        let result = manage::retrieve::get_table(&self.get_connection(), msg.name, msg.detailed)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -188,7 +188,7 @@ impl Handler<GetQuery> for DatabaseExecutor {
     type Result = <GetQuery as Message>::Result;
 
     fn handle(&mut self, msg: GetQuery, _: &mut Self::Context) -> Self::Result {
-        let result = manage::get_query(&self.get_connection(), msg.name)?;
+        let result = manage::retrieve::get_query(&self.get_connection(), msg.name)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -203,7 +203,7 @@ impl Handler<GetScript> for DatabaseExecutor {
     type Result = <GetScript as Message>::Result;
 
     fn handle(&mut self, msg: GetScript, _: &mut Self::Context) -> Self::Result {
-        let result = manage::get_script(&self.get_connection(), msg.name)?;
+        let result = manage::retrieve::get_script(&self.get_connection(), msg.name)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }

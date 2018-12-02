@@ -25,7 +25,7 @@ use super::api;
 
 use super::dbdata::*;
 use super::schema::{entity, table_schema, table_schema_history};
-use super::manage::{get_single_table, unroll_table};
+use super::manage::utils::{get_single_table, unroll_table};
 use super::database;
 
 fn get_table(
