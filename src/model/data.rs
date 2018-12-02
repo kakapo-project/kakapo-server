@@ -318,10 +318,13 @@ pub struct SchemaState {
 pub enum SchemaModification {
     Create {
         columns: Vec<Column>,
+        #[serde(default)]
         constraint: Vec<Constraint>,
     },
     Remove {
+        #[serde(default)]
         column: Vec<String>,
+        #[serde(default)]
         constraint: Vec<Constraint>,
     },
     Rename {

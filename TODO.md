@@ -66,6 +66,8 @@ encountered error: DatabaseError(DatabaseError(ForeignKeyViolation, "insert or u
 
 Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
 ```
+- fix is_deleted, especially for onDuplicate=fail / onDuplicate=ignore needlessly fails
+
 
  Devops
  - Different functions

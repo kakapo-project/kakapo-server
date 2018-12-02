@@ -41,14 +41,18 @@ pub fn create_table(
         let user_id = auth::get_current_user();
         let table_name = post_table.name;
 
-        let table_schema: TableSchema = table_schema::table
+        let (table_schema, exists) = table_schema::table
             .filter(table_schema::name.eq(table_name.to_string()))
             .get_result::<TableSchema>(conn)
             .and_then(|result| {
                 println!("table already loaded: {:?}", &result);
-                Ok(result)
+                Ok((result, true))
             })
             .or_else::<Error, _>(|error| {
+                if creation_method == data::CreationMethod::FailIfNotExists {
+                    return Err(error);
+                }
+
                 let entity = insert_into(entity::table)
                     .values(&NewEntity {
                         scope_id: 1,
@@ -64,40 +68,50 @@ pub fn create_table(
                     .get_result::<TableSchema>(conn)?;
 
                 println!("new table addedd: {:?}", &result);
-                Ok(result)
+                Ok((result, false))
             })?;
+
+        if exists && creation_method == data::CreationMethod::FailIfExists {
+            return Err(generate_error("script already loaded"));
+        }
 
         let previous_modifications = get_modification_commits(conn, &table_schema)?;
         let (previouse_schema_state, previous_modification) = unroll_modification_commits(previous_modifications)
             .or_else(|err| {
                 Err(Error::SerializationError(Box::new(err.compat())))
             })?;
-        let new_modification: data::SchemaModification = post_table.action;
 
-        let new_schema_state = update_migration(
-            conn,
-            table_name.to_string(),
-            previouse_schema_state,
-            previous_modification,
-            new_modification.to_owned())?;
+        let new_schema_state = if exists && creation_method == data::CreationMethod::IgnoreIfExists {
+            previouse_schema_state
+        } else {
+            let new_modification: data::SchemaModification = post_table.action;
 
-        let json_schema_action = serde_json::to_value(&new_modification)
-            .or_else(|err| {
-                Err(Error::SerializationError(Box::new(err)))
-            })?;
+            let updated_schema_state = update_migration(
+                conn,
+                table_name.to_string(),
+                previouse_schema_state,
+                previous_modification,
+                new_modification.to_owned())?;
 
-        let table_schema_history = insert_into(table_schema_history::table)
-            .values(&NewTableSchemaHistory {
-                table_schema_id: table_schema.table_schema_id,
-                description: post_table.description.to_string(),
-                modification: json_schema_action,
-                modified_by: user_id,
-            })
-            .get_result::<TableSchemaHistory>(conn)?;
+            let json_schema_action = serde_json::to_value(&new_modification)
+                .or_else(|err| {
+                    Err(Error::SerializationError(Box::new(err)))
+                })?;
+
+            let table_schema_history = insert_into(table_schema_history::table)
+                .values(&NewTableSchemaHistory {
+                    table_schema_id: table_schema.table_schema_id,
+                    description: post_table.description.to_string(),
+                    modification: json_schema_action,
+                    modified_by: user_id,
+                })
+                .get_result::<TableSchemaHistory>(conn)?;
+
+            println!("table_schema_history: {:?}", table_schema_history);
+            updated_schema_state
+        };
 
         println!("table_schema:         {:?}", table_schema);
-        println!("table_schema_history: {:?}", table_schema_history);
-
         let table = data::Table {
             name: table_name,
             description: post_table.description,
@@ -125,14 +139,18 @@ pub fn create_query(
         let user_id = auth::get_current_user();
         let query_name = post_query.name;
 
-        let data_query: DataQuery = query::table
+        let (data_query, exists) = query::table
             .filter(query::name.eq(query_name.to_string()))
             .get_result::<DataQuery>(conn)
             .and_then(|result| {
                 println!("query already loaded: {:?}", &result);
-                Ok(result)
+                Ok((result, true))
             })
             .or_else::<Error, _>(|error| {
+                if creation_method == data::CreationMethod::FailIfNotExists {
+                    return Err(error);
+                }
+
                 let entity = insert_into(entity::table)
                     .values(&NewEntity {
                         scope_id: 1,
@@ -148,18 +166,29 @@ pub fn create_query(
                     .get_result::<DataQuery>(conn)?;
 
                 println!("new table addedd: {:?}", &result);
-                Ok(result)
+                Ok((result, false))
             })?;
 
-        let query_history = insert_into(query_history::table)
-            .values(&NewDataQueryHistory {
-                query_id: data_query.query_id,
-                description: post_query.description.to_string(),
-                statement: post_query.statement.to_string(),
-                query_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
-                modified_by: user_id,
-            })
-            .get_result::<DataQueryHistory>(conn)?;
+        if exists && creation_method == data::CreationMethod::FailIfExists {
+            return Err(generate_error("script already loaded"));
+        }
+
+        let query_history = if exists && creation_method == data::CreationMethod::IgnoreIfExists {
+            query_history::table
+                .filter(query_history::query_id.eq(data_query.query_id))
+                .order_by(query_history::modified_at.desc())
+                .get_result::<DataQueryHistory>(conn)?
+        } else {
+            insert_into(query_history::table)
+                .values(&NewDataQueryHistory {
+                    query_id: data_query.query_id,
+                    description: post_query.description.to_string(),
+                    statement: post_query.statement.to_string(),
+                    query_info: serde_json::to_value(&json!({})).unwrap(), //TODO: what should go here?
+                    modified_by: user_id,
+                })
+                .get_result::<DataQueryHistory>(conn)?
+        };
 
         println!("query:         {:?}", data_query);
         println!("query_history: {:?}", query_history);
