@@ -22,6 +22,7 @@ Grid Frontend
 - do debounce on all inputs
 - double click not working correctly, it should only double click if it is on different table cells
 - clicking out of context menu should get out of it, don't need to click the cancel button
+- TODO: look into `https://github.com/reduxjs/reselect`
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns

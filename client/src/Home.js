@@ -1,11 +1,17 @@
 import React, { Component } from 'react'
 import Tab, { Button, Icon, Image, Menu, Search, Segment, Sidebar } from 'semantic-ui-react'
 
+import { connect } from 'react-redux'
+
+
 import Login from './Login.js'
 
 import Header from './Header.js'
 import Entities from './entities/Entities.js'
 import Settings from './Settings.js'
+
+import { loadedPage } from './actions'
+
 
 const Tabs = Object.freeze({
   entities: 0,
@@ -75,13 +81,14 @@ class Home extends Component {
     return this.state.selections.includes(selection)
   }
 
+  componentWillMount() {
+    this.props.loadedPage()
+  }
+
   render() {
     return (
       <div>
-        <Header
-          sidebarOpen={this.state.sidebarOpen}
-          onToggle={() => this.toggleSidebar()}
-        />
+        <Header />
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5em)'}}>
           <Sidebar
             as={Menu}
@@ -89,7 +96,7 @@ class Home extends Component {
             icon='labeled'
             inverted
             vertical
-            visible={!this.state.sidebarOpen}
+            visible={this.props.isSidebarOpen()}
             width='thin'
             style={{backgroundImage: 'linear-gradient(#1b1c1d, rgb(0, 83, 34)'}}
           >
@@ -141,4 +148,17 @@ class Home extends Component {
   }
 }
 
-export default Home;
+
+const mapStateToProps = (state) => ({
+  isSidebarOpen: () => state.sidebar.isOpen,
+  error: null,
+})
+
+const mapDispatchToProps = (dispatch) => ({
+  loadedPage: () => dispatch(loadedPage('Home'))
+})
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Home)

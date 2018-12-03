@@ -2,6 +2,9 @@
 import React, { Component } from 'react'
 import { Button, Card, Container, Divider, Form, Grid, Icon, Image, Menu, Segment, Sidebar } from 'semantic-ui-react'
 
+import { connect } from 'react-redux'
+
+
 import ErrorMsg from '../ErrorMsg'
 import { WS_URL } from '../config'
 
@@ -15,6 +18,9 @@ import 'codemirror/theme/darcula.css'
 import GridLayout from '../table/GridLayout.js'
 
 import Header from '../Header.js'
+
+import { loadedPage } from '../actions'
+
 
 const QueriesSidebar = (props) => (
   <Sidebar
@@ -200,6 +206,10 @@ class Queries extends Component {
     this.socket.send(JSON.stringify(sendRunQuery))
   }
 
+  componentWillMount() {
+    this.props.loadedPage()
+  }
+
   componentDidMount() {
     this.setupConnection()
   }
@@ -218,14 +228,10 @@ class Queries extends Component {
             }
           `}
         </style>
-        <Header
-          editor
-          sidebarOpen={this.state.sidebarOpen}
-          onToggle={() => this.toggleSidebar()}
-        />
+        <Header editor />
         <ErrorMsg error={this.state.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/>
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
-          <QueriesSidebar sidebarOpen={this.state.sidebarOpen} />
+          <QueriesSidebar sidebarOpen={this.props.isSidebarOpen()} />
 
           <Sidebar.Pusher>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
@@ -301,4 +307,16 @@ class Queries extends Component {
   // NOTE: Auto run if no changes within 5 seconds
 }
 
-export default Queries
+const mapStateToProps = (state) => ({
+  isSidebarOpen: () => state.sidebar.isOpen,
+  error: null,
+})
+
+const mapDispatchToProps = (dispatch) => ({
+  loadedPage: () => dispatch(loadedPage('Queries')),
+})
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Queries)

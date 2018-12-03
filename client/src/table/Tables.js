@@ -15,7 +15,8 @@ import {
   Pagination,
   Segment,
   Sidebar,
-  Table } from 'semantic-ui-react'
+  Table
+} from 'semantic-ui-react'
 
 
 import GridLayout from './GridLayout.js'
@@ -25,6 +26,12 @@ import ErrorMsg from '../ErrorMsg'
 
 
 import { WS_URL } from '../config'
+import { connect } from 'react-redux'
+
+import { tableWantsToLoad, loadedPage } from '../actions'
+
+import TableData from './TableData'
+
 
 const TableSidebase = (props) => (
   <Sidebar
@@ -91,255 +98,29 @@ const TableSidebase = (props) => (
     </Menu.Item>
   </Sidebar>
 )
+
 class Tables extends Component {
 
-  //TODO: Filters....
 
-  state = {
-    sidebarOpen: false,
-    data: null,
-    columns: null,
-    error: null,
-  }
-
-
-  toggleSidebar() {
-    this.setState({
-      ...this.state,
-      sidebarOpen: !this.state.sidebarOpen,
-    })
-  }
-
-  raiseError(msg) {
-    this.setState({ error: msg })
-  }
-
-  errorMsgTypes = ['Retry', 'Go Back']
-  closeErrorMessage(type) {
-    switch (type) {
-      case this.errorMsgTypes[0]:
-        this.setupConnection()
-        this.setState({ error: null })
-        return
-      case this.errorMsgTypes[1]:
-        this.props.history.push('/')
-        return
-    }
-  }
-
-  setupConnection() {
-    const { name } = this.props.match.params
-    const url = `${WS_URL}/table/${name}`
-    this.socket = new WebSocket(url);
-    console.log('socket: ', this.socket)
-
-    let sendGetTable = {
-      action: 'getTable',
-    }
-    let sendGetTableData = {
-      action: 'getTableData',
-      begin: 0,
-      end: 500,
-    }
-
-    this.socket.onopen = (event) => {
-      this.socket.send(JSON.stringify(sendGetTable))
-    }
-
-    this.socket.onerror = (event) => {
-      this.raiseError('Could not setup connection')
-    }
-
-    this.socket.onclose = (event) => {
-      console.error('WebSocket closed: ', event)
-    }
-
-    this.socket.onmessage = (event) => {
-      let incomingData = JSON.parse(event.data)
-      let oldData = this.state.data || []
-      let oldDataKeys = this.state.keys || new Set()
-
-      let action = incomingData.action
-      let rawData = incomingData.data
-
-      switch (action) {
-        case 'getTable': {
-          let schema = rawData.schema
-          let columns = schema.columns
-          let constraint = schema.constraint
-
-          let key = constraint.map(x => x.key).map(x => x)
-          if (key.length !== 1) {
-            this.raiseError('This table does not have any keys')
-            return
-          }
-          console.log('table: ', rawData)
-          this.setState({
-            tableInfoColumns: columns,
-            tableInfoKey: key[0],
-          })
-          this.socket.send(JSON.stringify(sendGetTableData))
-          return
-        }
-        case 'getTableData':
-        case 'update':
-        case 'create':
-          let data = rawData.data
-          let columns = rawData.columns
-          console.log('columns: ', columns)
-          console.log('data: ', data)
-          let keyIndex = columns.findIndex(x => x === this.state.tableInfoKey)
-          if (keyIndex.length === -1) {
-            this.raiseError('Unknown error: Database did not return the proper columns')
-            return
-          }
-
-          const findIndex = (key) => oldData.findIndex(x => key === x[keyIndex])
-
-          data.map((x) => {
-            let key = x[keyIndex]
-            console.log('key: ', key)
-            if (oldDataKeys.has(key)) {
-              //update
-              let index = findIndex(key) //O(n)
-              oldData[index] = x
-            } else {
-              //insert
-              oldData.push(x)
-            }
-
-            oldDataKeys.add(key)
-          })
-
-          let indices = oldData.map((_, idx) => idx + 1)
-
-          this.setState({
-            data: oldData,
-            indices: indices,
-            keys: oldDataKeys,
-            columns: columns,
-            keyIndex: keyIndex,
-          })
-          return
-      }
-    }
-  }
-
-  getNewRows() {
-    return this.state.newRows || []
-  }
-
-  addRow(afterIdx) {
-    let { indices, data } = this.state
-    indices.splice(afterIdx + 1, 0, <Icon name='minus' /> )
-    data.splice(afterIdx + 1, 0, data[0].map(x => ''))
-
-    let newRows = this.getNewRows()
-    newRows = newRows.map(x => {
-      if (x > afterIdx) {
-        return x + 1
-      } else {
-        return x
-      }
-    })
-    newRows.push(afterIdx + 1)
-    console.log('newRows: ', newRows)
-    this.setState({
-      data: data,
-      indices: indices,
-      newRows: newRows,
-    })
-  }
-
-  parseColumn(data, colName) {
-    let table = this.state.tableInfoColumns
-    let column = table.filter(x => x.name === colName)[0] //TODO: error checking
-    if (column.dataType === 'integer') {
-      if (!data) {
-        return null
-      } else {
-        return parseInt(data)
-      }
-    } else {
-      return data
-    }
-  }
-
-  updateValue(input, rowKey, colKey) {
-    //TODO: delete row if the key is changed
-    let newRows = this.getNewRows()
-    let data = {}
-    let key = this.state.tableInfoKey
-    let keyIndex = this.state.keyIndex
-
-    console.log('newRows: ', newRows)
-    console.log('rowKey: ', rowKey)
-    if (newRows.includes(rowKey)) {
-      if (colKey === keyIndex) {
-        let newData = this.state.data
-        let newKeys = this.state.keys
-
-        this.state.columns.map((x, idx) => {
-          if (colKey === idx) {
-            data[x] = this.parseColumn(input, x)
-            newKeys.add(data[x])
-          } else {
-            data[x] = this.parseColumn(this.state.data[rowKey][idx], x)
-          }
-        })
-
-
-        newData[rowKey][colKey] = input
-        this.setState({ data: newData, keys: newKeys })
-
-        let sendData = {
-          action: 'create',
-          data: data
-        }
-        console.log('sending data: ', sendData)
-        this.socket.send(JSON.stringify(sendData))
-      } else {
-        let newData = this.state.data
-        newData[rowKey][colKey] = input
-        this.setState({ data: newData })
-      }
-
-    } else {
-
-      data[key] = this.state.data[rowKey][keyIndex]
-      this.state.columns.map((x, idx) => {
-        if (colKey === idx) {
-          data[x] = this.parseColumn(input, x)
-        }
-      })
-
-      let sendData = {
-        action: 'update',
-        data: data
-      }
-      console.log('sending data: ', sendData)
-      this.socket.send(JSON.stringify(sendData))
-    }
+  componentWillMount() {
+    this.props.loadedPage()
   }
 
   componentDidMount() {
-    this.setupConnection()
+    const { name } = this.props.match.params
+    this.props.tableWantsToLoad(name)
   }
 
   render() {
     return (
       <div>
-        <Header
-          editor
-          sidebarOpen={this.state.sidebarOpen}
-          onToggle={() => this.toggleSidebar()}
-        />
-        <ErrorMsg error={this.state.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/>
+        <Header editor />
+        {/* <ErrorMsg error={this.props.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/> */}
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
-          <TableSidebase visible={this.state.sidebarOpen} />
+          <TableSidebase visible={this.props.isSidebarOpen()} />
 
           <Sidebar.Pusher>
-            <Dimmer active={this.state.data === null}>
+            <Dimmer active={!this.props.isTableLoaded()}>
               <Loader size='big'>Loading</Loader>
             </Dimmer>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
@@ -364,13 +145,7 @@ class Tables extends Component {
                     <Icon name='add' style={{marginRight: 0}}/>
                   </Label>
                 </Segment>
-                <GridLayout
-                  data={this.state.data}
-                  columns={this.state.columns}
-                  indices={this.state.indices}
-                  addRow={(afterIdx) => this.addRow(afterIdx)}
-                  updateValue={(input, rowKey, colKey) => this.updateValue(input, rowKey, colKey)}
-                />
+                { this.props.isTableConnected() ? <TableData /> : <></> }
               </Segment>
             </Segment>
           </Sidebar.Pusher>
@@ -380,4 +155,20 @@ class Tables extends Component {
   }
 }
 
-export default Tables
+
+const mapStateToProps = (state) => ({
+  isTableConnected: () => state.table.isConnected,
+  isTableLoaded: () => state.table.isLoaded,
+  isSidebarOpen: () => state.sidebar.isOpen,
+  error: null,
+})
+
+const mapDispatchToProps = (dispatch) => ({
+  tableWantsToLoad: name => dispatch(tableWantsToLoad(name)),
+  loadedPage: () => dispatch(loadedPage('Tables')),
+})
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Tables)

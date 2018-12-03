@@ -2,10 +2,10 @@
 import React, { Component } from 'react'
 import { Switch, Route } from 'react-router-dom'
 
-import Home from './Home.js'
-import Tables from './table/Tables.js'
-import Queries from './queries/Queries.js'
-import Login from './Login.js'
+import Home from './Home'
+import Tables from './table/Tables'
+import Queries from './queries/Queries'
+import Login from './Login'
 
 class App extends Component {
   render() {

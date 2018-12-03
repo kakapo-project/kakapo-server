@@ -2,6 +2,8 @@
 import React, { Component } from 'react'
 import { Button, Divider, Icon, Image, Menu, Search, Segment, Sidebar } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
+import { connect } from 'react-redux'
+import { clickToggleSidebar } from './actions'
 
 import logo from './logo.svg'
 class Header extends Component {
@@ -10,8 +12,7 @@ class Header extends Component {
   }
 
   render() {
-    let switchCompression = this.props.onToggle
-    let compress = this.props.sidebarOpen
+    let compress = this.props.isSidebarOpen()
 
     return (
       <Segment inverted attached='top' basic style={{border: 0, height: '5em', textAlign: 'bottom'}}>
@@ -75,7 +76,7 @@ class Header extends Component {
               />
             <Menu.Item
               name='compress'
-              onClick={(e, {name}) => switchCompression()}
+              onClick={(e, {name}) => this.props.clickToggleSidebar()}
             >
               {compress ?
                 <Icon name='expand' /> :
@@ -96,4 +97,15 @@ class Header extends Component {
   }
 }
 
-export default Header
+const mapStateToProps = (state) => ({
+  isSidebarOpen: () => state.sidebarOpen,
+})
+
+const mapDispatchToProps = (dispatch) => ({
+  clickToggleSidebar: () => dispatch(clickToggleSidebar()),
+})
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Header)

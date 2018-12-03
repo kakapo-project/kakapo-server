@@ -1,17 +1,20 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom'
 import App from './App';
-import * as serviceWorker from './serviceWorker';
+import * as serviceWorker from './serviceWorker'
 
 import { HashRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import store from './store'
 
-
-import 'semantic-ui-css/semantic.min.css';
+import 'semantic-ui-css/semantic.min.css'
 
 ReactDOM.render(
-  <HashRouter>
-    <App />
-  </HashRouter>,
+  <Provider store={store}>
+    <HashRouter>
+      <App />
+    </HashRouter>
+  </Provider>,
   document.getElementById('root'));
 
 serviceWorker.unregister();
