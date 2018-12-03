@@ -7137,6 +7137,10 @@ semantic-ui-css@^2.4.1:
   dependencies:
     jquery x.*
 
+semantic-ui-react-context-menu@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/semantic-ui-react-context-menu/-/semantic-ui-react-context-menu-1.0.0.tgz#91f2258516a9b3f978c7e677644e403a2bc7f2e6"
+
 semantic-ui-react@^0.83.0:
   version "0.83.0"
   resolved "https://registry.yarnpkg.com/semantic-ui-react/-/semantic-ui-react-0.83.0.tgz#3437d77bfd3d1e44d61e78d5740c262b9e63f258"

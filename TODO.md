@@ -21,6 +21,7 @@ Grid Frontend
 - holding shift for multiple selections
 - do debounce on all inputs
 - double click not working correctly, it should only double click if it is on different table cells
+- clicking out of context menu should get out of it, don't need to click the cancel button
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
@@ -29,6 +30,7 @@ Bugs:
 - sending integers not working
 - adding a new row with an old key should give an error?
 - save the selection when returning
+- inserting data into table doesn't fail properly
 
 Backend
 - Hook up table creation to websocket

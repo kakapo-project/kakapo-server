@@ -3,7 +3,7 @@ import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 
 import { Button, Divider, Header, Icon, Input, Label, Menu, Popup, Portal, Segment, Table } from 'semantic-ui-react'
-import ContextMenu from './ContextMenu.js';
+import ContextMenu from 'semantic-ui-react-context-menu'
 
 import DataGrid from '../data-grid'
 
@@ -293,19 +293,17 @@ class GridLayout extends Component {
             {this.renderColumnIcon(column)}{column.name}
           </Table.HeaderCell>
         }
-        position='bottom left'
-        open={this.isColumnContextMenu(idx)}
-        onClose={(e) => this.clearContextMenu(e)}
-      >
-        <div>
-          <Button.Group vertical labeled icon>
-            <Button icon='sort' content='Sort' />
-            <Button icon='filter' content='Filter' />
-            <Button icon='arrows alternate horizontal' content='Expand' />
-            <Button icon='hide' content='Hide' />
-          </Button.Group>
-        </div>
-      </ContextMenu>
+        items={[
+          { key: 0, icon: <Icon name='sort'/>, content: 'Sort' },
+          { key: 1, icon: <Icon name='filter'/>, content: 'Filter' },
+          { key: 2, icon: <Icon name='arrows alternate horizontal'/>, content: 'Expand' },
+          { key: 3, icon: <Icon name='hide' />, content: 'Hide' },
+          { key: 4, icon: <Icon name='cancel' /> },
+        ]}
+        onClick={(e, item) => {
+          console.log('context menu click item', item)
+        }}
+      />
     )
   }
 
@@ -324,22 +322,25 @@ class GridLayout extends Component {
             {x}
           </Table.Cell>
         }
-        position='right center'
-        open={this.isIndexContextMenu(idx)}
-        onClose={(e) => this.clearContextMenu(e)}
-      >
-        <div>
-          <Button.Group vertical labeled icon>
-            <Button icon='copy' content='Copy' />
-            <Button icon='paste' content='Paste' />
-            <Button icon='cut' content='Cut' />
-            <Divider />
-            <Button icon='add' content='Add Row' onClick={() => this.addRow(idx)}/>
-            <Button icon='clone' content='Duplicate Row' />
-            <Button icon='trash' content='Delete Row' />
-          </Button.Group>
-        </div>
-      </ContextMenu>
+        items={[
+          { key: 0, icon: <Icon name='copy'/>, content: 'Copy' },
+          { key: 1, icon: <Icon name='paste'/>, content: 'Paste' },
+          { key: 2, icon: <Icon name='cut'/>, content: 'Cut' },
+          //TODO: maybe put a divider here
+          { key: 3, icon: <Icon name='add' />, content: 'Add Row' },
+          { key: 4, icon: <Icon name='clone'/>, content: 'Duplicate Row' },
+          { key: 5, icon: <Icon name='trash'/>, content: 'Delete Row' },
+          { key: 6, icon: <Icon name='cancel'/> },
+        ]}
+        onClick={(e, item) => {
+          console.log('context menu click item', item)
+          switch (item.key) {
+            case 3:
+              this.addRow(idx)
+              return
+          }
+        }}
+      />
 
     )
   }
@@ -378,18 +379,16 @@ class GridLayout extends Component {
             }
           </Table.Cell>
         }
-        position='bottom center'
-        open={this.isDataContextMenu(rowKey, colKey)}
-        onClose={(e) => this.clearContextMenu(e)}
-      >
-        <div>
-          <Button.Group vertical labeled icon>
-            <Button icon='copy' content='Copy' />
-            <Button icon='paste' content='Paste' />
-            <Button icon='cut' content='Cut' />
-          </Button.Group>
-        </div>
-      </ContextMenu>
+        items={[
+          { key: 0, icon: <Icon name='copy'/>, content: 'Copy' },
+          { key: 1, icon: <Icon name='paste'/>, content: 'Paste' },
+          { key: 2, icon: <Icon name='cut'/>, content: 'Cut' },
+          { key: 6, icon: <Icon name='cancel'/> },
+        ]}
+        onClick={(e, item) => {
+          console.log('context menu click item', item)
+        }}
+      />
 
     )
   }
