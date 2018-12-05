@@ -124,7 +124,7 @@ class Tables extends Component {
               <Loader size='big'>Loading</Loader>
             </Dimmer>
             <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
-              <Segment padded style={{ height: '100%', overflowY: 'scroll', overflowX: 'hidden'}}>
+              <Segment padded style={{ height: '100%', overflowX: 'hidden'}}>
                 <Segment>
                   <Label as='a'>
                     <Icon name='mouse pointer' />
