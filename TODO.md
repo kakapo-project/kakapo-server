@@ -23,6 +23,7 @@ Grid Frontend
 - double click not working correctly, it should only double click if it is on different table cells
 - clicking out of context menu should get out of it, don't need to click the cancel button
 - TODO: look into `https://github.com/reduxjs/reselect`
+- add sql creator (gui for full schema design)
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
@@ -81,6 +82,7 @@ Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
     - Redis
     - Postgres
     - Frontend
+- add devtools (redux)
 
 
 Actual TODOS:

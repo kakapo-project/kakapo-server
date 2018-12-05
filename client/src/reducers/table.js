@@ -13,7 +13,6 @@ const initialState = {
 
   data: [[]],
   columns: [],
-  indices: [],
 }
 
 const handleWebsocketMessage = (action, data, state) => {
@@ -45,12 +44,10 @@ const handleWebsocketMessage = (action, data, state) => {
     case 'getTableData':
       let dataset = data.data
       let columns = data.columns
-      let indices = dataset.map((_, idx) => idx + 1)
 
       return {
         data: dataset,
         columns: columns,
-        indices: indices,
 
         isTableDataLoaded: true,
         isLoaded: state.isTableMetaLoaded
