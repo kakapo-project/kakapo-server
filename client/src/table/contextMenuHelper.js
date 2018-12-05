@@ -1,5 +1,6 @@
 
 
+//FIXME: this doesn't work!!!!
 export const hide = () => {
 
   let elems = document.getElementsByClassName('react-contextmenu')

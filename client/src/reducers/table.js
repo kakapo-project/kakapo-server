@@ -1,6 +1,8 @@
 
 import { WEBSOCKET_CLOSED, WEBSOCKET_OPEN, WEBSOCKET_MESSAGE } from '@giantmachines/redux-websocket'
 
+import { ACTIONS } from '../actions'
+
 const initialState = {
   isConnected: false,
   isTableMetaLoaded: false, //TODO: put these in reselect
@@ -89,13 +91,18 @@ const table = (state = initialState, action) => {
       }
     case WEBSOCKET_MESSAGE:
       let { data, event } = action.payload
-      console.log('received message: ', data)
-      console.log('event: ', event)
 
       let json = JSON.parse(data)
 
       let stateModification = handleWebsocketMessage(json.action, json.data, state)
       return { ...state, ...stateModification }
+
+    case ACTIONS.DELETE_ROW:
+      let oldData = state.data
+      let idx = action.idx
+      let newData = [...oldData.slice(0, idx), ...oldData.slice(idx + 1)]
+
+      return { ...state, data: newData }
 
     default:
       return state
