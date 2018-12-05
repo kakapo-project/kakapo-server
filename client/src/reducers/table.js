@@ -61,6 +61,7 @@ const handleWebsocketMessage = (action, data, state) => {
 
     case 'update':
     case 'create':
+    case 'delete':
 
   }
 

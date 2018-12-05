@@ -29,14 +29,14 @@ import ErrorMsg from '../ErrorMsg'
 import { WS_URL } from '../config'
 import { connect } from 'react-redux'
 
-import { requestingTableData } from '../actions'
+import { requestingTableData, addRow, deleteRow, modifyValue } from '../actions'
 
 import ReactDataGrid from 'react-data-grid'
 import { Menu } from 'react-data-grid-addons'
 
 import { hide } from './contextMenuHelper'
 
-const ColumnContextMenu = ({id, col}) => (
+const ColumnContextMenu = ({id, col, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
       <Dropdown.Item icon='sort' text='Sort' />
@@ -51,21 +51,21 @@ const ColumnContextMenu = ({id, col}) => (
   </Menu.ContextMenu>
 )
 
-const IndexContextMenu = ({id, row}) => (
+const IndexContextMenu = ({id, row, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
       <Dropdown.Item icon='add' text='Add Row' />
       <Dropdown.Item icon='clone' text='Duplicate Row' />
       <Dropdown.Item icon='trash' text='Delete Row' />
       <Dropdown.Divider />
-      <Dropdown.Item icon='cut' text='Cut' />
+      <Dropdown.Item icon='cut' text='Cut' onClick={(e) => {props.onRowDelete(row); hide()}}/>
       <Dropdown.Item icon='copy' text='Copy' />
       <Dropdown.Item icon='paste' text='Paste' onClick={(e) => hide()}/>
     </Dropdown.Menu>
   </Menu.ContextMenu>
 )
 
-const CellContextMenu = ({id, col, row}) => (
+const CellContextMenu = ({id, col, row, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
       <Dropdown.Item icon='cut' text='Cut' />
@@ -79,20 +79,18 @@ const ContextMenu = ({
   idx,
   id,
   rowIdx,
-  onRowDelete,
-  onRowInsertAbove,
-  onRowInsertBelow
+  ...props,
 }) => {
   const colId = idx
   const rowId = rowIdx
 
   console.log('connect: ', Menu.connect)
   if (colId === 0) {
-    return <IndexContextMenu id={id} row={rowId}/>
+    return <IndexContextMenu {...props} id={id} row={rowId}/>
   } else if (rowId === 0) {
-    return <ColumnContextMenu id={id} col={colId} />
+    return <ColumnContextMenu {...props} id={id} col={colId} />
   }
-  return <CellContextMenu id={id} row={rowId} col={colId}/>
+  return <CellContextMenu {...props} id={id} row={rowId} col={colId}/>
 }
 
 const DefaultFormatter = (e) => {
@@ -111,6 +109,8 @@ const RowRenderer = ({ renderBaseRow, ...props }) => {
   return renderBaseRow(props)
 }
 
+const visualToRawIndex = (index) => (index - 1)
+const visualToRawColumn = (index) => (index - 1)
 
 class TableData extends Component {
 
@@ -162,9 +162,7 @@ class TableData extends Component {
             rowRenderer={RowRenderer}
             contextMenu={
               <ContextMenu
-                onRowDelete={(e, data) => console.log('e1: ', e, data)}
-                onRowInsertAbove={(e, data) => console.log('e2: ', e, data)}
-                onRowInsertBelow={(e, data) => console.log('e3: ', e, data)}
+                onRowDelete={(rowIdx) => this.props.deleteRow(visualToRawIndex(rowIdx))}
               />
             }
             RowsContainer={Menu.ContextMenuTrigger}
@@ -189,6 +187,9 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = (dispatch) => ({
   requestingTableData: () => dispatch(requestingTableData()),
+  deleteRow: (idx) => dispatch(deleteRow(idx)),
+  addRow: (idx) => dispatch(addRow(idx)),
+  modifyValue: (rowIdx, colIdx, value) => dispatch(modifyValue(rowIdx, colIdx, value)),
 })
 
 export default connect(

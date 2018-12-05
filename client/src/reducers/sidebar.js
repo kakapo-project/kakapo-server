@@ -1,21 +1,23 @@
 
+import { ACTIONS } from '../actions'
+
 const initialState = {
   isOpen: false,
 }
 
 const sidebar = (state = initialState, action) => {
   switch (action.type) {
-    case 'TOGGLE_SIDEBAR':
+    case ACTIONS.TOGGLE_SIDEBAR:
       return {
         ...state,
         isOpen: !state.isOpen,
       }
-    case 'OPEN_SIDEBAR':
+    case ACTIONS.OPEN_SIDEBAR:
       return {
         ...state,
         isOpen: true,
       }
-    case 'CLOSE_SIDEBAR':
+    case ACTIONS.CLOSE_SIDEBAR:
       return {
         ...state,
         isOpen: false,
