@@ -14,6 +14,11 @@ const initialState = {
 
   data: [[]],
   columns: [],
+
+  //user actions, to update
+  userDeleted: [], //buffered when user calls the row to be delete, removed from buffer when message received
+  userInserted: [], //buffered when user's newly added row (i.e. null key) has been updated with a key, meaning it can be sent, removed when message received
+  userUpdated: [], //buffered when user is updating value of an object that has a key
 }
 
 const handleWebsocketMessage = (action, data, state) => {
@@ -72,6 +77,9 @@ const handleWebsocketMessage = (action, data, state) => {
 
 const table = (state = initialState, action) => {
   console.log('received action: ', action)
+
+  let oldData, newData, rowIdx, rowKey, colIdx;
+
   switch (action.type) {
     case WEBSOCKET_OPEN:
       return {
@@ -97,10 +105,34 @@ const table = (state = initialState, action) => {
       let stateModification = handleWebsocketMessage(json.action, json.data, state)
       return { ...state, ...stateModification }
 
+    case ACTIONS.ADD_ROW:
+      oldData = state.data
+      rowIdx = action.idx
+      let emptyRow = Object.keys(state.columnInfo).map(x => null) //just count the number of columns and create row with null values
+      newData = [...oldData.slice(0, rowIdx), emptyRow, ...oldData.slice(rowIdx)]
+      return { ...state, data: newData }
+
     case ACTIONS.DELETE_ROW:
-      let oldData = state.data
-      let idx = action.idx
-      let newData = [...oldData.slice(0, idx), ...oldData.slice(idx + 1)]
+      oldData = state.data
+      rowIdx = action.idx
+      rowKey = action.key
+      newData = [...oldData.slice(0, rowIdx), ...oldData.slice(rowIdx + 1)]
+      let userDeleted = [...state.userDeleted, rowKey] //TODO: remove item when websocket message returns remove
+
+      return { ...state, data: newData, userDeleted: userDeleted }
+
+    case ACTIONS.UPDATE_VALUE:
+      oldData = state.data
+      rowIdx = action.rowIdx
+      colIdx = action.colIdx
+
+      console.log('oldData: ', oldData)
+      console.log('rowIdx: ', rowIdx)
+      let oldRow = oldData[rowIdx]
+      let value = action.value
+
+      let newRow = [...oldRow.slice(0, colIdx), value, ...oldRow.slice(colIdx + 1)]
+      newData = [...oldData.slice(0, rowIdx), newRow, ...oldData.slice(rowIdx + 1)]
 
       return { ...state, data: newData }
 

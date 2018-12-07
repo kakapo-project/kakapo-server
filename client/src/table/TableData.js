@@ -54,13 +54,13 @@ const ColumnContextMenu = ({id, col, ...props}) => (
 const IndexContextMenu = ({id, row, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
-      <Dropdown.Item icon='add' text='Add Row' />
+      <Dropdown.Item icon='add' text='Add Row' onClick={(e) => { props.onRowAdded(row); hide() }} />
       <Dropdown.Item icon='clone' text='Duplicate Row' />
-      <Dropdown.Item icon='trash' text='Delete Row' />
+      <Dropdown.Item icon='trash' text='Delete Row' onClick={(e) => { props.onRowDelete(row); hide() }} />
       <Dropdown.Divider />
-      <Dropdown.Item icon='cut' text='Cut' onClick={(e) => {props.onRowDelete(row); hide()}}/>
+      <Dropdown.Item icon='cut' text='Cut' />
       <Dropdown.Item icon='copy' text='Copy' />
-      <Dropdown.Item icon='paste' text='Paste' onClick={(e) => hide()}/>
+      <Dropdown.Item icon='paste' text='Paste' onClick={(e) => hide()} />
     </Dropdown.Menu>
   </Menu.ContextMenu>
 )
@@ -111,7 +111,7 @@ const RowRenderer = ({ renderBaseRow, ...props }) => {
 
 const visualToRawIndex = (index) => (index - 1)
 const visualToRawColumn = (index) => (index - 1)
-
+const rowAfter = (index) => (index + 1)
 class TableData extends Component {
 
   componentDidMount() {
@@ -158,10 +158,18 @@ class TableData extends Component {
             rowGetter={i => data[i]}
             rowsCount={data.length}
             minHeight={500}
-            onGridRowsUpdated={(e, data) => console.log('e: ', e, data)}
+            onGridRowsUpdated={({toRow, updated}) => {
+              let [colIdx, value] = Object.entries(updated)[0] //FIXME: assuming length === 0
+              this.props.modifyValue(
+                visualToRawIndex(toRow),
+                visualToRawColumn(colIdx),
+                value,
+              )}
+            }
             rowRenderer={RowRenderer}
             contextMenu={
               <ContextMenu
+                onRowAdded={(rowIdx) => this.props.addRow(visualToRawIndex(rowAfter(rowIdx)))}
                 onRowDelete={(rowIdx) => this.props.deleteRow(visualToRawIndex(rowIdx))}
               />
             }

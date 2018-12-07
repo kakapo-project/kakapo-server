@@ -95,3 +95,4 @@ Actual TODOS:
 - upload files
 - api documentation
 - packaging with ./configure && make && make install
+- onDuplicate=fail table row data should fail, not return empty array, onDuplicate=ignore should return old value

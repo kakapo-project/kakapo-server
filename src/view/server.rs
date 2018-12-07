@@ -198,8 +198,16 @@ struct GetQueryDataQuery { //ha
 struct InsertTableDataQuery {
     #[serde(default)]
     pub format: api::TableDataFormat,
+    #[serde(default)]
+    pub on_duplicate: api::OnDuplicate,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct UpdateTableDataQuery {
+    #[serde(default)]
+    pub format: api::TableDataFormat,
+}
 
 
 fn get_tables((state, query): (State<AppState>, Query<GetTablesQuery>)) -> AsyncResponse {
@@ -313,15 +321,6 @@ fn delete_script((state, path): (State<AppState>, Path<String>)) -> AsyncRespons
     })
 }
 
-fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableDataQuery>)) -> AsyncResponse {
-    println!("received message: {:?}", &query);
-    http_response(&state,handlers::GetTableData {
-        name: path.to_string(),
-        start: query.start,
-        end: query.end,
-        format: query.format,
-    })
-}
 
 fn get_query_data((state, path, query): (State<AppState>, Path<String>, Query<GetQueryDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &query);
@@ -334,16 +333,7 @@ fn get_query_data((state, path, query): (State<AppState>, Path<String>, Query<Ge
     })
 }
 
-fn post_table_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::TableData>, Query<InsertTableDataQuery>)) -> AsyncResponse {
-    println!("received message: {:?}", &json);
-    //TODO: on duplicate - update (default), ignore, fail
-    //TODO: implement
-    http_response(&state,handlers::InsertTableData {
-        name: path.to_string(),
-        data: json.into_inner(),
-        format: query.format,
-    })
-}
+
 
 fn post_query_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::QueryParams>, Query<GetQueryDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
@@ -365,22 +355,41 @@ fn post_script_data((state, path, json): (State<AppState>, Path<String>, Json<ap
     })
 }
 
-fn put_table_data((state, path, json): (State<AppState>, Path<(String, String)>, Json<u32>)) -> AsyncResponse {
-    //TODO: implement
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+fn get_table_data((state, path, query): (State<AppState>, Path<String>, Query<GetTableDataQuery>)) -> AsyncResponse {
+    println!("received message: {:?}", &query);
+    http_response(&state,handlers::GetTableData {
+        name: path.to_string(),
+        start: query.start,
+        end: query.end,
+        format: query.format,
+    })
+}
+
+
+fn post_table_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::TableData>, Query<InsertTableDataQuery>)) -> AsyncResponse {
+    println!("received message: {:?}", &json);
+    http_response(&state,handlers::InsertTableData {
+        name: path.to_string(),
+        data: json.into_inner(),
+        format: query.format,
+        method: query.into_inner().on_duplicate.into_method(),
+    })
+}
+
+fn put_table_data((state, path, json, query): (State<AppState>, Path<(String, String)>, Json<api::RowData>, Query<UpdateTableDataQuery>)) -> AsyncResponse {
+    http_response(&state,handlers::UpdateTableData {
+        name: path.0.to_string(),
+        key: path.1.to_string(),
+        data: json.into_inner(),
+        format: query.format,
+    })
 }
 
 fn delete_table_data((state, path): (State<AppState>, Path<(String, String)>)) -> AsyncResponse {
-    //TODO: implement
-    result(Ok(
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": "method not implemented" })).unwrap())
-    )).responder()
+    http_response(&state,handlers::DeleteTableData {
+        name: path.0.to_string(),
+        key: path.1.to_string(),
+    })
 }
 
 
@@ -407,20 +416,22 @@ impl TableSession {
                     name: self.table_name.to_string(),
                     data: data.into_table_data(),
                     format: api::FLAT_TABLE_DATA_FORMAT,
+                    method: api::CreationMethod::default(),
                 })
             },
-            api::TableSessionRequest::Update { data } => {
-                websocket_response(ctx, "update", handlers::InsertTableData { //TODO: this is upsert
+            api::TableSessionRequest::Update { data, key } => {
+                websocket_response(ctx, "update", handlers::UpdateTableData { //TODO: this is upsert
                     name: self.table_name.to_string(),
-                    data: data.into_table_data(),
+                    key: key,
+                    data: data,
                     format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
-            api::TableSessionRequest::Delete { data } => {
+            api::TableSessionRequest::Delete { data, key } => {
                 //TODO: implement me
-                websocket_response(ctx, "delete",handlers::GetTable {
+                websocket_response(ctx, "delete",handlers::DeleteTableData {
                     name: self.table_name.to_string(),
-                    detailed: false,
+                    key: key,
                 })
             },
         };

@@ -177,13 +177,13 @@ pub type OnDuplicate = data::OnDuplicate;
 pub type CreationMethod = data::CreationMethod;
 
 pub type TableData = data::TableData;
+pub type RowData = data::RowData;
 pub type TableDataFormat = data::TableDataFormat;
 pub type QueryParams = data::QueryParams;
 pub type ScriptParam = data::ScriptParam;
 
 
 pub const FLAT_TABLE_DATA_FORMAT: TableDataFormat = data::TableDataFormat::FlatRows;
-
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
@@ -226,6 +226,12 @@ pub struct GetTableDataResult(pub data::TableData);  //TODO: just need the data,
 
 #[derive(Debug, Serialize)]
 pub struct InsertTableDataResult(pub data::TableData);
+
+#[derive(Debug, Serialize)]
+pub struct UpdateTableDataResult(pub data::RowData);
+
+#[derive(Debug, Serialize)]
+pub struct DeleteTableDataResult(pub data::RowData);
 
 #[derive(Debug, Serialize)]
 pub struct RunQueryResult(pub data::TableData);
@@ -282,12 +288,14 @@ pub enum TableSessionRequest {
     },
     Update {
         data: data::RowData,
+        key: String,
     },
     Create {
         data: data::RowData,
     },
     Delete {
         data: data::IndexableValue,
+        key: String,
     },
 
 }

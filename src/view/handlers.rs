@@ -283,13 +283,48 @@ pub struct InsertTableData {
     pub name: String,
     pub data: api::TableData, //payload
     pub format: api::TableDataFormat,
+    pub method: api::CreationMethod,
 }
 
 impl Handler<InsertTableData> for DatabaseExecutor {
     type Result = <InsertTableData as Message>::Result;
 
     fn handle(&mut self, msg: InsertTableData, _: &mut Self::Context) -> Self::Result {
-        let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data, msg.format)?;
+        let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data, msg.format, msg.method)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct UpdateTableData {
+    pub name: String,
+    pub key: String,
+    pub data: api::RowData, //payload
+    pub format: api::TableDataFormat,
+}
+
+impl Handler<UpdateTableData> for DatabaseExecutor {
+    type Result = <UpdateTableData as Message>::Result;
+
+    fn handle(&mut self, msg: UpdateTableData, _: &mut Self::Context) -> Self::Result {
+        let result = table::update_table_data(&self.get_connection(), msg.name, msg.key, msg.data, msg.format)?;
+        Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
+    }
+}
+
+#[derive(Clone, Message)]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct DeleteTableData {
+    pub name: String,
+    pub key: String,
+}
+
+impl Handler<DeleteTableData> for DatabaseExecutor {
+    type Result = <DeleteTableData as Message>::Result;
+
+    fn handle(&mut self, msg: DeleteTableData, _: &mut Self::Context) -> Self::Result {
+        let result = table::delete_table_data(&self.get_connection(), msg.name, msg.key)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }

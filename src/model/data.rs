@@ -163,12 +163,69 @@ pub enum TableData {
 
 
 impl RowData {
+
+    fn get_row_data_from_row_flat_data(columns: Vec<String>, data: Vec<Value>) -> BTreeMap<String, Value>{
+        let mut row_data = BTreeMap::new();
+        for (name, value) in columns.iter().zip(data) {
+            row_data.insert(name.to_owned(), value.to_owned());
+        }
+
+        row_data
+    }
+
     pub fn into_table_data(self) -> TableData {
         match self {
             RowData::RowData(x) => TableData::RowsData(vec![x]),
             RowData::RowsFlatData { columns, data } => TableData::RowsFlatData {
                 columns: columns,
                 data: vec![data],
+            },
+        }
+    }
+
+    pub fn into_row_data_vec(self) -> BTreeMap<String, Value> {
+        match self {
+            RowData::RowsFlatData { columns, data } => {
+                RowData::get_row_data_from_row_flat_data(columns, data)
+            },
+            RowData::RowData(x) => x,
+        }
+    }
+
+    pub fn into_row_data(self) -> Self {
+        match self {
+            RowData::RowsFlatData { columns, data } => {
+                let rows_data = RowData::get_row_data_from_row_flat_data(columns, data);
+                RowData::RowData(rows_data)
+            },
+            RowData::RowData(_) => self,
+        }
+    }
+
+    pub fn into_row_flat_data(self) -> Self {
+        match self {
+            RowData::RowsFlatData { .. } => self,
+            RowData::RowData(row) => { //This is actually slow
+                let mut columns = BTreeMap::new();
+                for row_column in row.keys() {
+                    columns.insert(row_column.to_owned(), ());
+                }
+
+                //TODO: handle case for missing values, right now it just puts null, but it should handle it as different
+                let mut new_row = vec![];
+                for key in columns.keys() {
+                    let new_value = match row.get(key) {
+                        Some(value) => value.to_owned(),
+                        None => Value::Null,
+                    };
+                    new_row.push(new_value);
+                }
+
+
+                RowData::RowsFlatData {
+                    columns: columns.keys().cloned().collect::<Vec<String>>(),
+                    data: new_row,
+                }
             },
         }
     }
