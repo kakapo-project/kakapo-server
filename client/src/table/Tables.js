@@ -12,6 +12,7 @@ import {
   Input,
   Label,
   Menu,
+  Modal,
   Pagination,
   Segment,
   Sidebar,
@@ -31,7 +32,7 @@ import { connect } from 'react-redux'
 import { tableWantsToLoad, loadedPage } from '../actions'
 
 import TableData from './TableData'
-
+import DataExporter from './menus/DataExporter'
 
 const TableSidebase = (props) => (
   <Sidebar
@@ -44,11 +45,26 @@ const TableSidebase = (props) => (
     visible={props.visible}
     width='thin'
   >
-    <Menu.Item
-        as='a'>
-      <Icon name='download' />
-      Export Data
-    </Menu.Item>
+
+    <Modal
+      trigger={
+        <Menu.Item
+          as='a'
+          onClick={() => props.openModal('exportData')}
+        >
+          <Icon name='download' />
+          Export Data
+        </Menu.Item>
+      }
+      open={props.modalOpen === 'exportData'}
+      onClose={() => props.onComplete(null, {})}
+      basic
+    >
+      <DataExporter
+        onComplete={(data) => props.onComplete('exportData', data)}
+      />
+    </Modal>
+
     <Menu.Item
         as='a'>
       <Icon name='cloud upload' />
@@ -101,6 +117,10 @@ const TableSidebase = (props) => (
 
 class Tables extends Component {
 
+  state = {
+    viewOpen: false,
+    modalOpen: null,
+  }
 
   componentWillMount() {
     this.props.loadedPage()
@@ -111,13 +131,29 @@ class Tables extends Component {
     this.props.tableWantsToLoad(name)
   }
 
+  onFormComplete(action, data) {
+    switch (action) {
+      case 'exportData': {
+        let { fileName, fileType } = data
+        console.log('fileName: ', fileName, 'fileType', fileType)
+      }
+    }
+
+    this.setState({ modalOpen: null })
+  }
+
   render() {
     return (
       <div>
         <Header editor />
         {/* <ErrorMsg error={this.props.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/> */}
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
-          <TableSidebase visible={this.props.isSidebarOpen()} />
+          <TableSidebase
+            visible={ this.props.isSidebarOpen() }
+            onComplete={ (action, data) => this.onFormComplete(action, data) }
+            openModal={(modal) => this.setState({ modalOpen: modal })}
+            modalOpen={ this.state.modalOpen }
+          />
 
           <Sidebar.Pusher>
             <Dimmer active={!this.props.isTableLoaded()}>
@@ -145,7 +181,11 @@ class Tables extends Component {
                     <Icon name='add' style={{marginRight: 0}}/>
                   </Label>
                 </Segment>
-                { this.props.isTableConnected() ? <TableData /> : <></> }
+                { this.props.isTableConnected() ?
+                  <TableData hideActions={this.state.viewOpen} />
+                  :
+                  <></>
+                }
               </Segment>
             </Segment>
           </Sidebar.Pusher>

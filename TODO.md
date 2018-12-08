@@ -27,19 +27,13 @@ Grid Frontend
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
-- minor: adding a row should defocus the value input field
-- until the data is updated, the user's input value change should be reflected
 - sending integers not working
 - adding a new row with an old key should give an error?
 - save the selection when returning
 - inserting data into table doesn't fail properly
 
 Backend
-- Hook up table creation to websocket
-- Hook up table get data to websocket
-- Hook up table create row to websocket
-- Hook up table updates to websocket
-- Hook up table delete to websocket
+- Proper message queues and websockets
 - Figure out docker
 - Figure out authentication
 - Excel + CSV maker
@@ -86,7 +80,6 @@ Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
 
 
 Actual TODOS:
-- Delete implementation
 - differentiate boolean, integer, string, json in the front end
 - Build the docker setup
 - scripts support
@@ -96,3 +89,4 @@ Actual TODOS:
 - api documentation
 - packaging with ./configure && make && make install
 - onDuplicate=fail table row data should fail, not return empty array, onDuplicate=ignore should return old value
+- Better color feedback for data entry
