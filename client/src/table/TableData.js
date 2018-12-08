@@ -31,10 +31,10 @@ import { connect } from 'react-redux'
 
 import { requestingTableData, addRow, deleteRow, modifyValue } from '../actions'
 
-import ReactDataGrid from 'react-data-grid'
 import { Menu } from 'react-data-grid-addons'
 
 import { hide } from './contextMenuHelper'
+import DataGrid from '../data-grid/index.js';
 
 const ColumnContextMenu = ({id, col, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
@@ -153,7 +153,7 @@ class TableData extends Component {
           `}
         </style>
         <Segment style={{ margin: 0, padding: 0, }}>
-          <ReactDataGrid
+          <DataGrid
             columns={columns}
             rowGetter={i => data[i]}
             rowsCount={data.length}
