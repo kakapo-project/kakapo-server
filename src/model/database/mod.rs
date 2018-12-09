@@ -155,7 +155,7 @@ impl ResultWrapper {
         let res: Result<Vec<String>, Error> =
             (0..num_cols).map(|col_idx| {
                 let name_str = unsafe {
-                    let name_ptr = unsafe { pq_sys::PQfname(self.p(), col_idx as i32) };
+                    let name_ptr = pq_sys::PQfname(self.p(), col_idx as i32);
                     CString::from_raw(name_ptr)
                 };
                 name_str.into_string().or_else(|err| Err(generate_error("error parsing column name")))
@@ -185,6 +185,17 @@ impl ResultWrapper {
                 row_idx as raw::c_int,
                 col_idx as raw::c_int,
             )
+        }
+    }
+
+    pub fn print_error(&self) -> () {
+        unsafe {
+            let error_enum = pq_sys::PQresultStatus(self.p());
+            println!("status: {:?}", error_enum);
+            if format!("{:?}", error_enum) == "PGRES_FATAL_ERROR" {
+                let r = pq_sys::PQresultErrorMessage(self.p());
+                println!("error: {:?}", CString::from_raw(r));
+            }
         }
     }
 }
@@ -261,6 +272,15 @@ fn exec(conn: &ConnWrapper, query: &str, params: Vec<Value>) -> Result<ResultWra
             .or_else(|err| Err(Error::SerializationError(err)))
     }).collect::<Result<_, Error>>()?;
 
+    let param_types: Vec<u32> = params.iter().map(|x| {
+         match x {
+             Value::Null => 0x0, //TODO: is this right?
+             Value::Integer(x) => 0x17,
+             Value::String(x) => 0x19,
+             _ => 0x0, //TODO: fix
+         }
+    }).collect();
+
     let params_pointer = param_data
         .iter()
         .map(|data| {
@@ -280,7 +300,7 @@ fn exec(conn: &ConnWrapper, query: &str, params: Vec<Value>) -> Result<ResultWra
             conn.p(),
             query_cstring.as_ptr(),
             params_pointer.len() as raw::c_int,
-            ptr::null() as *const u32, //FIXME: what are the oids?
+            param_types.as_ptr(),
             params_pointer.as_ptr(),
             param_lengths.as_ptr(),
             vec![1 as raw::c_int; params_pointer.len()].as_ptr(),
@@ -420,7 +440,12 @@ pub fn upsert_rows(
         let query = format!("{}\n{}\n{}\n{};", query_insert_into, query_values, query_on_conflict, query_returning);
         println!("query: {}", query);
 
+        println!("values: {:?}", values);
         let result = exec(&internal_conn, &query, values)?;
+
+        println!("printing errors: ");
+        result.print_error();
+
         let mut curr_row = result.get_rows_data()?;
 
         rows.append(&mut curr_row);
@@ -500,6 +525,7 @@ pub fn insert_rows(
         let query = format!("{}\n{}\n{}\n{};", query_insert_into, query_values, query_on_conflict, query_returning);
         println!("query: {}", query);
 
+        println!("values: {:?}", values);
         let result = exec(&internal_conn, &query, values)?;
         let mut curr_row = result.get_rows_data()?;
 
@@ -576,6 +602,7 @@ pub fn update_rows(
         let query = format!("{}\n{}\n{};", query_update_value, where_clause, query_returning);
         println!("query: {}", query);
 
+        println!("values: {:?}", values);
         let result = exec(&internal_conn, &query, values)?;
         let mut curr_row = result.get_rows_data()?;
 
@@ -690,6 +717,7 @@ pub fn delete_row_with_key(
     println!("query: {}", query);
 
     let values = vec![Value::String(key_value)];
+    println!("values: {:?}", values);
     let result = exec(&internal_conn, &query, values)?;
     let rows = result.get_rows_data()?;
     let row: Vec<Value> = match rows.first() {

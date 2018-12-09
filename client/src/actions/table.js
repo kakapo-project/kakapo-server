@@ -4,6 +4,15 @@ import { WS_URL } from './config'
 
 import { ACTIONS } from './index'
 
+const encodeByType = (data, type) => {
+  switch (type) {
+    case 'string':
+      return data
+    case 'integer':
+      return parseInt(data)
+  }
+}
+
 export const tableWantsToLoad = (name) => {
   const url = `${WS_URL}/table/${name}`
   return {
@@ -129,6 +138,8 @@ export const modifyValue = (rowIdx, colIdx, value) => {
     let data = state.table.data
     let columns = state.table.columns
     let primaryKey = state.table.primaryKey
+    let columnData = state.table.columnInfo
+    console.log('columnData: ', columnData)
 
     let primaryKeyIdx = columns.findIndex(x => x === primaryKey)
     let row = data[rowIdx]
@@ -142,15 +153,17 @@ export const modifyValue = (rowIdx, colIdx, value) => {
     else if (key === null && primaryKeyIdx === colIdx) {
       let newRow = {}
       columns.map((columnName, idx) => {
-        newRow[columnName] = (idx == colIdx) ? value : row[idx]
+        let type = columnData[columnName].dataType
+        newRow[columnName] = encodeByType((idx == colIdx) ? value : row[idx], type)
       })
       return dispatch(insertRow(newRow))
     }
     //case 3, a value was modified
     else {
       let otherColumnName = columns[colIdx]
+      let type = columnData[otherColumnName].dataType
       let newRow = {
-        [otherColumnName]: value,
+        [otherColumnName]: encodeByType(value, type),
       }
       return dispatch(updateValue(key, newRow))
     }
