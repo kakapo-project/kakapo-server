@@ -57,8 +57,25 @@ impl OnDuplicate {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DataType {
-    String,
+    SmallInteger,
     Integer,
+    BigInteger,
+    //Decimal { precision: u32, scale: u32 },
+    Float,
+    DoubleFloat,
+
+    String,
+    VarChar { length: u32 },
+
+    Byte,
+
+    Timestamp { with_tz: bool },
+    Date,
+    Time { with_tz: bool },
+    //TimeInterval,
+
+    Boolean,
+
     Json,
 }
 
@@ -66,8 +83,8 @@ pub enum DataType {
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum IndexableValue {
-    String(String),
     Integer(i64),
+    String(String),
     //TODO: allow for multiple indexable values if the multiple keys exists
 }
 
@@ -79,7 +96,12 @@ pub enum Value {
     Null,
     String(String),
     Integer(i64),
-    Json(serde_json::Value),
+    Float(f64),
+    Boolean(bool),
+    DateTime { datetime: chrono::NaiveDateTime },
+    Date { date: chrono::NaiveDate },
+    Binary { b64: String },
+    Json { json: serde_json::Value },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

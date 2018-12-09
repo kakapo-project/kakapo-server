@@ -2,6 +2,8 @@
 extern crate actix;
 extern crate actix_broker;
 extern crate actix_web;
+extern crate base64;
+extern crate bigdecimal;
 extern crate byteorder;
 extern crate bytes;
 extern crate chrono;

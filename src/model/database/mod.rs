@@ -29,6 +29,9 @@ use diesel::serialize::ToSql;
 use diesel::serialize::IsNull;
 use diesel::serialize;
 
+use base64;
+use bigdecimal;
+
 struct InternalRawConnection {
     pub internal_connection: NonNull<pq_sys::PGconn>,
 }
@@ -63,6 +66,11 @@ fn generate_error(fmt: &str) -> Error {
             )
         )
     )
+}
+
+type FromError = std::boxed::Box<(dyn std::error::Error + std::marker::Sync + std::marker::Send + 'static)>;
+fn parse<T>(data: Result<T, FromError>) -> Result<T, Error> {
+    data.or_else(|err| Err(Error::SerializationError(err)))
 }
 
 impl ResultWrapper {
@@ -114,20 +122,26 @@ impl ResultWrapper {
         let result = if bytes.is_none() {
             Value::Null
         } else {
-             match data_type {
-                DataType::Integer => Value::Integer({
-                    <i32 as FromSql<sql_types::Integer, Pg>>::from_sql(bytes)
-                        .or_else(|err| Err(Error::SerializationError(err)))
-                        .and_then(|r| Ok(r as i64))?
-                }),
-                DataType::String => Value::String(
-                    <String as FromSql<sql_types::Text, Pg>>::from_sql(bytes)
-                        .or_else(|err| Err(Error::SerializationError(err)))?
-                ),
-                DataType::Json => Value::Json(
-                    <serde_json::Value as FromSql<sql_types::Json, Pg>>::from_sql(bytes)
-                        .or_else(|err| Err(Error::SerializationError(err)))?
-                ),
+            match data_type {
+                DataType::SmallInteger => Value::Integer(parse(<i16 as FromSql<sql_types::SmallInt, Pg>>::from_sql(bytes))? as i64),
+                DataType::Integer => Value::Integer(parse(<i32 as FromSql<sql_types::Integer, Pg>>::from_sql(bytes))? as i64),
+                DataType::BigInteger =>  Value::Integer(parse(<i64 as FromSql<sql_types::BigInt, Pg>>::from_sql(bytes))?),
+                DataType::Float => Value::Float(parse(<f32 as FromSql<sql_types::Float, Pg>>::from_sql(bytes))? as f64),
+                DataType::DoubleFloat => Value::Float(parse(<f64 as FromSql<sql_types::Double, Pg>>::from_sql(bytes))?),
+
+                DataType::String => Value::String(parse(<String as FromSql<sql_types::Text, Pg>>::from_sql(bytes))?),
+                DataType::VarChar { length } => Value::String(parse(<String as FromSql<sql_types::VarChar, Pg>>::from_sql(bytes))?),
+
+                DataType::Byte => Value::Binary {
+                    b64: base64::encode(&parse(<Vec<u8> as FromSql<sql_types::Binary, Pg>>::from_sql(bytes))?)
+                },
+
+                DataType::Timestamp { with_tz } => Value::DateTime { datetime: parse(<chrono::NaiveDateTime as FromSql<sql_types::Timestamp, Pg>>::from_sql(bytes))? },
+                DataType::Date => Value::Date { date: parse(<chrono::NaiveDate as FromSql<sql_types::Date, Pg>>::from_sql(bytes))? },
+                DataType::Time { with_tz } => Value::DateTime { datetime: parse(<chrono::NaiveDateTime as FromSql<sql_types::Timestamp, Pg>>::from_sql(bytes))? },
+
+                DataType::Boolean => Value::Boolean(parse(<bool as FromSql<sql_types::Bool, Pg>>::from_sql(bytes))?),
+                DataType::Json => Value::Json { json: parse(<serde_json::Value as FromSql<sql_types::Json, Pg>>::from_sql(bytes))? },
             }
         };
 
@@ -204,15 +218,35 @@ fn exec(conn: &ConnWrapper, query: &str, params: Vec<Value>) -> Result<ResultWra
         let result = match x {
             Value::Null => Ok(IsNull::Yes),
             Value::Integer(x) => {
-                let value = *x as i32;
+                let value = *x as i32; //TODO: why not i64?
                 <i32 as ToSql<sql_types::Integer, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::Float(x) => {
+                let value = x;
+                <f64 as ToSql<sql_types::Double, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::Boolean(x) => {
+                let value = x;
+                <bool as ToSql<sql_types::Bool, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::DateTime { datetime } => {
+                let value = datetime;
+                <chrono::NaiveDateTime as ToSql<sql_types::Timestamp, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::Date { date } => {
+                let value = date;
+                <chrono::NaiveDate as ToSql<sql_types::Date, Pg>>::to_sql(&value, &mut bytes)
             },
             Value::String(x) => {
                 let value = x;
                 <String as ToSql<sql_types::Text, Pg>>::to_sql(&value, &mut bytes)
             },
-            Value::Json(x) => {
-                let value = x;
+            Value::Binary { b64 } => {
+                let value =  base64::decode(b64).or_else(|err| Err(generate_error("error decoding base 64 data")))?;
+                <Vec<u8> as ToSql<sql_types::Binary, Pg>>::to_sql(&value, &mut bytes)
+            },
+            Value::Json { json } => {
+                let value = json;
                 <serde_json::Value as ToSql<sql_types::Json, Pg>>::to_sql(&value, &mut bytes)
             },
         };

@@ -232,8 +232,23 @@ pub fn unroll_table(table: data::DetailedTable) -> Result<data::Table, StateErro
 
 fn format_column(column: &data::Column) -> String {
     let result = match &column.data_type {
-        data::DataType::String => format!("{} TEXT", &column.name),
+        data::DataType::SmallInteger => format!("{} SMALLINT", &column.name),
         data::DataType::Integer => format!("{} INTEGER", &column.name),
+        data::DataType::BigInteger => format!("{} BIGINT", &column.name),
+        data::DataType::Float => format!("{} REAL", &column.name),
+        data::DataType::DoubleFloat => format!("{} DOUBLE PRECISION", &column.name),
+
+        data::DataType::String => format!("{} TEXT", &column.name),
+        data::DataType::VarChar { length } => format!("{} VARCHAR({})", &column.name, &length),
+
+        data::DataType::Byte => format!("{} BYTEA", &column.name),
+
+        data::DataType::Timestamp { with_tz } => format!("{} TIMESTAMP {}", &column.name, if *with_tz { "WITH TIMEZONE" } else { "WITHOUT TIMEZONE" }),
+        data::DataType::Date => format!("{} DATE", &column.name),
+        data::DataType::Time { with_tz } => format!("{} TIME {}", &column.name, if *with_tz { "WITH TIMEZONE" } else { "WITHOUT TIMEZONE" }),
+
+        data::DataType::Boolean => format!("{} BOOLEAN", &column.name),
+
         data::DataType::Json => format!("{} JSON", &column.name),
     };
 
