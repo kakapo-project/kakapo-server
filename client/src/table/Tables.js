@@ -32,7 +32,63 @@ import { connect } from 'react-redux'
 import { tableWantsToLoad, loadedPage } from '../actions'
 
 import TableData from './TableData'
-import DataExporter from './menus/DataExporter'
+import { DataExporter, DataImporter, Api } from './menus'
+
+
+const actions = [
+  {
+    name: 'exportData',
+    button: (props) => <><Icon name='download' />Export Data</>,
+    modal: (props) => <DataExporter {...props} />,
+  },
+  {
+    name: 'importData',
+    button: (props) => <><Icon name='cloud upload' />Import Data</>,
+    modal: (props) => <DataImporter {...props} />,
+  },
+  {
+    name: 'api',
+    button: (props) => <><Icon name='anchor' />API</>,
+    modal: (props) => <Api {...props} />,
+  },
+  {
+    name: 'history',
+    button: (props) => <><Icon name='history' />History</>,
+    modal: (props) => <></>,
+  },
+  null,
+  {
+    name: 'history',
+    button: (props) => <><Icon name='plus' />Create New</>,
+    modal: (props) => <></>,
+  },
+  {
+    name: 'history',
+    button: (props) => <><Icon name='clone' />Duplicate</>,
+    modal: (props) => <></>,
+  },
+  {
+    name: 'history',
+    button: (props) => <><Icon name='edit' />Modify</>,
+    modal: (props) => <></>,
+  },
+  {
+    name: 'history',
+    button: (props) => <><Icon name='undo alternate' />Rollback</>,
+    modal: (props) => <></>,
+  },
+  {
+    name: 'history',
+    button: (props) => <><Icon name='trash' />Delete</>,
+    modal: (props) => <></>,
+  },
+  {
+    name: 'history',
+    button: (props) => <><Icon name='shield' />Access</>,
+    modal: (props) => <></>,
+  },
+
+]
 
 const TableSidebase = (props) => (
   <Sidebar
@@ -46,72 +102,31 @@ const TableSidebase = (props) => (
     width='thin'
   >
 
-    <Modal
-      trigger={
-        <Menu.Item
-          as='a'
-          onClick={() => props.openModal('exportData')}
-        >
-          <Icon name='download' />
-          Export Data
-        </Menu.Item>
-      }
-      open={props.modalOpen === 'exportData'}
-      onClose={() => props.onComplete(null, {})}
-      basic
-    >
-      <DataExporter
-        onComplete={(data) => props.onComplete('exportData', data)}
-      />
-    </Modal>
-
-    <Menu.Item
-        as='a'>
-      <Icon name='cloud upload' />
-      Import Data
-    </Menu.Item>
-    <Menu.Item
-        as='a'>
-      <Icon name='anchor' />
-      API
-    </Menu.Item>
-    <Menu.Item
-        as='a'>
-      <Icon name='history' />
-      History
-    </Menu.Item>
-    <Divider />
-    <Menu.Item
-        as='a'>
-      <Icon name='plus' />
-      Create New
-    </Menu.Item>
-    <Menu.Item
-        as='a'>
-      <Icon name='clone' />
-      Duplicate
-    </Menu.Item>
-    <Menu.Item
-        as='a'>
-      <Icon name='edit' />
-      Modify
-    </Menu.Item>
-    <Menu.Item
-        as='a'>
-      <Icon name='undo alternate' />
-      Rollback
-    </Menu.Item>
-    <Menu.Item
-        as='a'>
-      <Icon name='trash' />
-      Delete
-    </Menu.Item>
-    <Divider />
-    <Menu.Item
-        as='a'>
-      <Icon name='shield' />
-      Access
-    </Menu.Item>
+    {actions.map((x, idx) => (
+      (x === null) ?
+      <Divider idx={idx} />
+      :
+      <Modal
+        trigger={
+          <Menu.Item
+            as='a'
+            onClick={() => props.openModal(x.name)}
+          >
+            {x.button({})}
+          </Menu.Item>
+        }
+        open={props.modalOpen === x.name}
+        onClose={() => props.onComplete(null, {})}
+        idx={idx}
+        basic
+      >
+        {
+          x.modal({
+            onComplete: (data) => props.onComplete(x.name, data)
+          })
+        }
+      </Modal>
+    ))}
   </Sidebar>
 )
 

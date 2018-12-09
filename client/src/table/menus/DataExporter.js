@@ -81,7 +81,7 @@ class DataExporter extends Component {
   steps = [
     (props) => <FileExporter {...props} />,
     (props) => <RowsExporter {...props} />,
-    (props) => <DownloadExporter {...props} />
+    (props) => <DownloadExporter {...props} />,
   ]
 
   actions = {
