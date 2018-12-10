@@ -7,6 +7,7 @@ export const ACTIONS = {
   OPEN_SIDEBAR: 'OPEN_SIDEBAR',
   CLOSE_SIDEBAR: 'CLOSE_SIDEBAR',
   TOGGLE_SIDEBAR: 'TOGGLE_SIDEBAR',
+  SET_ENTITY_SELECTION: 'SET_ENTITY_SELECTION',
 
   ADD_ROW: 'ADD_ROW',
   DELETE_ROW: 'DELETE_ROW',
@@ -30,6 +31,25 @@ export const ACTIONS = {
     MODIFY_STATE: 'ENTITY_CREATOR:MODIFY_STATE',
   }
 }
+
+
+
+export const Selections = Object.freeze({
+  tables: 'table',
+  queries: 'query',
+  views: 'view',
+  scripts: 'script',
+})
+
+export const setEntitySelection = (selection) => {
+
+  return {
+    type: ACTIONS.SET_ENTITY_SELECTION,
+    selection: selection
+  }
+
+}
+
 
 export const clickToggleSidebar = () => {
   return { type: ACTIONS.TOGGLE_SIDEBAR }

@@ -20,8 +20,6 @@ import {
 } from 'semantic-ui-react'
 
 
-import GridLayout from './GridLayout.js'
-
 import Header from '../Header.js'
 import ErrorMsg from '../ErrorMsg'
 
@@ -133,7 +131,6 @@ const TableSidebase = (props) => (
 class Tables extends Component {
 
   state = {
-    viewOpen: false,
     modalOpen: null,
   }
 
@@ -162,7 +159,7 @@ class Tables extends Component {
       <div>
         <Header editor />
         {/* <ErrorMsg error={this.props.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/> */}
-        <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
+        <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)', border: 0}}>
           <TableSidebase
             visible={ this.props.isSidebarOpen() }
             onComplete={ (action, data) => this.onFormComplete(action, data) }
@@ -174,7 +171,7 @@ class Tables extends Component {
             <Dimmer active={!this.props.isTableLoaded()}>
               <Loader size='big'>Loading</Loader>
             </Dimmer>
-            <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
+            <Segment basic padded style={{}}>
               <Segment padded style={{ height: '100%', overflowX: 'hidden'}}>
                 <Segment>
                   <Label as='a'>
@@ -197,7 +194,7 @@ class Tables extends Component {
                   </Label>
                 </Segment>
                 { this.props.isTableConnected() ?
-                  <TableData hideActions={this.state.viewOpen} />
+                  <TableData />
                   :
                   <></>
                 }

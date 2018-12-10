@@ -15,12 +15,12 @@ import 'codemirror/addon/hint/sql-hint'
 import 'codemirror/lib/codemirror.css'
 import 'codemirror/theme/darcula.css'
 
-import GridLayout from '../table/GridLayout.js'
 
 import Header from '../Header.js'
 
 import { loadedPage } from '../actions'
 
+import QueryData from './QueryData'
 
 const QueriesSidebar = (props) => (
   <Sidebar
@@ -97,8 +97,6 @@ class Queries extends Component {
     isTableLoaded: false,
     error: null,
   }
-
-  getNa
 
   setupConnection() {
     const { name } = this.props.match.params
@@ -230,12 +228,12 @@ class Queries extends Component {
         </style>
         <Header editor />
         <ErrorMsg error={this.state.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/>
-        <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)'}}>
+        <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)', border: 0}}>
           <QueriesSidebar sidebarOpen={this.props.isSidebarOpen()} />
 
           <Sidebar.Pusher>
-            <Segment basic padded style={{ height: 'calc(100vh - 8em)' }}>
-              <Segment padded='very' style={{ height: '100%' }}>
+            <Segment basic padded style={{}}>
+              <Segment padded='very' style={{ minHeight: '100%' }}>
                 <Form>
                   <CodeMirror
                     options={{
@@ -281,14 +279,15 @@ class Queries extends Component {
                       </Button>
                     </Grid.Column>
                   </Grid>
+
                   {this.state.isTableLoaded ?
-                     <GridLayout
-                      data={this.state.data}
-                      columns={this.state.columns}
-                      indices={this.state.keys}
-                      addRow={(afterIdx) => console.log('not implemented')}
-                      updateValue={(input, rowKey, colKey) => console.log('not implemented')}
-                    />
+                    <>
+                      <Divider />
+                      <QueryData
+                        columns={this.state.columns}
+                        data={this.state.data}
+                      />
+                    </>
                     : <></>
                   }
 

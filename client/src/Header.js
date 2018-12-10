@@ -15,7 +15,7 @@ class Header extends Component {
     let compress = this.props.isSidebarOpen()
 
     return (
-      <Segment inverted attached='top' basic style={{border: 0, height: '5em', textAlign: 'bottom'}}>
+      <Segment inverted basic style={{border: 0, height: '5em', textAlign: 'bottom', margin: 0}}>
         <Menu inverted pointing secondary style={{height: '3.1em'}}>
           <style>
             {`

@@ -10,27 +10,17 @@ import Header from './Header.js'
 import Entities from './entities/Entities.js'
 import Settings from './Settings.js'
 
-import { loadedPage } from './actions'
+import { loadedPage, setEntitySelection, Selections } from './actions'
 
 
 const Tabs = Object.freeze({
   entities: 0,
   settings: 1,
 })
-
-const Selections = Object.freeze({
-  tables: 'table',
-  queries: 'query',
-  views: 'view',
-  scripts: 'script',
-})
-
 class Home extends Component {
 
   state = {
     tab: Tabs.entities,
-    selections: [Selections.tables],
-    compress: false,
   }
 
   setTab(tab) {
@@ -43,27 +33,8 @@ class Home extends Component {
   }
 
   setEntitySelection(selection) {
-
-    let newSelections = [...this.state.selections]
-    if (newSelections.includes(selection)) {
-      newSelections = newSelections.filter(x => x !== selection)
-    } else {
-      newSelections = newSelections.concat([selection])
-    }
-
-    console.log('selection: ', newSelections)
-    this.setState({
-      ...this.state,
-      tab: Tabs.entities,
-      selections: newSelections
-    })
-  }
-
-  toggleSidebar() {
-    this.setState({
-      ...this.state,
-      sidebarOpen: !this.state.sidebarOpen,
-    })
+    this.setState({ tab: Tabs.entities })
+    this.props.setEntitySelection(selection)
   }
 
   renderSelection() {
@@ -71,14 +42,14 @@ class Home extends Component {
 
     switch (tab) {
       case Tabs.entities:
-        return <Entities select={this.state.selections} />
+        return <Entities select={this.props.selections} />
       case Tabs.settings:
         return <Settings />
     }
   }
 
   isEntityActive(selection) {
-    return this.state.selections.includes(selection)
+    return this.props.selections.includes(selection)
   }
 
   componentWillMount() {
@@ -89,7 +60,7 @@ class Home extends Component {
     return (
       <div>
         <Header />
-        <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5em)'}}>
+        <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5em)', border: 0}}>
           <Sidebar
             as={Menu}
             animation='scale down'
@@ -151,11 +122,13 @@ class Home extends Component {
 
 const mapStateToProps = (state) => ({
   isSidebarOpen: () => state.sidebar.isOpen,
+  selections: state.home.selections,
   error: null,
 })
 
 const mapDispatchToProps = (dispatch) => ({
-  loadedPage: () => dispatch(loadedPage('Home'))
+  loadedPage: () => dispatch(loadedPage('Home')),
+  setEntitySelection: (selection) => dispatch(setEntitySelection(selection)),
 })
 
 export default connect(

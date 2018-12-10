@@ -17,6 +17,7 @@ export const pullData = () => {
       return response.json()
     })
     .then(data => {
+      console.log('received data: ', data)
       let entities = data.map(x => ({
         name: x.name,
         type: 'table',
