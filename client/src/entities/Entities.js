@@ -5,87 +5,27 @@ import { Button, Card, Container, Dropdown, Header, Grid, Icon, Image, Input, Me
 import { Link } from 'react-router-dom'
 
 import ErrorMsg from '../ErrorMsg'
-import { CreateEntities } from './CreateEntities'
+import CreateEntities from './CreateEntities'
 
 import { API_URL } from '../config'
+
+import { pullData, clearPullDataError } from '../actions'
+import { connect } from 'react-redux'
 class Entities extends Component {
 
-  state = {
-    tables: [],
-    queries: [],
-    error: null,
-  }
-
   getEntities() {
-    return this.state.tables
-      .concat(this.state.queries)
-  }
-
-  setTables(entities) {
-    this.setState({ tables: entities })
-  }
-
-  setQueries(entities) {
-    this.setState({ queries: entities })
-  }
-
-  raiseError(msg) {
-    this.setState({ error: msg })
+    return this.props.data.tables
+      .concat(this.props.data.queries)
   }
 
   clearError() {
-    this.pullData()
-    this.setState({ error: null })
+    this.prop.pullData()
+    this.props.clearError()
   }
 
-  pullData() {
-    //tables
-    fetch(`${API_URL}/manage/table`)
-    .then(response => {
-      return response.json()
-    })
-    .then(data => {
-      let entities = data.map(x => ({
-        name: x.name,
-        type: 'table',
-        icon: 'database',
-        lastUpdated: 'yesterday',
-        description: x.description,
-        isBookmarked: false,
-      }))
-
-      this.setTables(entities)
-    })
-    .catch(err => {
-      console.log('err: ', err.message)
-      this.raiseError(err.message)
-    })
-
-    //queries
-    fetch(`${API_URL}/manage/query`)
-    .then(response => {
-      return response.json()
-    })
-    .then(data => {
-      let entities = data.map(x => ({
-        name: x.name,
-        type: 'query',
-        icon: 'search',
-        lastUpdated: 'yesterday',
-        description: x.description,
-        isBookmarked: false,
-      }))
-
-      this.setQueries(entities)
-    })
-    .catch(err => {
-      console.log('err: ', err.message)
-      this.raiseError(err.message)
-    })
-  }
 
   componentDidMount() {
-    this.pullData()
+    this.props.pullData()
   }
 
   renderIcon(entity) {
@@ -119,11 +59,15 @@ class Entities extends Component {
 
     let entities = this.getEntities()
 
+    if (this.props.isDirty) {
+      this.props.pullData()
+    }
+
     return (
       <Segment basic>
 
-        <ErrorMsg error={this.state.error} onClose={() => this.clearError()} types={['Retry']} />
-        <CreateEntities onCreated={() => this.pullData()}/>
+        <ErrorMsg error={this.props.error} onClose={() => this.clearError()} types={['Retry']} />
+        <CreateEntities />
 
         <Transition.Group as={Grid} animation='scale' duration={400} container doubling columns={4} >
           { entities
@@ -156,4 +100,19 @@ class Entities extends Component {
   }
 }
 
-export default Entities
+
+const mapStateToProps = (state) => ({
+  data: state.data,
+  isDirty: state.entityCreator.entitiesDirty,
+  error: state.data.error,
+})
+
+const mapDispatchToProps = (dispatch) => ({
+  pullData: () => dispatch(pullData()),
+  clearError: () => dispatch(clearPullDataError()),
+})
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Entities)
