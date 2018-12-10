@@ -8,9 +8,8 @@ import { API_URL } from '../../config'
 import { DEFAULT_TYPE, ALL_TYPES } from '../../actions/columns'
 
 import {
-  setTableName,
-  addColumn,
-} from '../../actions'
+  setScriptName,
+} from '../../actions/createScript'
 
 import { connect } from 'react-redux'
 
@@ -21,20 +20,27 @@ class CreateScript extends Component {
   render() {
 
     return (
-      <>
-
-      </>
+      <Grid>
+        <Grid.Column width={16}>
+          <Input
+            placeholder='Script Name'
+            fluid
+            value={this.props.scriptName}
+            onChange={(e, data) => this.props.setScriptName(data.value)}
+            />
+        </Grid.Column>
+      </Grid>
     )
   }
 }
 
 
 const mapStateToProps = (state) => ({
-
+  scriptName: state.entityCreator.scriptName,
 })
 
 const mapDispatchToProps = (dispatch) => ({
-
+  setScriptName: (name) => dispatch(setScriptName(name)),
 })
 
 export default connect(

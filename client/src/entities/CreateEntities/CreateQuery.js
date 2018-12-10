@@ -8,9 +8,8 @@ import { API_URL } from '../../config'
 import { DEFAULT_TYPE, ALL_TYPES } from '../../actions/columns'
 
 import {
-  setTableName,
-  addColumn,
-} from '../../actions'
+  setQueryName,
+} from '../../actions/createQuery'
 
 import { connect } from 'react-redux'
 
@@ -21,20 +20,27 @@ class CreateQuery extends Component {
   render() {
 
     return (
-      <>
-
-      </>
+      <Grid>
+        <Grid.Column width={16}>
+          <Input
+            placeholder='Query Name'
+            fluid
+            value={this.props.queryName}
+            onChange={(e, data) => this.props.setQueryName(data.value)}
+            />
+        </Grid.Column>
+      </Grid>
     )
   }
 }
 
 
 const mapStateToProps = (state) => ({
-
+  queryName: state.entityCreator.queryName,
 })
 
 const mapDispatchToProps = (dispatch) => ({
-
+  setQueryName: (name) => dispatch(setQueryName(name)),
 })
 
 export default connect(

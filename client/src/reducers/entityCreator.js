@@ -8,6 +8,8 @@ const initialState = {
 
   error: null,
   tableName: null,
+  scriptName: null,
+  queryName: null,
 
   primaryKey: 0,
   columns: { 0: null },
@@ -40,7 +42,7 @@ const entityCreator = (state = initialState, action) => {
         ...state,
         creatingEntities: true,
       }
-    case ACTIONS.ENTITY_CREATOR.COMMIT_TABLE_CHANGES:
+    case ACTIONS.ENTITY_CREATOR.COMMIT_CHANGES:
       return {
         ...state,
         creatingEntities: false,
@@ -50,6 +52,21 @@ const entityCreator = (state = initialState, action) => {
       return {
         ...state,
         tableName: action.name,
+      }
+    case ACTIONS.ENTITY_CREATOR.SET_TABLE_NAME:
+      return {
+        ...state,
+        tableName: action.name,
+      }
+    case ACTIONS.ENTITY_CREATOR.SET_QUERY_NAME:
+      return {
+        ...state,
+        queryName: action.name,
+      }
+    case ACTIONS.ENTITY_CREATOR.SET_SCRIPT_NAME:
+      return {
+        ...state,
+        scriptName: action.name,
       }
     case ACTIONS.ENTITY_CREATOR.MODIFY_STATE:
       return {

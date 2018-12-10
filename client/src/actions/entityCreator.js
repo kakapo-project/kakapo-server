@@ -14,7 +14,7 @@ export const startCreatingEntities = () => {
 
 export const exitCreatingEntities = () => {
   return {
-    type: ACTIONS.ENTITY_CREATOR.COMMIT_TABLE_CHANGES,
+    type: ACTIONS.ENTITY_CREATOR.COMMIT_CHANGES,
   }
 }
 
@@ -105,7 +105,7 @@ const commitTableChanges = (dispatch, data) => {
         })
       } else {
         return dispatch({
-          type: ACTIONS.ENTITY_CREATOR.COMMIT_TABLE_CHANGES,
+          type: ACTIONS.ENTITY_CREATOR.COMMIT_CHANGES,
         })
       }
     })
@@ -117,6 +117,87 @@ const commitTableChanges = (dispatch, data) => {
     })
 }
 
+const commitScriptChanges = (dispatch, data) => {
+  //parse data
+  let postData = {
+    name: `${data.scriptName}`,
+    description: '',
+    text: '',
+  }
+
+  //send
+  fetch(`${API_URL}/manage/script`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify(postData),
+  })
+    .then(response => {
+      return response.json()
+    })
+    .then(data => {
+      console.log('finished sending data')
+      console.log(data)
+      if (data.error) { //For some reason it returned an error message, but it was a 200 http code
+        return dispatch({
+          type: ACTIONS.ENTITY_CREATOR.ERROR,
+          msg: data.error,
+        })
+      } else {
+        return dispatch({
+          type: ACTIONS.ENTITY_CREATOR.COMMIT_CHANGES,
+        })
+      }
+    })
+    .catch(data => {
+      return dispatch({
+        type: ACTIONS.ENTITY_CREATOR.ERROR,
+        msg: data && data.error,
+      })
+    })
+}
+
+const commitQueryChanges = (dispatch, data) => {
+  //parse data
+  let postData = {
+    name: `${data.queryName}`,
+    description: '',
+    statement: '',
+  }
+
+  //send
+  fetch(`${API_URL}/manage/query`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify(postData),
+  })
+    .then(response => {
+      return response.json()
+    })
+    .then(data => {
+      console.log('finished sending data')
+      console.log(data)
+      if (data.error) { //For some reason it returned an error message, but it was a 200 http code
+        return dispatch({
+          type: ACTIONS.ENTITY_CREATOR.ERROR,
+          msg: data.error,
+        })
+      } else {
+        return dispatch({
+          type: ACTIONS.ENTITY_CREATOR.COMMIT_CHANGES,
+        })
+      }
+    })
+    .catch(data => {
+      return dispatch({
+        type: ACTIONS.ENTITY_CREATOR.ERROR,
+        msg: data && data.error,
+      })
+    })
+}
 
 export const commitChanges = () => {
 
@@ -126,8 +207,10 @@ export const commitChanges = () => {
     switch (data.mode) {
       case 'Table':
         return commitTableChanges(dispatch, data)
-      default:
-        throw "couldn't commit changes"
+      case 'Query':
+        return commitQueryChanges(dispatch, data)
+      case 'Script':
+        return commitScriptChanges(dispatch, data)
     }
 
   }

@@ -19,7 +19,7 @@ class Entities extends Component {
   }
 
   clearError() {
-    this.prop.pullData()
+    this.props.pullData()
     this.props.clearError()
   }
 
