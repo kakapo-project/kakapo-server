@@ -16,7 +16,7 @@ import {
   removeColumn,
   moveColumnDown,
   moveColumnUp,
-} from '../../actions'
+} from '../../actions/createTable'
 
 import { connect } from 'react-redux'
 

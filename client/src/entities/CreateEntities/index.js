@@ -8,19 +8,32 @@ import { API_URL } from '../../config'
 import { DEFAULT_TYPE, ALL_TYPES } from '../../actions/columns'
 
 import CreateTable from './CreateTable'
+import CreateScript from './CreateScript'
+import CreateQuery from './CreateQuery'
 
-import { setTableName, commitTableChanges, exitCreatingEntities, closeEntityCreatorErrorMessage, startCreatingEntities, pullData } from '../../actions'
+
+import { setTableName, commitChanges, exitCreatingEntities, closeEntityCreatorErrorMessage, startCreatingEntities, pullData, setMode } from '../../actions'
 import { connect } from 'react-redux'
 
 
 class CreateEntities extends Component {
-
 
   handleCreatedEntities(commitChanges = false) {
     if (commitChanges) {
       this.props.commitChanges()
     } else {
       this.props.exitCreatingEntities()
+    }
+  }
+
+  getEntityCreatorComponent() {
+    switch (this.props.mode) {
+      case 'Table':
+        return <CreateTable />
+      case 'Query':
+        return <CreateQuery />
+      case 'Script':
+        return <CreateScript />
     }
   }
 
@@ -42,16 +55,25 @@ class CreateEntities extends Component {
       >
         <Segment basic padded>
           <Button.Group fluid>
-            <Button icon='database' content='Table' />
-            <Button icon='search' content='Query' />
-            <Button icon='code' content='Script' />
+            <Button icon='database' content='Table'
+              active={this.props.mode === 'Table'}
+              onClick={() => this.props.setMode('Table')} />
+            <Button icon='search' content='Query'
+              active={this.props.mode === 'Query'}
+              onClick={() => this.props.setMode('Query')} />
+            <Button icon='code' content='Script'
+              active={this.props.mode === 'Script'}
+              onClick={() => this.props.setMode('Script')} />
           </Button.Group>
         </Segment>
-        <Header icon='database' content='Create New Table' />
+        <Header
+          icon={(this.props.mode === 'Table') ? `database` : (this.props.mode === 'Query') ? 'search' : 'code'}
+          content={`Create New ${this.props.mode}`}
+        />
         <Modal.Content>
           <ErrorMsg error={this.props.error} onClose={(type) => this.props.closeErrorMessage()}/>
 
-          <CreateTable />
+          { this.getEntityCreatorComponent() }
 
           <Divider hidden/>
           <Divider />
@@ -70,14 +92,17 @@ class CreateEntities extends Component {
 const mapStateToProps = (state) => ({
   creatingEntities: state.entityCreator.creatingEntities,
   error: state.entityCreator.error,
+  mode: state.entityCreator.mode,
 })
 
 const mapDispatchToProps = (dispatch) => ({
-  commitChanges: () => dispatch(commitTableChanges()),
+  commitChanges: () => dispatch(commitChanges()),
   exitCreatingEntities: () => dispatch(exitCreatingEntities()),
   closeErrorMessage: () => dispatch(closeEntityCreatorErrorMessage()),
   startCreatingEntities: () => dispatch(startCreatingEntities()),
   pullData: () => dispatch(pullData()),
+
+  setMode: (mode) => dispatch(setMode(mode)),
 })
 
 export default connect(

@@ -4,6 +4,7 @@ import { ACTIONS } from '../actions'
 const initialState = {
   creatingEntities: false,
   entitiesDirty: false,
+  mode: 'Table',
 
   error: null,
   tableName: null,
@@ -18,6 +19,11 @@ const entityCreator = (state = initialState, action) => {
       return {
         ...state,
         error: action.msg,
+      }
+    case ACTIONS.ENTITY_CREATOR.SET_MODE:
+      return {
+        ...state,
+        mode: action.mode,
       }
     case ACTIONS.ENTITY_CREATOR.CLEAR_ERROR:
       return {

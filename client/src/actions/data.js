@@ -26,10 +26,6 @@ export const pullData = () => {
         isBookmarked: false,
       }))
 
-      dispatch({
-        type: ACTIONS.SET_TABLE_DATA,
-        entities: entities,
-      })
       dispatch([
         {
           type: ACTIONS.SET_TABLE_DATA,
