@@ -3,7 +3,6 @@
 use actix::prelude::*;
 
 use model::{api, connection, connection::executor::DatabaseExecutor, connection::py::PyRunner};
-use cpython::{Python, PyDict, PyErr, PyResult, NoArgs};
 
 
 #[derive(Clone)]

@@ -3,7 +3,7 @@ extern crate pq_sys;
 
 use std::ops::Deref;
 use std::os::raw;
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use std::ptr::NonNull;
 use std::mem::transmute_copy;
 use std::mem;
@@ -49,14 +49,6 @@ impl ConnWrapper {
         self.0
     }
 }
-/*
-impl Drop for ConnWrapper {
-    //TODO: is this handled or not handled (MEMORY LEAK!!!!!!!!!!!!!)
-    fn drop(&mut self) {
-        unsafe { pq_sys::PQfinish(self.p()) };
-    }
-}
-*/
 
 fn generate_error(fmt: &str) -> Error {
     Error::SerializationError(
@@ -154,11 +146,13 @@ impl ResultWrapper {
 
         let res: Result<Vec<String>, Error> =
             (0..num_cols).map(|col_idx| {
-                let name_str = unsafe {
+                let name_raw = unsafe {
                     let name_ptr = pq_sys::PQfname(self.p(), col_idx as i32);
-                    CString::from_raw(name_ptr)
+                    CStr::from_ptr(name_ptr)
                 };
-                name_str.into_string().or_else(|err| Err(generate_error("error parsing column name")))
+                name_raw.to_str()
+                    .or_else(|err| Err(generate_error("error parsing column name")))
+                    .and_then(|val| Ok(val.to_owned()))
             }).collect::<Result<Vec<String>, Error>>();
 
         res
@@ -202,6 +196,7 @@ impl ResultWrapper {
 
 impl Drop for ResultWrapper {
     fn drop(&mut self) {
+        //drop it like it's hot
         unsafe { pq_sys::PQclear(self.p()) }
     }
 }
@@ -354,7 +349,7 @@ pub fn execute_query(
     let db: &PgConnection = conn.deref();
     let internal_conn = conn_ptr(&db);
 
-    let query_str = &query.statement;
+    let query_str = format!("{}", &query.statement);
     println!("final query: {:?}", query);
 
 

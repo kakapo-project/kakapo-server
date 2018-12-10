@@ -11,7 +11,6 @@ use actix_web::{
 
 use actix_web::middleware::cors::Cors;
 
-use cpython::{Python, PyDict, PyErr, PyResult, NoArgs};
 use dotenv::{dotenv};
 use env_logger::{Builder, Target};
 

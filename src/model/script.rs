@@ -1,6 +1,6 @@
 
 use actix::prelude::*;
-use cpython::{Python, PyDict, PyErr, PyResult, NoArgs};
+//use cpython::{Python, PyDict, PyErr, PyResult, NoArgs};
 use diesel;
 use diesel::result::Error;
 use diesel::{
@@ -84,6 +84,7 @@ fn with_docker(py: Python) -> PyResult<()> {
 }
 */
 
+/*
 fn setup_py(script_path: String, py: Python) -> PyResult<()> {
 
     let sys = py.import("sys")?;
@@ -114,12 +115,17 @@ fn handle_py_error() -> () {
 
 }
 
+*/
+
 pub fn run_script(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     py_runner: connection::py::PyRunner,
     script_name: String,
     params: data::ScriptParam,
 ) -> Result<api::RunScriptResult, api::Error> {
+
+    unimplemented!();
+    /*
 
     //get table
     let script_item = conn.transaction::<data::Script, diesel::result::Error, _>(|| {
@@ -168,5 +174,7 @@ pub fn run_script(
     let result = serde_json::to_value(json_result).or_else(|err| Err(api::Error::UnknownError))?;
 
     Ok(api::RunScriptResult(result))
+
+    */
 }
 
