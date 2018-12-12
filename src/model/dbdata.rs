@@ -21,7 +21,7 @@ use failure::Fail;
 use super::api;
 use super::data;
 use super::err::StateError;
-use super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history};
+use super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history, user_account};
 
 
 
@@ -154,4 +154,20 @@ pub struct DataScriptHistory {
     pub is_deleted: bool,
     pub modified_at: NaiveDateTime,
     pub modified_by: i64,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "user_account"]
+pub struct NewUser {
+    pub username: String,
+    pub password: String,
+    pub email: String,
+}
+
+#[derive(Debug, Queryable)]
+pub struct User {
+    pub user_account_id: i64,
+    pub username: String,
+    pub password: String,
+    pub email: String,
 }

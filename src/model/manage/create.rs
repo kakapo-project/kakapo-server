@@ -292,31 +292,31 @@ fn create_script_internal(
 
 pub fn create_table(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    creation_method: api::CreationMethod,
+    on_duplicate: api::OnDuplicate,
     post_table: api::PostTable
 ) -> Result<api::CreateTableResult, api::Error> {
 
-    create_table_internal(conn, creation_method, post_table.into_new())
+    create_table_internal(conn, on_duplicate.into_method(), post_table.into_new())
 }
 
 
 pub fn create_query(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    creation_method: api::CreationMethod,
+    on_duplicate: api::OnDuplicate,
     post_query: api::PostQuery
 ) -> Result<api::CreateQueryResult, api::Error> {
 
-    create_query_internal(conn, creation_method, post_query.into_new())
+    create_query_internal(conn, on_duplicate.into_method(), post_query.into_new())
 }
 
 
 pub fn create_script(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    creation_method: api::CreationMethod,
+    on_duplicate: api::OnDuplicate,
     post_script: api::PostScript
 ) -> Result<api::CreateScriptResult, api::Error> {
 
-    create_script_internal(conn, creation_method, post_script.into_new())
+    create_script_internal(conn, on_duplicate.into_method(), post_script.into_new())
 }
 
 pub fn update_table(

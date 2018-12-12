@@ -3,12 +3,13 @@ extern crate actix;
 extern crate actix_broker;
 extern crate actix_web;
 extern crate base64;
+extern crate bcrypt;
 extern crate bigdecimal;
 extern crate byteorder;
 extern crate bytes;
 extern crate chrono;
 extern crate clap;
-//extern crate cpython;
+extern crate cpython;
 extern crate dotenv;
 #[macro_use]
 extern crate diesel;
@@ -18,6 +19,7 @@ extern crate failure;
 extern crate futures;
 #[macro_use]
 extern crate json;
+extern crate jsonwebtoken;
 extern crate log;
 extern crate num_cpus;
 extern crate serde;

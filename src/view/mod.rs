@@ -4,3 +4,4 @@ pub mod handlers;
 
 mod state;
 mod session;
+mod routes;

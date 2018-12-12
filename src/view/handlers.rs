@@ -20,14 +20,14 @@ use view::session::TableSession;
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct CreateTable {
     pub reqdata: api::PostTable,
-    pub method: api::CreationMethod,
+    pub on_duplicate: api::OnDuplicate,
 }
 
 impl Handler<CreateTable> for DatabaseExecutor {
     type Result = <CreateTable as Message>::Result;
 
     fn handle(&mut self, msg: CreateTable, _: &mut Self::Context) -> Self::Result {
-        let result = manage::create::create_table(&self.get_connection(), msg.method, msg.reqdata)?;
+        let result = manage::create::create_table(&self.get_connection(), msg.on_duplicate, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -36,14 +36,14 @@ impl Handler<CreateTable> for DatabaseExecutor {
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct CreateQuery {
     pub reqdata: api::PostQuery,
-    pub method: api::CreationMethod,
+    pub on_duplicate: api::OnDuplicate,
 }
 
 impl Handler<CreateQuery> for DatabaseExecutor {
     type Result = <CreateQuery as Message>::Result;
 
     fn handle(&mut self, msg: CreateQuery, _: &mut Self::Context) -> Self::Result {
-        let result = manage::create::create_query(&self.get_connection(), msg.method, msg.reqdata)?;
+        let result = manage::create::create_query(&self.get_connection(), msg.on_duplicate, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -52,14 +52,14 @@ impl Handler<CreateQuery> for DatabaseExecutor {
 #[rtype(result="Result<serde_json::Value, api::Error>")]
 pub struct CreateScript {
     pub reqdata: api::PostScript,
-    pub method: api::CreationMethod,
+    pub on_duplicate: api::OnDuplicate,
 }
 
 impl Handler<CreateScript> for DatabaseExecutor {
     type Result = <CreateScript as Message>::Result;
 
     fn handle(&mut self, msg: CreateScript, _: &mut Self::Context) -> Self::Result {
-        let result = manage::create::create_script(&self.get_connection(), msg.method, msg.reqdata)?;
+        let result = manage::create::create_script(&self.get_connection(), msg.on_duplicate, msg.reqdata)?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
@@ -283,14 +283,14 @@ pub struct InsertTableData {
     pub name: String,
     pub data: api::TableData, //payload
     pub format: api::TableDataFormat,
-    pub method: api::CreationMethod,
+    pub on_duplicate: api::OnDuplicate,
 }
 
 impl Handler<InsertTableData> for DatabaseExecutor {
     type Result = <InsertTableData as Message>::Result;
 
     fn handle(&mut self, msg: InsertTableData, _: &mut Self::Context) -> Self::Result {
-        let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data, msg.format, msg.method)?;
+        let result = table::insert_table_data(&self.get_connection(), msg.name, msg.data, msg.format, msg.on_duplicate.into_method())?;
         Ok(serde_json::to_value(&result).or_else(|err| Err(api::Error::SerializationError))?)
     }
 }
