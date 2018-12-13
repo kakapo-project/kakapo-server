@@ -5,6 +5,7 @@ const initialState = {
   error: null,
   tables: [],
   queries: [],
+  script: [],
 }
 
 const entityCreator = (state = initialState, action) => {
@@ -28,6 +29,11 @@ const entityCreator = (state = initialState, action) => {
       return {
         ...state,
         queries: action.entities,
+      }
+    case ACTIONS.SET_SCRIPT_DATA:
+      return {
+        ...state,
+        script: action.entities,
       }
     default:
       return state

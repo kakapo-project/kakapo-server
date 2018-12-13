@@ -16,6 +16,7 @@ class Entities extends Component {
   getEntities() {
     return this.props.data.tables
       .concat(this.props.data.queries)
+      .concat(this.props.data.script)
   }
 
   clearError() {
@@ -50,7 +51,7 @@ class Entities extends Component {
       case 'table':
         return `/tables/${entity.name}`
       case 'script':
-        return '/'
+        return `/scripts/${entity.name}`
     }
   }
 

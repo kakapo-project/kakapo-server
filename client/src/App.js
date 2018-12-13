@@ -5,6 +5,7 @@ import { Switch, Route } from 'react-router-dom'
 import Home from './Home'
 import Tables from './table/Tables'
 import Queries from './queries/Queries'
+import Scripts from './scripts/Scripts'
 import Login from './Login'
 
 class App extends Component {
@@ -30,6 +31,7 @@ class App extends Component {
           <Route path='/login' component={Login}/>
           <Route path='/tables/:name' component={Tables}/>
           <Route path='/queries/:name' component={Queries}/>
+          <Route path='/scripts/:name' component={Scripts}/>
         </Switch>
       </main>
     )
