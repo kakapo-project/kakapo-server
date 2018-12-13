@@ -134,12 +134,10 @@ class Tables extends Component {
     modalOpen: null,
   }
 
-  componentWillMount() {
-    this.props.loadedPage()
-  }
 
   componentDidMount() {
     const { name } = this.props.match.params
+    this.props.loadedPage()
     this.props.tableWantsToLoad(name)
   }
 
