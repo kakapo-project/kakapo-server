@@ -14,6 +14,8 @@ use actix_broker::BrokerMsg;
 use view::state::AppState;
 use view::session::TableSession;
 
+// Exposes CRUD Api, items from either REST or websocket data will be transformed into these handlers
+// which are pure CRUD
 
 // Create Stuff
 #[derive(Clone, Message)]

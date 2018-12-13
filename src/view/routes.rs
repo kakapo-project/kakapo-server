@@ -304,19 +304,6 @@ pub fn delete_script((state, path): (State<AppState>, Path<String>)) -> AsyncRes
 }
 
 
-pub fn get_query_data((state, path, query): (State<AppState>, Path<String>, Query<GetQueryDataQuery>)) -> AsyncResponse {
-    println!("received message: {:?}", &query);
-    http_response(&state,handlers::RunQuery {
-        name: path.to_string(),
-        start: query.start,
-        end: query.end,
-        format: query.format,
-        params: api::QueryParams::default(),
-    })
-}
-
-
-
 pub fn post_query_data((state, path, json, query): (State<AppState>, Path<String>, Json<api::QueryParams>, Query<GetQueryDataQuery>)) -> AsyncResponse {
     println!("received message: {:?}", &json);
     http_response(&state,handlers::RunQuery {

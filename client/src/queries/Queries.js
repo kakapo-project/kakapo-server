@@ -1,12 +1,14 @@
 
 import React, { Component } from 'react'
-import { Button, Card, Container, Divider, Form, Grid, Icon, Image, Menu, Segment, Sidebar } from 'semantic-ui-react'
+import { Button, Card, Container, Divider, Dropdown, Form, Grid, Icon, Input, Image, Label, Menu, Segment, Select, Sidebar } from 'semantic-ui-react'
 
 import { connect } from 'react-redux'
 
 
 import ErrorMsg from '../ErrorMsg'
 import { WS_URL } from '../config'
+import { DEFAULT_TYPE, ALL_TYPES } from '../actions/columns'
+
 
 import { Controlled as CodeMirror } from 'react-codemirror2'
 import _ from 'lodash'
@@ -87,6 +89,46 @@ const QueriesSidebar = (props) => (
     </Menu.Item>
   </Sidebar>
 )
+
+const ParameterList = (props) => {
+  const grouped = (arr, n) => {
+    let result = []
+    arr.map((x, idx) => {
+      let g = idx / n >> 0
+      result[g] = result[g] ? result[g].concat([x]) : [x]
+    })
+    return result
+  }
+  Array.prototype.grouped = function(n) { return grouped(this, n) }
+  const N = 4
+
+  return [...Array(props.params.length).keys()].grouped(N).map((row, rowIdx) => (
+    <Grid.Row key={rowIdx} style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+      {row.map((x, idx) => (
+        <Grid.Column key={rowIdx * N + idx} width={16 / N >> 0}>
+          <Input
+            labelPosition='right'
+            placeholder='Column Name'
+            fluid
+            value={'test'}
+            onChange={(e, data) => console.log('...')}
+            action
+          >
+            <input />
+            <Select
+              compact
+              defaultValue={DEFAULT_TYPE}
+              options={ALL_TYPES.map(x => ({key: x, text: x, value: x}))}
+              onChange={(e, data) => console.log('...')}
+            />
+             <Button icon='delete' color='orange' />
+          </Input>
+
+        </Grid.Column>
+      ))}
+    </Grid.Row>
+  ))
+}
 class Queries extends Component {
 
   state = {
@@ -95,6 +137,7 @@ class Queries extends Component {
     statement: '',
     isRunningQuery: false,
     isTableLoaded: false,
+    params: [],
     error: null,
   }
 
@@ -255,29 +298,40 @@ class Queries extends Component {
                 </Form>
                 <Segment>
                   <Grid columns='equal'>
-                    <Grid.Column width={4}>
-                      <Button
-                        color='black'
-                        icon
-                        size='large'
-                        floated='left'
-                        labelPosition='right'
-                        loading={this.state.isRunningQuery}
-                        onClick={(e) => this.runQuery()}
-                      >
-                        Run
-                        {this.state.isRunningQuery ? <></> :
-                          <Icon color='green' name='play' />
-                        }
-                      </Button>
-                    </Grid.Column>
-                    <Grid.Column>
-                    </Grid.Column>
-                    <Grid.Column width={4}>
-                      <Button icon circular color='black' size='large' floated='right'>
-                        <Icon  name='add' /> {/* TODO: parameters, technically, don't need the add */}
-                      </Button>
-                    </Grid.Column>
+                    <Grid.Row>
+                      <Grid.Column>
+                        <Button
+                          color='black'
+                          icon
+                          size='large'
+                          floated='left'
+                          labelPosition='right'
+                          loading={this.state.isRunningQuery}
+                          onClick={(e) => this.runQuery()}
+                        >
+                          Run
+                          {this.state.isRunningQuery ? <></> :
+                            <Icon color='green' name='play' />
+                          }
+                        </Button>
+                      </Grid.Column>
+                      <Grid.Column>
+                        <Button
+                          icon
+                          circular
+                          color='black'
+                          size='large'
+                          floated='right'
+                          onClick={() => this.setState({ params: this.state.params.concat([null]) })}
+                        >
+                          <Icon  name='add' /> {/* TODO: parameters, technically, don't need the add */}
+                        </Button>
+                      </Grid.Column>
+                    </Grid.Row>
+                    <ParameterList
+                      params={this.state.params}
+                    />
+                    <Divider hidden style={{ margin: '0.25rem' }}/>
                   </Grid>
 
                   {this.state.isTableLoaded ?

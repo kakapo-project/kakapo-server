@@ -252,7 +252,6 @@ pub fn serve() {
                     r.method(http::Method::DELETE).with(delete_table_data);
                 })
                 .resource("/api/query/{query_name}", |r| {
-                    r.method(http::Method::GET).with(get_query_data);
                     r.method(http::Method::POST).with_config(post_query_data, |((_, _, cfg, _),)| config(cfg));
                 })
                 .resource("/api/script/{script_name}", |r| {
