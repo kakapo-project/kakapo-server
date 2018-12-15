@@ -1,6 +1,18 @@
 
 import ReactDataGrid from 'react-data-grid'
 
+
+function isRightClick(e = window.event) {
+  let isRightMB
+  if ('which' in e) {  // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
+    isRightMB = e.which == 3;
+  } else if ('button' in e) {  // IE, Opera
+    isRightMB = e.button == 2;
+  }
+
+  return isRightMB
+}
+
 class DataGrid extends ReactDataGrid {
 
   selectStart = (cellPosition) => {

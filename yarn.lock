@@ -6673,7 +6673,7 @@ react-data-grid-addons@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/react-data-grid-addons/-/react-data-grid-addons-6.0.1.tgz#5d911ee709ab8972d6955556584c46e3e79bcfc8"
 
-react-data-grid@^6.0.1:
+react-data-grid@6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-6.0.1.tgz#e5122253ffef827b68e30f369dda2accdef88b14"
 

@@ -142,9 +142,9 @@ export class DataGrid extends Component {
 
 
     let cellRangeSelection = {
-      onStart: args => console.log(args),
-      onUpdate: args => console.log(args),
-      onComplete: args => console.log(args)
+      onStart: args => console.log('start', args),
+      onUpdate: args => console.log('update', args),
+      onComplete: args => console.log('complete', args)
     }
 
     let dataLength = this.props.data.length
