@@ -1,6 +1,6 @@
 
 import React, { Component } from 'react'
-import { Button, Card, Container, Divider, Dropdown, Form, Grid, Icon, Input, Image, Label, Menu, Segment, Select, Sidebar } from 'semantic-ui-react'
+import { Button, Card, Container, Dimmer, Divider, Dropdown, Form, Grid, Icon, Input, Loader, Image, Label, Menu, Segment, Select, Sidebar } from 'semantic-ui-react'
 
 import { connect } from 'react-redux'
 
@@ -32,7 +32,7 @@ const QueriesSidebar = (props) => (
     inverted
     direction='right'
     vertical
-    visible={props.sidebarOpen}
+    visible={props.visible}
     width='thin'
   >
     <Menu.Item
@@ -139,6 +139,7 @@ class Queries extends Component {
     isTableLoaded: false,
     params: [],
     error: null,
+    queryLoaded: false,
   }
 
   setupConnection() {
@@ -153,6 +154,7 @@ class Queries extends Component {
 
     this.socket.onopen = (event) => {
       this.socket.send(JSON.stringify(sendGetQuery))
+      this.setState({ queryLoaded: true })
     }
 
     this.socket.onerror = (event) => {
@@ -162,6 +164,7 @@ class Queries extends Component {
 
     this.socket.onclose = (event) => {
       console.error('WebSocket closed: ', event)
+      this.setState({ queryLoaded: false })
     }
 
     this.socket.onmessage = (event) => {
@@ -247,11 +250,8 @@ class Queries extends Component {
     this.socket.send(JSON.stringify(sendRunQuery))
   }
 
-  componentWillMount() {
-    this.props.loadedPage()
-  }
-
   componentDidMount() {
+    this.props.loadedPage()
     this.setupConnection()
   }
 
@@ -272,11 +272,17 @@ class Queries extends Component {
         <Header editor />
         <ErrorMsg error={this.state.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/>
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)', border: 0}}>
-          <QueriesSidebar sidebarOpen={this.props.isSidebarOpen()} />
+          <QueriesSidebar
+            visible={ this.props.isSidebarOpen }
+          />
 
           <Sidebar.Pusher>
+            <Dimmer active={false}>
+              <Loader size='big'>Loading</Loader>
+            </Dimmer>
             <Segment basic padded style={{}}>
               <Segment padded='very' style={{ minHeight: '100%' }}>
+                { this.state.queryLoaded &&
                 <Form>
                   <CodeMirror
                     options={{
@@ -296,6 +302,7 @@ class Queries extends Component {
                     }}
                   />
                 </Form>
+                }
                 <Segment>
                   <Grid columns='equal'>
                     <Grid.Row>
@@ -361,7 +368,7 @@ class Queries extends Component {
 }
 
 const mapStateToProps = (state) => ({
-  isSidebarOpen: () => state.sidebar.isOpen,
+  isSidebarOpen: state.sidebar.isOpen,
   error: null,
 })
 

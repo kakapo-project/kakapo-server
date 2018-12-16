@@ -88,7 +88,7 @@ const actions = [
 
 ]
 
-const TableSidebase = (props) => (
+const TableSidebar = (props) => (
   <Sidebar
     as={Menu}
     animation='overlay'
@@ -158,15 +158,15 @@ class Tables extends Component {
         <Header editor />
         {/* <ErrorMsg error={this.props.error} onClose={(type) => this.closeErrorMessage(type)} types={this.errorMsgTypes}/> */}
         <Sidebar.Pushable className='basic attached' as={Segment} style={{height: 'calc(100vh - 5.15em)', border: 0}}>
-          <TableSidebase
-            visible={ this.props.isSidebarOpen() }
+          <TableSidebar
+            visible={ this.props.isSidebarOpen }
             onComplete={ (action, data) => this.onFormComplete(action, data) }
             openModal={(modal) => this.setState({ modalOpen: modal })}
             modalOpen={ this.state.modalOpen }
           />
 
           <Sidebar.Pusher>
-            <Dimmer active={!this.props.isTableLoaded()}>
+            <Dimmer active={!this.props.isTableLoaded}>
               <Loader size='big'>Loading</Loader>
             </Dimmer>
             <Segment basic padded style={{}}>
@@ -191,7 +191,7 @@ class Tables extends Component {
                     <Icon name='add' style={{marginRight: 0}}/>
                   </Label>
                 </Segment>
-                { this.props.isTableConnected() ?
+                { this.props.isTableConnected ?
                   <TableData />
                   :
                   <></>
@@ -207,9 +207,9 @@ class Tables extends Component {
 
 
 const mapStateToProps = (state) => ({
-  isTableConnected: () => state.table.isConnected,
-  isTableLoaded: () => state.table.isLoaded,
-  isSidebarOpen: () => state.sidebar.isOpen,
+  isTableConnected: state.table.isConnected,
+  isTableLoaded: state.table.isLoaded,
+  isSidebarOpen: state.sidebar.isOpen,
   error: null,
 })
 
