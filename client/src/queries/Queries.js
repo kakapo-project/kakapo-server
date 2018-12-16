@@ -102,30 +102,33 @@ const ParameterList = (props) => {
   Array.prototype.grouped = function(n) { return grouped(this, n) }
   const N = 4
 
-  return [...Array(props.params.length).keys()].grouped(N).map((row, rowIdx) => (
+  return props.params.grouped(N).map((row, rowIdx) => (
     <Grid.Row key={rowIdx} style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
-      {row.map((x, idx) => (
-        <Grid.Column key={rowIdx * N + idx} width={16 / N >> 0}>
-          <Input
-            labelPosition='right'
-            placeholder='Column Name'
-            fluid
-            value={'test'}
-            onChange={(e, data) => console.log('...')}
-            action
-          >
-            <input />
-            <Select
-              compact
-              defaultValue={DEFAULT_TYPE}
-              options={ALL_TYPES.map(x => ({key: x, text: x, value: x}))}
-              onChange={(e, data) => console.log('...')}
-            />
-             <Button icon='delete' color='orange' />
-          </Input>
+      {row.map((x, idx) => {
+        let key = rowIdx * N + idx
+        return (
+          <Grid.Column key={key} width={16 / N >> 0}>
+            <Input
+              labelPosition='right'
+              placeholder='Column Name'
+              fluid
+              value={x.value || ''}
+              onChange={(e, data) => props.modifyParam(key, { value: data.value, type: 'string' })}
+              action
+            >
+              <input />
+              <Select
+                compact
+                defaultValue={DEFAULT_TYPE}
+                options={ALL_TYPES.map(x => ({key: x, text: x, value: x}))}
+                onChange={(e, data) => console.log('...')}
+              />
+              <Button icon='delete' color='orange' onClick={(e) => props.deleteParam(key)} />
+            </Input>
 
-        </Grid.Column>
-      ))}
+          </Grid.Column>
+        )
+      })}
     </Grid.Row>
   ))
 }
@@ -329,7 +332,7 @@ class Queries extends Component {
                           color='black'
                           size='large'
                           floated='right'
-                          onClick={() => this.setState({ params: this.state.params.concat([null]) })}
+                          onClick={() => this.setState({ params: this.state.params.concat([{ value: '', type: DEFAULT_TYPE }]) })}
                         >
                           <Icon  name='add' /> {/* TODO: parameters, technically, don't need the add */}
                         </Button>
@@ -337,6 +340,12 @@ class Queries extends Component {
                     </Grid.Row>
                     <ParameterList
                       params={this.state.params}
+                      modifyParam={(key, value) => this.setState({params:
+                        [...this.state.params.slice(0, key), value, ...this.state.params.slice(key + 1) ]
+                      })}
+                      deleteParam={(key) => this.setState({params:
+                        [...this.state.params.slice(0, key), ...this.state.params.slice(key + 1) ]
+                      })}
                     />
                     <Divider hidden style={{ margin: '0.25rem' }}/>
                   </Grid>
