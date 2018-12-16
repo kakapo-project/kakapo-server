@@ -37,10 +37,12 @@ function clipboardWrite(text, event) {
 }
 
 export const tableWantsToLoad = (name) => {
-  const url = `${WS_URL}/table/${name}`
-  return {
-    type: WEBSOCKET_CONNECT,
-    payload: { url }
+  return async (dispatch, getState) => {
+    const url = `${WS_URL}/table/${name}`
+    return dispatch({
+      type: WEBSOCKET_CONNECT,
+      payload: { url }
+    })
   }
 }
 
