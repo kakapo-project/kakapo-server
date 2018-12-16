@@ -396,7 +396,7 @@ impl TableSession {
                     format: api::FLAT_TABLE_DATA_FORMAT,
                 })
             },
-            api::TableSessionRequest::Delete { data, key } => {
+            api::TableSessionRequest::Delete { key } => {
                 //TODO: implement me
                 websocket_response(ctx, "delete",handlers::DeleteTableData {
                     name: self.table_name.to_string(),

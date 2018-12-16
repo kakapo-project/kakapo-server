@@ -4,6 +4,9 @@ import { WS_URL } from './config'
 
 import { ACTIONS } from './index'
 
+import ClipBoard from 'clipboard'
+const csvParse = require('csv-stringify/lib/sync')
+
 const encodeByType = (data, type) => {
   switch (type) {
     case 'string':
@@ -11,6 +14,26 @@ const encodeByType = (data, type) => {
     case 'integer':
       return parseInt(data)
   }
+}
+
+function clipboardWrite(text, event) {
+  const cb = new ClipBoard('.null', {
+      text: () => text
+  });
+
+  cb.on('success', function(e) {
+      console.log(e);
+      cb.off('error');
+      cb.off('success');
+  });
+
+  cb.on('error', function(e) {
+      console.log(e);
+      cb.off('error');
+      cb.off('success');
+  });
+
+  cb.onClick(event);
 }
 
 export const tableWantsToLoad = (name) => {
@@ -47,6 +70,23 @@ export const requestingTableData = () => {
   }
 }
 
+export const copySelection = (topLeft, bottomRight, e) => {
+  return async (dispatch, getState) => {
+    let y0 = topLeft.idx
+    let x0 = topLeft.col
+    let y1 = bottomRight.idx
+    let x1 = bottomRight.col
+
+    let state = getState()
+    let data = state.table.data
+
+    let filteredData = data.slice(y0, y1 + 1).map(x => x.slice(x0, x1 + 1))
+
+    let output = csvParse(filteredData) //need to use the sync api for the clipboard write to work (this is a browser restriction)
+    clipboardWrite(output, e)
+  }
+}
+
 export const addRow = (idx) => {
   return {
     type: ACTIONS.ADD_ROW,
@@ -65,15 +105,15 @@ export const deleteRow = (idx) => {
     let primaryKeyIdx = columns.findIndex(x => x === primaryKey)
     let key = data[idx][primaryKeyIdx]
 
-    let deleteRow = {
+    let deletedRow = {
       action: 'delete',
-      data: key,
+      key: key,
     }
 
     return dispatch([
       {
         type: WEBSOCKET_SEND,
-        payload: deleteRow,
+        payload: deletedRow,
       },
       {
         type: ACTIONS.DELETE_ROW,

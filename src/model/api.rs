@@ -294,7 +294,6 @@ pub enum TableSessionRequest {
         data: data::RowData,
     },
     Delete {
-        data: data::IndexableValue,
         key: String,
     },
 

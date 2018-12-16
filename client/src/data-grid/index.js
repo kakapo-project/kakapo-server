@@ -26,6 +26,18 @@ import { Menu } from 'react-data-grid-addons'
 import { hide } from './contextMenuHelper'
 import InnerDataGrid from './InnerDatagrid';
 
+import stringify from 'csv-stringify'
+
+const onClickHandler = (props, event, row, col, e) => {
+  console.log('props: ', props)
+  props.clickHandler && props.clickHandler(event, row, col, e)
+  hide()
+}
+
+const visualToRawIndex = (index) => (index - 1)
+const visualToRawColumn = (index) => (index - 1)
+const rowAfter = (index) => (index + 1)
+
 const ColumnContextMenu = ({id, col, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
@@ -44,13 +56,19 @@ const ColumnContextMenu = ({id, col, ...props}) => (
 const IndexContextMenu = ({id, row, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
-      <Dropdown.Item icon='add' text='Add Row' onClick={(e) => { props.onRowAdded(row); hide() }} />
-      <Dropdown.Item icon='clone' text='Duplicate Row' />
-      <Dropdown.Item icon='trash' text='Delete Row' onClick={(e) => { props.onRowDelete(row); hide() }} />
+      <Dropdown.Item icon='add' text='Add Row'
+        onClick={(e) => onClickHandler(props, 'add', row, null, e)} />
+      <Dropdown.Item icon='clone' text='Duplicate Row'
+        onClick={(e) => onClickHandler(props, 'cut', row, null, e)}/>
+      <Dropdown.Item icon='trash' text='Delete Row'
+        onClick={(e) => onClickHandler(props, 'delete', row, null, e)} />
       <Dropdown.Divider />
-      <Dropdown.Item icon='cut' text='Cut' />
-      <Dropdown.Item icon='copy' text='Copy' />
-      <Dropdown.Item icon='paste' text='Paste' onClick={(e) => hide()} />
+      <Dropdown.Item icon='cut' text='Cut'
+        onClick={(e) => onClickHandler(props, 'cut', row, null, e)} />
+      <Dropdown.Item icon='copy' text='Copy'
+        onClick={(e) => onClickHandler(props, 'copy', row, null, e)} />
+      <Dropdown.Item icon='paste' text='Paste'
+        onClick={(e) => onClickHandler(props, 'paste', row, null, e)} />
     </Dropdown.Menu>
   </Menu.ContextMenu>
 )
@@ -58,9 +76,9 @@ const IndexContextMenu = ({id, row, ...props}) => (
 const CellContextMenu = ({id, col, row, ...props}) => (
   <Menu.ContextMenu id={id} className={'ui active visible dropdown'}>
     <Dropdown.Menu className={'visible'} style={{top: -70 /*needed because the context menu doesn't work properly*/}}>
-      <Dropdown.Item icon='cut' text='Cut' />
-      <Dropdown.Item icon='copy' text='Copy' />
-      <Dropdown.Item icon='paste' text='Paste' onClick={(e) => hide()}/>
+      <Dropdown.Item icon='cut' text='Cut' onClick={(e) => onClickHandler(props, 'cut', row, col, e)} />
+      <Dropdown.Item icon='copy' text='Copy' onClick={(e) => onClickHandler(props, 'copy', row, col, e)} />
+      <Dropdown.Item icon='paste' text='Paste' onClick={(e) => onClickHandler(props, 'paste', row, col, e)} />
     </Dropdown.Menu>
   </Menu.ContextMenu>
 )
@@ -71,13 +89,12 @@ export const ContextMenu = ({
   rowIdx,
   ...props,
 }) => {
-  const colId = idx
-  const rowId = rowIdx
+  const colId = visualToRawColumn(idx)
+  const rowId = visualToRawIndex(rowIdx)
 
-  console.log('connect: ', Menu.connect)
-  if (colId === 0) {
+  if (colId === -1) {
     return <IndexContextMenu {...props} id={id} row={rowId}/>
-  } else if (rowId === 0) {
+  } else if (rowId === -1) {
     return <ColumnContextMenu {...props} id={id} col={colId} />
   }
   return <CellContextMenu {...props} id={id} row={rowId} col={colId}/>
@@ -99,12 +116,28 @@ const RowRenderer = ({ renderBaseRow, ...props }) => {
   return renderBaseRow(props)
 }
 
-const visualToRawIndex = (index) => (index - 1)
-const visualToRawColumn = (index) => (index - 1)
-const rowAfter = (index) => (index + 1)
+
 export class DataGrid extends Component {
 
+  cellRangeComplete(args) {
+    const onSelectionComplete = this.props.onSelectionComplete
+    if (!onSelectionComplete) {
+      return
+    }
 
+    let result = {
+      topLeft: {
+        idx: visualToRawIndex(args.topLeft.rowIdx),
+        col: visualToRawColumn(args.topLeft.idx),
+      },
+      bottomRight: {
+        idx: visualToRawIndex(args.bottomRight.rowIdx),
+        col: visualToRawColumn(args.bottomRight.idx),
+      },
+    }
+
+    onSelectionComplete(result)
+  }
 
   render() {
 
@@ -118,19 +151,9 @@ export class DataGrid extends Component {
       contextMenu = this.props.contextMenu()
     }
 
-    if (this.props.contextMenuProps) {
-      contextMenuProps.onRowAdded = (rowIdx) => this.props.contextMenuProps.addRow(visualToRawIndex(rowAfter(rowIdx)))
-      contextMenuProps.onRowDelete = (rowIdx) => this.props.contextMenuProps.deleteRow(visualToRawIndex(rowIdx))
-
-      if (this.props.contextMenu) {
-        contextMenu = this.props.contextMenu(contextMenuProps)
-      }
-    }
-
     let onGridRowsUpdated = null
     if (this.props.modifyValue) {
       onGridRowsUpdated = (data) => {
-        console.log('onGridRowsUpdated: ', data)
         let {fromRow, updated} = data
         let [colIdx, value] = Object.entries(updated)[0] //FIXME: assuming length === 0
         this.props.modifyValue(
@@ -142,9 +165,9 @@ export class DataGrid extends Component {
 
 
     let cellRangeSelection = {
-      onStart: args => console.log('start', args),
-      onUpdate: args => console.log('update', args),
-      onComplete: args => console.log('complete', args)
+      onStart: args => {},
+      onUpdate: args => {},
+      onComplete: args => this.cellRangeComplete(args),
     }
 
     let dataLength = this.props.data.length

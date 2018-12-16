@@ -28,7 +28,7 @@ import ErrorMsg from '../ErrorMsg'
 import { WS_URL } from '../config'
 import { connect } from 'react-redux'
 
-import { requestingTableData, addRow, deleteRow, modifyValue } from '../actions'
+import { requestingTableData, addRow, deleteRow, modifyValue, copySelection } from '../actions'
 
 
 import { DataGrid, ContextMenu, NumberFormatter, DefaultFormatter } from '../data-grid/index.js';
@@ -37,6 +37,39 @@ class TableData extends Component {
 
   componentDidMount() {
     this.props.requestingTableData()
+  }
+
+  state = {
+    topLeft: {
+      idx: -1,
+      col: -1,
+    },
+    bottomRight: {
+      idx: -1,
+      col: -1,
+    },
+  }
+
+  contexMenuHandler(click, row, col, e) {
+    console.log('click: ', click, row, col)
+
+    if (col === null) { // is clicked on row index
+      switch (click) {
+        case 'delete': return this.props.deleteRow(row)
+        case 'add': return this.props.addRow(row)
+        case 'cut': return
+        case 'copy': return
+        case 'paste': return
+      }
+    } else if (row === null ) { // is clicked on column
+
+    } else {
+      switch (click) {
+        case 'cut': return
+        case 'copy': return this.props.copySelection(this.state, e)
+        case 'paste': return
+      }
+    }
   }
 
   render() {
@@ -57,11 +90,12 @@ class TableData extends Component {
         columns={columns}
         data={data}
         modifyValue={(rowIdx, colIdx, value) => this.props.modifyValue(rowIdx, colIdx, value)}
-        contextMenu={(props) => <ContextMenu {...props} />}
-        contextMenuProps={{
-          addRow: (rowIdx) => this.props.addRow(rowIdx),
-          deleteRow: (rowIdx) => this.props.deleteRow(rowIdx),
-        }}
+        contextMenu={(props) =>
+          <ContextMenu
+            {...props}
+            clickHandler={(click, row, col, e) => this.contexMenuHandler(click, row, col, e)}
+          />}
+        onSelectionComplete={({topLeft, bottomRight}) => this.setState({topLeft, bottomRight})}
       />
     )
   }
@@ -78,6 +112,7 @@ const mapDispatchToProps = (dispatch) => ({
   deleteRow: (idx) => dispatch(deleteRow(idx)),
   addRow: (idx) => dispatch(addRow(idx)),
   modifyValue: (rowIdx, colIdx, value) => dispatch(modifyValue(rowIdx, colIdx, value)),
+  copySelection: ({ topLeft, bottomRight }, e) => dispatch(copySelection(topLeft, bottomRight, e)),
 })
 
 export default connect(
