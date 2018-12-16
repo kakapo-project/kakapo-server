@@ -117,6 +117,24 @@ impl Handler<LogoutUser> for DatabaseExecutor {
     }
 }
 
+#[derive(Clone, Message, Deserialize)]
+#[rtype(result="Result<bool, api::Error>")]
+pub struct IsUserLoggedIn { token: String }
+
+impl Handler<IsUserLoggedIn> for DatabaseExecutor {
+    type Result = <IsUserLoggedIn as Message>::Result;
+
+    fn handle(&mut self, msg: IsUserLoggedIn, _: &mut Self::Context) -> Self::Result {
+        // no session management necessary since we are using jwt, maybe put in some validation, but not necessary
+        if msg.token == "" {
+            Ok(false)
+        } else {
+            Ok(true)
+        }
+    }
+}
+
+
 
 fn login((login_data, req): (Json<LoginData>, HttpRequest<AppState>)) -> AsyncResponse {
     req.state()
@@ -132,6 +150,22 @@ fn login((login_data, req): (Json<LoginData>, HttpRequest<AppState>)) -> AsyncRe
                .content_type("application/json")
                .body(serde_json::to_string(&json!({ "error": "not authorized" }))
                    .unwrap_or_default())),
+        }).responder()
+}
+
+fn is_logged_in(req: HttpRequest<AppState>) -> AsyncResponse {
+    req.state()
+        .connect(0 /* use master database connector for authentication */)
+        .send(IsUserLoggedIn { token: req.identity().unwrap_or("".to_string()) })
+        .from_err()
+        .and_then(move |res| match res {
+            Ok(is_authenticated) => {
+                Ok(HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(serde_json::to_string(&json!({ "auth": is_authenticated }))
+                        .unwrap_or_default()))
+            },
+            Err(err) => Ok(err.error_response()),
         }).responder()
 }
 
@@ -210,6 +244,9 @@ pub fn serve() {
                 //login
                 .resource("/api/auth/login", |r| {
                     r.method(http::Method::POST).with(login);
+                })
+                .resource("/api/auth/is_logged_in", |r| {
+                    r.method(http::Method::GET).with(is_logged_in);
                 })
                 .resource("/api/auth/logout", |r| {
                     r.method(http::Method::DELETE).with(logout);
