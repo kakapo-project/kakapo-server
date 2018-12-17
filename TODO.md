@@ -1,9 +1,6 @@
 
 * Dependency inversion for items in `handlers.rs`
 
-Grid Frontend
-- Grid is the frontend for views and tables
-
 - Figure out what other sql function we want to have
   - join
   - Groupby
@@ -20,14 +17,11 @@ Grid Frontend
 - rename string to Text, and integer -> Number
 - holding shift for multiple selections
 - do debounce on all inputs
-- double click not working correctly, it should only double click if it is on different table cells
-- clicking out of context menu should get out of it, don't need to click the cancel button
 - TODO: look into `https://github.com/reduxjs/reselect`
 - add sql creator (gui for full schema design)
 
 Bugs:
 - creating a new table with an old table name, will attempt to append the columns
-- sending integers not working
 - adding a new row with an old key should give an error?
 - save the selection when returning
 - inserting data into table doesn't fail properly
@@ -35,8 +29,6 @@ Bugs:
 Backend
 - Proper message queues and websockets
 - Figure out docker
-- Figure out authentication
-- Excel + CSV maker
 - plugins:
   - S3
   - airflow
@@ -54,15 +46,6 @@ Bugs:
 SELECT * FROM "character"
 ORDER BY "age" DESC
 LIMIT 3;
-```
-- segmentation fault on some queries log:
-```
-final result: QueryWithData { query: Query { name: "my_special_query", description: "", statement: "SELECT * FROM \"diesel_demo\".\"character\"\n  LIMIT 3;" }, data: RowsFlatData { columns: [], data: [] } }
-final result: Object({"columns": Array([]), "data": Array([])})
-query already loaded: DataQuery { query_id: 3, entity_id: 13, name: "my_special_query" }
-encountered error: DatabaseError(DatabaseError(ForeignKeyViolation, "insert or update on table \"query_history\" violates foreign key constraint \"query_history_modified_by_fkey\""))
-
-Process finished with exit code 139 (interrupted by signal 11: SIGSEGV)
 ```
 - fix is_deleted, especially for onDuplicate=fail / onDuplicate=ignore needlessly fails
 
