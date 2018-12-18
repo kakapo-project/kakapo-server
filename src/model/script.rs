@@ -31,7 +31,7 @@ use super::dbdata::*;
 use super::schema::{entity, query, query_history};
 use super::manage::retrieve::{get_one_script};
 use super::database;
-use super::connection;
+use connection;
 
 
 /*

@@ -25,7 +25,8 @@ use log::LevelFilter;
 
 use chrono::Duration;
 
-use model::{connection, connection::executor::DatabaseExecutor};
+use connection;
+use connection::executor::DatabaseExecutor;
 use data::api;
 
 use model::auth;

@@ -2,7 +2,9 @@
 
 use actix::prelude::*;
 
-use model::{connection, connection::executor::DatabaseExecutor, connection::py::PyRunner};
+use connection;
+use connection::executor::DatabaseExecutor;
+use connection::py::PyRunner;
 use data::api;
 
 #[derive(Clone)]

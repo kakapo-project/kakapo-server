@@ -35,6 +35,7 @@ extern crate tokio_core;
 mod view;
 mod model;
 mod data;
+mod connection;
 
 /// Extenal dependencies
 use log::LevelFilter;
@@ -43,7 +44,6 @@ use clap::{Arg, App, SubCommand};
 
 /// Internal dependencies
 use view::server;
-use model::connection;
 
 fn main() {
 
