@@ -5,14 +5,18 @@ use actix_web::ws;
 
 use serde_json;
 
+use actix_broker::BrokerMsg;
+
+// other modules
 use data::api;
 use connection::{executor::DatabaseExecutor, py::PyRunner};
 
 use model::manage;
 use model::{table, query, script};
-use actix_broker::BrokerMsg;
-use view::state::AppState;
-use view::session::TableSession;
+
+// current module
+use super::state::AppState;
+use super::session::TableSession;
 
 // Exposes CRUD Api, items from either REST or websocket data will be transformed into these handlers
 // which are pure CRUD

@@ -26,10 +26,6 @@ use log::LevelFilter;
 
 use chrono::Duration;
 
-use connection;
-use connection::executor::DatabaseExecutor;
-use data::api;
-
 use serde;
 use serde_derive;
 use serde_json;
@@ -40,9 +36,16 @@ use std::result::Result::Ok;
 use std::path::Path as fsPath;
 use std::env;
 
+// other modules
+use connection;
+use connection::executor::DatabaseExecutor;
+use data::api;
+
+// current module
 use super::handlers;
 use super::session::{TableSession, QuerySession, ScriptSession};
 use super::state::AppState;
+
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 

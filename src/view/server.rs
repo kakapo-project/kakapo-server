@@ -25,12 +25,6 @@ use log::LevelFilter;
 
 use chrono::Duration;
 
-use connection;
-use connection::executor::DatabaseExecutor;
-use data::api;
-
-use model::auth;
-
 use serde;
 use serde_derive;
 use serde_json;
@@ -41,6 +35,13 @@ use std::result::Result::Ok;
 use std::path::Path as fsPath;
 use std::env;
 
+
+use model::auth;
+use connection;
+use connection::executor::DatabaseExecutor;
+use data::api;
+
+// current module
 use super::handlers;
 use super::session::{TableSession, QuerySession, ScriptSession};
 use super::state::AppState;

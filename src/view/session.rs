@@ -1,6 +1,8 @@
 use actix_web::ws;
 use actix::Actor;
-use view::state::AppState;
+
+// current module
+use super::state::AppState;
 
 pub struct TableSession {
     pub table_name: String,

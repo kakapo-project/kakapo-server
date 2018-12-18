@@ -1,6 +1,6 @@
 
 pub mod server;
-pub mod handlers;
+mod handlers;
 
 mod state;
 mod session;
