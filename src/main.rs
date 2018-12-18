@@ -34,7 +34,6 @@ extern crate tokio_core;
 /// Mods
 mod view;
 mod model;
-mod auth;
 
 /// Extenal dependencies
 use log::LevelFilter;

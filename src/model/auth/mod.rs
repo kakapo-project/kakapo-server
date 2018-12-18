@@ -37,10 +37,6 @@ pub fn token_has_permission(token: Token /*, permission: Permission*/) -> bool {
 
 */
 
-pub fn get_current_user(token: Token) -> i64 {
-    return 1;
-}
-
 pub enum AuthError {
     AuthenticationFailure,
 }
@@ -92,4 +88,8 @@ impl Token {
         }
         Err(AuthError::AuthenticationFailure)
     }
+}
+
+pub fn get_current_user() -> i64 {
+    return 1;
 }
