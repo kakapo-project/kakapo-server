@@ -19,9 +19,9 @@ use std::collections::BTreeMap;
 use std;
 use std::ops::Deref;
 
-use super::data;
-use super::data::DataType;
-use super::api;
+use data;
+use data::DataType;
+use data::api;
 
 use super::dbdata::*;
 use super::schema::{entity, table_schema, table_schema_history};

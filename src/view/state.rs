@@ -2,8 +2,8 @@
 
 use actix::prelude::*;
 
-use model::{api, connection, connection::executor::DatabaseExecutor, connection::py::PyRunner};
-
+use model::{connection, connection::executor::DatabaseExecutor, connection::py::PyRunner};
+use data::api;
 
 #[derive(Clone)]
 pub struct AppState {

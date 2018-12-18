@@ -18,8 +18,8 @@ use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 
 use serde_json;
 
-use super::data;
-use super::data::{RowData, Table, Value, DataType, TableData};
+use data;
+use data::{RowData, Table, Value, DataType, TableData};
 use diesel::pg::Pg;
 use diesel::sql_types;
 use diesel::deserialize::FromSql;

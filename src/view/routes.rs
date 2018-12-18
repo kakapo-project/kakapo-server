@@ -26,7 +26,8 @@ use log::LevelFilter;
 
 use chrono::Duration;
 
-use model::{api, connection, connection::executor::DatabaseExecutor};
+use model::{connection, connection::executor::DatabaseExecutor};
+use data::api;
 
 use serde;
 use serde_derive;

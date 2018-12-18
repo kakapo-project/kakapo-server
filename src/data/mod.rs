@@ -1,4 +1,7 @@
 
+pub mod error;
+pub mod api;
+
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 

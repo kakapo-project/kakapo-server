@@ -18,9 +18,9 @@ use std::collections::HashMap;
 
 use failure::Fail;
 
-use super::api;
-use super::data;
-use super::err::StateError;
+use data;
+use data::error::StateError;
+use data::api;
 use super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history, user_account};
 
 

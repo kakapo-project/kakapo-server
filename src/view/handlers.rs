@@ -5,7 +5,7 @@ use actix_web::ws;
 
 use serde_json;
 
-use model::api;
+use data::api;
 use model::connection::{executor::DatabaseExecutor, py::PyRunner};
 
 use model::manage;

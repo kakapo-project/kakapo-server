@@ -17,9 +17,9 @@ use std::io;
 
 use failure::Fail;
 
-use super::super::api;
-use super::super::data;
-use super::super::err::StateError;
+use data;
+use data::error::StateError;
+use data::api;
 
 use super::super::auth;
 use super::super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history};

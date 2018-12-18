@@ -23,9 +23,9 @@ use std::fs::File;
 use std::path::Path;
 use std::ops::Deref;
 
-use super::data;
-use super::data::DataType;
-use super::api;
+use data;
+use data::DataType;
+use data::api;
 
 use super::dbdata::*;
 use super::schema::{entity, query, query_history};

@@ -1,5 +1,5 @@
 
-use super::data;
+use data;
 
 use diesel;
 use std::fmt;
