@@ -116,15 +116,6 @@ fn websocket_response<
 // getting
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetTablesQuery {
-    #[serde(default)]
-    pub detailed: bool,
-    #[serde(default)]
-    pub show_deleted: bool,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct GetQueriesQuery {
     #[serde(default)]
     pub show_deleted: bool,
@@ -194,15 +185,6 @@ pub struct InsertTableDataQuery {
 pub struct UpdateTableDataQuery {
     #[serde(default)]
     pub format: api::TableDataFormat,
-}
-
-
-pub fn get_tables((state, query): (State<AppState>, Query<GetTablesQuery>)) -> AsyncResponse {
-    println!("received message: {:?}", &query);
-    http_response(&state,handlers::GetTables {
-        detailed: query.detailed,
-        show_deleted: query.show_deleted,
-    })
 }
 
 pub fn get_queries((state, query): (State<AppState>, Query<GetQueriesQuery>)) -> AsyncResponse {

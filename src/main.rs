@@ -82,6 +82,6 @@ fn main() {
 
     server::serve();
 
-    /// loop
+    // loop
     sys.run();
 }

@@ -4,7 +4,7 @@ use actix::prelude::*;
 use actix_broker::{BrokerIssue, BrokerSubscribe};
 use actix_web::{
     App, AsyncResponder, Error as ActixError, FromRequest,
-    dev::JsonConfig, error, http, http::header::DispositionType, http::NormalizePath, middleware,
+    dev::JsonConfig, dev::Handler as MsgHandler, error, http, http::header::DispositionType, http::NormalizePath, middleware,
     HttpMessage, HttpRequest, HttpResponse, fs, fs::{NamedFile, StaticFileConfig, StaticFiles},
     Json, Path, Query, ResponseError, Responder, State, ws,
 };
@@ -47,6 +47,7 @@ use super::session::{TableSession, QuerySession, ScriptSession};
 use super::state::AppState;
 
 use super::routes::*;
+use actix_web::middleware::cors::CorsBuilder;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -91,100 +92,94 @@ fn get_secret_key() -> String {
 }
 
 
-//auth routes
-#[derive(Clone, Message, Deserialize)]
-#[rtype(result="Result<auth::Token, auth::AuthError>")]
-pub struct LoginData {
-    pub username: String,
-    pub password: String,
+//Api functions
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTablesQuery {
+    #[serde(default)]
+    pub detailed: bool,
+    #[serde(default)]
+    pub show_deleted: bool,
 }
 
-impl Handler<LoginData> for DatabaseExecutor {
-    type Result = <LoginData as Message>::Result;
 
-    fn handle(&mut self, msg: LoginData, _: &mut Self::Context) -> Self::Result {
-        auth::Token::create_new(&self.get_connection(), msg.username, msg.password)
+type ResultMessage = Result<serde_json::Value, api::Error>;
+
+trait RPC {
+    fn procedure<M: Message<Result = ResultMessage>>
+    (&mut self, path: &str, msg: M) -> &mut CorsBuilder<AppState>
+        where
+            M: Send + 'static,
+            M: std::clone::Clone,
+            M::Result: Send,
+            DatabaseExecutor: Handler<M>;
+}
+
+struct ProcedureHandler<M: Message<Result = ResultMessage>>
+where
+    M: Send + 'static,
+    M: std::clone::Clone,
+    M::Result: Send,
+    DatabaseExecutor: Handler<M>
+{
+    msg: M
+}
+
+impl<M: Message<Result = ResultMessage>> ProcedureHandler<M>
+where
+    M: Send + 'static,
+    M: std::clone::Clone,
+    M::Result: Send,
+    DatabaseExecutor: Handler<M>
+{
+    pub fn setup(msg: M) -> Self {
+        Self { msg }
     }
 }
 
-#[derive(Clone, Message, Deserialize)]
-#[rtype(result="Result<(), api::Error>")]
-pub struct LogoutUser { token: String }
 
-impl Handler<LogoutUser> for DatabaseExecutor {
-    type Result = <LogoutUser as Message>::Result;
+impl<M: Message<Result = ResultMessage>> MsgHandler<AppState> for ProcedureHandler<M>
+where
+    M: Send + 'static,
+    M: std::clone::Clone,
+    M::Result: Send,
+    DatabaseExecutor: Handler<M>
+{
+    type Result = AsyncResponse;
 
-    fn handle(&mut self, msg: LogoutUser, _: &mut Self::Context) -> Self::Result {
-        // no session management necessary since we are using jwt, maybe put in some validation, but not necessary
-        Ok(())
-    }
-}
-
-#[derive(Clone, Message, Deserialize)]
-#[rtype(result="Result<bool, api::Error>")]
-pub struct IsUserLoggedIn { token: String }
-
-impl Handler<IsUserLoggedIn> for DatabaseExecutor {
-    type Result = <IsUserLoggedIn as Message>::Result;
-
-    fn handle(&mut self, msg: IsUserLoggedIn, _: &mut Self::Context) -> Self::Result {
-        // no session management necessary since we are using jwt, maybe put in some validation, but not necessary
-        if msg.token == "" {
-            Ok(false)
-        } else {
-            Ok(true)
-        }
-    }
-}
-
-
-
-fn login((login_data, req): (Json<LoginData>, HttpRequest<AppState>)) -> AsyncResponse {
-    req.state()
-        .connect(0 /* use master database connector for authentication */)
-        .send(login_data.into_inner())
-        .from_err()
-        .and_then(move |res| match res {
-            Ok(user) => {
-                req.remember("test".to_string());
-                Ok(HttpResponse::Ok().into())
-            },
-            Err(err) => Ok(HttpResponse::Unauthorized()
-               .content_type("application/json")
-               .body(serde_json::to_string(&json!({ "error": "not authorized" }))
-                   .unwrap_or_default())),
-        }).responder()
-}
-
-fn is_logged_in(req: HttpRequest<AppState>) -> AsyncResponse {
-    req.state()
-        .connect(0 /* use master database connector for authentication */)
-        .send(IsUserLoggedIn { token: req.identity().unwrap_or("".to_string()) })
-        .from_err()
-        .and_then(move |res| match res {
-            Ok(is_authenticated) => {
-                Ok(HttpResponse::Ok()
+    fn handle(&self, req: &HttpRequest<AppState>) -> AsyncResponse {
+        req.state()
+            .connect(0 /* use master database connector for authentication */)
+            .send::<<M as std::borrow::ToOwned>::Owned>(self.msg.clone())
+            .from_err()
+            .and_then(|res| {
+                let fin = HttpResponse::Ok()
                     .content_type("application/json")
-                    .body(serde_json::to_string(&json!({ "auth": is_authenticated }))
-                        .unwrap_or_default()))
-            },
-            Err(err) => Ok(err.error_response()),
-        }).responder()
+                    .body(serde_json::to_string(&json!({ "success": "all is well" }))
+                        .unwrap_or_default());
+
+                Ok(fin)
+            })
+            .responder()
+    }
 }
 
-fn logout(req: HttpRequest<AppState>) -> AsyncResponse {
 
-    req.state()
-        .connect(0 /* use master database connector for authentication */)
-        .send(LogoutUser { token: req.identity().unwrap_or("".to_string()) })
-        .from_err()
-        .and_then(move |res| match res {
-            Ok(user) => {
-                req.forget();
-                Ok(HttpResponse::Ok().into())
-            },
-            Err(err) => Ok(err.error_response()),
-        }).responder()
+impl RPC for CorsBuilder<AppState> {
+    fn procedure<M: Message<Result = ResultMessage>>
+    (&mut self, path: &str, msg: M) -> &mut CorsBuilder<AppState>
+        where
+            M: Send + 'static,
+            M: std::clone::Clone,
+            M::Result: Send,
+            DatabaseExecutor: Handler<M>,
+    {
+
+        self.resource(path, |r| {
+            r.method(http::Method::POST).h(ProcedureHandler::setup(msg));
+        })
+    }
 }
 
 //static routes
@@ -244,69 +239,7 @@ pub fn serve() {
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
-                //login
-                .resource("/api/auth/login", |r| {
-                    r.method(http::Method::POST).with(login);
-                })
-                .resource("/api/auth/is_logged_in", |r| {
-                    r.method(http::Method::GET).with(is_logged_in);
-                })
-                .resource("/api/auth/logout", |r| {
-                    r.method(http::Method::DELETE).with(logout);
-                })
-                // metadata
-                .resource("/api/manage/table", |r| {
-                    r.method(http::Method::GET).with(get_tables);
-                    r.method(http::Method::POST).with_config(post_tables, |((_, cfg, _),)| config(cfg));
-                })
-                .resource("/api/manage/table/{table_name}", |r| {
-                    r.method(http::Method::GET).with(get_table);
-                    r.method(http::Method::PUT).with(put_table);
-                    r.method(http::Method::DELETE).with(delete_table);
-                })
-                .resource("/api/manage/query", |r| {
-                    r.method(http::Method::GET).with(get_queries);
-                    r.method(http::Method::POST).with_config(post_queries, |((_, cfg, _),)| config(cfg));
-                })
-                .resource("/api/manage/query/{query_name}", |r| {
-                    r.method(http::Method::GET).with(get_query);
-                    r.method(http::Method::PUT).with(put_query);
-                    r.method(http::Method::DELETE).with(delete_query);
-                })
-                .resource("/api/manage/script", |r| {
-                    r.method(http::Method::GET).with(get_scripts);
-                    r.method(http::Method::POST).with_config(post_scripts, |((_, cfg, _),)| config(cfg));
-                })
-                .resource("/api/manage/script/{script_name}", |r| {
-                    r.method(http::Method::GET).with(get_script);
-                    r.method(http::Method::PUT).with(put_script);
-                    r.method(http::Method::DELETE).with(delete_script);
-                })
-                //data
-                .resource("/api/table/{table_name}", |r| {
-                    r.method(http::Method::GET).with(get_table_data);
-                    r.method(http::Method::POST).with_config(post_table_data, |((_, _, cfg, _),)| config(cfg));
-                })
-                .resource("/api/table/{table_name}/{id}", |r| {
-                    r.method(http::Method::PUT).with(put_table_data);
-                    r.method(http::Method::DELETE).with(delete_table_data);
-                })
-                .resource("/api/query/{query_name}", |r| {
-                    r.method(http::Method::POST).with_config(post_query_data, |((_, _, cfg, _),)| config(cfg));
-                })
-                .resource("/api/script/{script_name}", |r| {
-                    r.method(http::Method::POST).with_config(post_script_data, |((_, _, cfg),)| config(cfg));
-                })
-                //Websockets
-                .resource("/api/listen/table/{table_name}", |r| {
-                    r.method(http::Method::GET).f(websocket_table_listener)
-                })
-                .resource("/api/listen/query/{query_name}", |r| {
-                    r.method(http::Method::GET).f(websocket_query_listener)
-                })
-                .resource("/api/listen/script/{script_name}", |r| {
-                    r.method(http::Method::GET).f(websocket_script_listener)
-                })
+                .procedure("/manage/getTables", handlers::GetTables { detailed: false, show_deleted: false })
                 .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)
