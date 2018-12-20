@@ -91,6 +91,38 @@ fn get_secret_key() -> String {
     key
 }
 
+/* TODO: put in actions */
+struct _State {
+    database: String,
+    user: String,
+}
+
+struct _Error {
+
+}
+
+trait Action {
+    type Return;
+    fn call(&self, state: _State) -> Result<Self::Return, _Error>;
+}
+
+#[derive(Deserialize, Debug, Message)]
+#[serde(rename_all = "camelCase")]
+#[rtype(result="Result<serde_json::Value, api::Error>")]
+pub struct GetTablesAction {
+    #[serde(default)]
+    pub detailed: bool,
+}
+
+impl Action for GetTablesAction {
+    type Return = serde_json::Value;
+    fn call(&self, state: _State) -> Result<Self::Return, _Error> {
+        Ok(serde_json::to_value(&json!({ "success": "get table procedure" })).unwrap())
+    }
+
+}
+
+/* END */
 
 //Api functions
 
@@ -104,54 +136,64 @@ pub struct GetTablesQuery {
 }
 
 
+// build procedure (I don't like that this is depending on HttpRequest)
 type ResultMessage = Result<serde_json::Value, api::Error>;
 
-trait RPC {
-    fn procedure<M: Message<Result = ResultMessage>>
-    (&mut self, path: &str, msg: M) -> &mut CorsBuilder<AppState>
-        where
-            M: Send + 'static,
-            M: std::clone::Clone,
-            M::Result: Send,
-            DatabaseExecutor: Handler<M>;
+trait ProcedureBuilder<M: Action> {
+    fn build(req: &HttpRequest<AppState>) -> M;
 }
 
-struct ProcedureHandler<M: Message<Result = ResultMessage>>
-where
-    M: Send + 'static,
-    M: std::clone::Clone,
-    M::Result: Send,
-    DatabaseExecutor: Handler<M>
-{
-    msg: M
+impl ProcedureBuilder<GetTablesAction> for GetTablesAction { // This is user generated
+    fn build(req: &HttpRequest<AppState>) -> GetTablesAction {
+        GetTablesAction { detailed: false }
+    }
 }
 
-impl<M: Message<Result = ResultMessage>> ProcedureHandler<M>
-where
-    M: Send + 'static,
-    M: std::clone::Clone,
-    M::Result: Send,
-    DatabaseExecutor: Handler<M>
+impl Handler<GetTablesAction> for DatabaseExecutor {
+    type Result = <GetTablesAction as Message>::Result;
+
+    fn handle(&mut self, msg: GetTablesAction, _: &mut Self::Context) -> Self::Result {
+        //TODO:...
+        Ok(serde_json::to_value(&json!({ "success": "get table procedure" })).unwrap())
+    }
+}
+
+// handle procedure and turn into http result
+struct ProcedureHandler
+<M: Action + Message + Send + 'static, PB: ProcedureBuilder<M>>
+    where
+        M::Result: Send,
+        DatabaseExecutor: Handler<M>
 {
-    pub fn setup(msg: M) -> Self {
-        Self { msg }
+    procedure_builder: PB,
+    ph: std::marker::PhantomData<M>,
+}
+
+
+impl<M: Action + Message + Send + 'static, PB: ProcedureBuilder<M> + 'static> ProcedureHandler<M, PB>
+where
+    M::Result: Send,
+    DatabaseExecutor: Handler<M>,
+{
+    pub fn setup(procedure_builder: PB) -> Self {
+        ProcedureHandler { procedure_builder, ph: std::marker::PhantomData }
     }
 }
 
 
-impl<M: Message<Result = ResultMessage>> MsgHandler<AppState> for ProcedureHandler<M>
-where
-    M: Send + 'static,
-    M: std::clone::Clone,
-    M::Result: Send,
-    DatabaseExecutor: Handler<M>
+impl<M: Action + Message + Send + 'static, PB: ProcedureBuilder<M> + 'static>
+    MsgHandler<AppState> for ProcedureHandler<M, PB>
+    where
+        M::Result: Send,
+        DatabaseExecutor: Handler<M>,
 {
     type Result = AsyncResponse;
 
     fn handle(&self, req: &HttpRequest<AppState>) -> AsyncResponse {
+
         req.state()
             .connect(0 /* use master database connector for authentication */)
-            .send::<<M as std::borrow::ToOwned>::Owned>(self.msg.clone())
+            .send(PB::build(req))
             .from_err()
             .and_then(|res| {
                 let fin = HttpResponse::Ok()
@@ -165,19 +207,25 @@ where
     }
 }
 
-
-impl RPC for CorsBuilder<AppState> {
-    fn procedure<M: Message<Result = ResultMessage>>
-    (&mut self, path: &str, msg: M) -> &mut CorsBuilder<AppState>
+// extend actix router
+pub trait CorsBuilderExt {
+    fn procedure<M: Action + Message + Send + 'static, PB: ProcedureBuilder<M> + 'static>
+    (&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
-            M: Send + 'static,
-            M: std::clone::Clone,
+            M::Result: Send,
+            DatabaseExecutor: Handler<M>;
+
+}
+
+impl CorsBuilderExt for CorsBuilder<AppState> {
+    fn procedure<M: Action + Message + Send + 'static, PB: ProcedureBuilder<M> + 'static>
+    (&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
+        where
             M::Result: Send,
             DatabaseExecutor: Handler<M>,
     {
-
         self.resource(path, |r| {
-            r.method(http::Method::POST).h(ProcedureHandler::setup(msg));
+            r.method(http::Method::POST).h(ProcedureHandler::<M, PB>::setup(procedure_builder));
         })
     }
 }
@@ -239,7 +287,7 @@ pub fn serve() {
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
-                .procedure("/manage/getTables", handlers::GetTables { detailed: false, show_deleted: false })
+                .procedure("/manage/getTables", GetTablesAction { detailed: false })
                 .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)
