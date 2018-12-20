@@ -1,41 +1,24 @@
 
 
-use actix::prelude::*;
 use diesel;
-use diesel::result::Error;
-use diesel::{
-    prelude::*,
-    insert_into,
-    delete,
-    update,
-};
+use diesel::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use chrono::NaiveDateTime;
-use serde_json;
-
-use std::error;
-use std::collections::HashMap;
-use std::io;
-
-use failure::Fail;
 
 use data;
 use data::error::StateError;
 use data::api;
 
-use super::super::auth;
-use super::super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history};
-use connection::executor::DatabaseExecutor;
+use super::super::schema::{table_schema, query, query_history, script, script_history};
 
 use super::super::dbdata::*;
 
-use super::utils::{get_modification_commits, unroll_modification_commits, update_migration, generate_error, get_single_table, unroll_table};
+use super::utils::{get_single_table, unroll_table};
 
 
 pub fn get_tables(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     detailed: bool,
-    show_deleted: bool,
+    _show_deleted: bool,
 ) -> Result<api::GetTablesResult, api::Error> {
 
     let result = conn.transaction::<Vec<data::DetailedTable>, diesel::result::Error, _>(|| {
@@ -61,7 +44,7 @@ pub fn get_tables(
                     let unrolled_tables = tables.iter()
                         .map(|table| unroll_table(table.to_owned()))
                         .collect::<Result<Vec<data::Table>, StateError>>()
-                        .or_else(|err| Err(api::Error::InvalidStateError))?;
+                        .or_else(|_err| Err(api::Error::InvalidStateError))?;
 
                     api::GetTablesResult::Tables(unrolled_tables)
                 }
@@ -74,7 +57,7 @@ pub fn get_tables(
 
 pub fn get_queries(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
-    show_deleted: bool,
+    _show_deleted: bool,
 ) -> Result<api::GetQueriesResult, api::Error> {
 
     let result = conn.transaction::<Vec<data::Query>, diesel::result::Error, _>(|| {

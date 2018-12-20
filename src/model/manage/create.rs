@@ -1,30 +1,20 @@
 
-use actix::prelude::*;
 use diesel;
 use diesel::result::Error;
 use diesel::{
     prelude::*,
     insert_into,
-    delete,
-    update,
 };
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use chrono::NaiveDateTime;
 use serde_json;
-
-use std::error;
-use std::collections::HashMap;
-use std::io;
 
 use failure::Fail;
 
 use data;
 use data::api;
-use data::error::StateError;
 
 use super::super::auth;
 use super::super::schema::{entity, table_schema, table_schema_history, query, query_history, script, script_history};
-use connection::executor::DatabaseExecutor;
 
 use super::super::dbdata::*;
 

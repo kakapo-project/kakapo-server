@@ -1,7 +1,7 @@
 
 pub mod server;
-mod handlers;
 
+mod actions; //TODO: this should be in model
 mod state;
 mod session;
-mod routes;
+mod procedure;

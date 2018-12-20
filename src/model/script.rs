@@ -1,36 +1,18 @@
 
-use actix::prelude::*;
 use cpython::{Python, PyDict, PyErr, PyResult, NoArgs};
 use diesel;
-use diesel::result::Error;
-use diesel::{
-    prelude::*,
-    sql_types,
-    insert_into,
-    delete,
-    update,
-};
+use diesel::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::sql_types::*;
 
-use failure::Fail;
 use serde_json;
 use std::io::Write;
-use std::io;
-use std::collections::BTreeMap;
-use std;
 use std::fs::File;
 use std::path::Path;
-use std::ops::Deref;
 
 use data;
-use data::DataType;
 use data::api;
 
-use super::dbdata::*;
-use super::schema::{entity, query, query_history};
-use super::manage::retrieve::{get_one_script};
-use super::database;
+use super::manage::retrieve::get_one_script;
 use connection;
 
 

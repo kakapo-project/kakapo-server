@@ -1,3 +1,5 @@
+#![allow(proc_macro_derive_resolution_fallback)]
+
 /// Crates
 extern crate actix;
 extern crate actix_broker;
@@ -40,7 +42,7 @@ mod connection;
 /// Extenal dependencies
 use log::LevelFilter;
 use env_logger::{Builder, Target};
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App};
 
 /// Internal dependencies
 use view::server;

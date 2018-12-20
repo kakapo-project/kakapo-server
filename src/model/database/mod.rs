@@ -9,7 +9,6 @@ use std::mem::transmute_copy;
 use std::mem;
 use std::{slice, str};
 use std::io;
-use std::str::from_utf8;
 use std::ptr;
 
 use diesel::prelude::*;
@@ -24,13 +23,10 @@ use diesel::pg::Pg;
 use diesel::sql_types;
 use diesel::deserialize::FromSql;
 use diesel::serialize::Output;
-use diesel::pg::PgMetadataLookup;
 use diesel::serialize::ToSql;
 use diesel::serialize::IsNull;
-use diesel::serialize;
 
 use base64;
-use bigdecimal;
 
 struct InternalRawConnection {
     pub internal_connection: NonNull<pq_sys::PGconn>,

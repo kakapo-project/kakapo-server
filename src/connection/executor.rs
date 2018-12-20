@@ -1,8 +1,5 @@
 
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use dotenv::dotenv;
-use std::env;
 
 use actix::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};

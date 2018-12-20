@@ -1,30 +1,13 @@
 
-use actix::prelude::*;
 use diesel;
-use diesel::result::Error;
-use diesel::{
-    prelude::*,
-    sql_types,
-    insert_into,
-    delete,
-    update,
-};
+use diesel::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::sql_types::*;
-
-use failure::Fail;
-use std::io::Write;
-use std::io;
-use std::collections::BTreeMap;
-use std;
-use std::ops::Deref;
 
 use data;
-use data::DataType;
 use data::api;
 
 use super::dbdata::*;
-use super::schema::{entity, query, query_history};
+use super::schema::{query, query_history};
 use super::database;
 
 fn get_query(

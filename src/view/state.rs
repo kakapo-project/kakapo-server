@@ -2,7 +2,6 @@
 
 use actix::prelude::*;
 
-use connection;
 use connection::executor::DatabaseExecutor;
 use connection::py::PyRunner;
 

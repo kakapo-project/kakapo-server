@@ -3,13 +3,7 @@
 use jsonwebtoken::{decode, encode, Header, Validation};
 use bcrypt::verify;
 
-use diesel::{
-    prelude::*,
-    sql_types,
-    insert_into,
-    delete,
-    update,
-};
+use diesel::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 
 
