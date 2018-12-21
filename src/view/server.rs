@@ -34,6 +34,7 @@ use super::actions;
 
 use super::procedure::ProcedureBuilder;
 use super::procedure::CorsBuilderExt;
+use view::procedure;
 
 
 //TODO: implement for own Response Type
@@ -76,38 +77,6 @@ fn get_secret_key() -> String {
 }
 
 
-//Api functions
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct GetTablesQuery {
-    #[serde(default)]
-    pub detailed: bool,
-    #[serde(default)]
-    pub show_deleted: bool,
-}
-
-struct GetTables;
-
-// build procedure (I don't like that this is depending on HttpRequest)
-impl ProcedureBuilder<actions::GetTablesAction> for GetTables { // This is user generated
-    fn build(req: &HttpRequest<AppState>) -> actions::GetTablesAction {
-        actions::GetTablesAction { detailed: false }
-    }
-}
-
-impl Handler<actions::GetTablesAction> for DatabaseExecutor {
-    type Result = <actions::GetTablesAction as Message>::Result;
-
-    fn handle(&mut self, msg: actions::GetTablesAction, _: &mut Self::Context) -> Self::Result {
-        //TODO:...
-        Ok(serde_json::to_value(&json!({ "success": "get table procedure" })).unwrap())
-    }
-}
-
-
-
-
 //static routes
 fn index(_state: State<AppState>) -> Result<NamedFile, ActixError> {
     let www_path = get_www_path();
@@ -128,6 +97,19 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
         });
 }
 
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTable {
+    #[serde(default)]
+    pub detailed: bool,
+}
+
+impl procedure::Parameters for GetTable {
+    fn temp() {
+        //...
+    }
+}
 
 pub fn serve() {
 
@@ -165,7 +147,9 @@ pub fn serve() {
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
-                .procedure("/manage/getTables", GetTables)
+                .procedure(
+                    "/manage/getTables",
+                    |get_table: GetTable| actions::GetTablesAction { detailed: get_table.detailed })
                 .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)

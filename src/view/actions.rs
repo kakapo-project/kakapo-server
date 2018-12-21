@@ -8,20 +8,23 @@ use std::result::Result;
 use std::result::Result::Ok;
 
 use data::api;
+use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
+use diesel::pg::PgConnection;
+
+use data;
 
 /* TODO: put in actions */
-pub struct _State {
+/*pub struct _State {
     database: String,
     user: String,
 }
-
-pub struct _Error {
-
-}
+*/
+type _State = PooledConnection<ConnectionManager<PgConnection>>;
+type _Error = data::api::Error;
 
 pub trait Action {
     type Return;
-    fn call(&self, state: _State) -> Result<Self::Return, _Error>;
+    fn call(&self, state: &_State) -> Self::Return;
 }
 
 #[derive(Deserialize, Debug, Message)]
@@ -33,8 +36,8 @@ pub struct GetTablesAction {
 }
 
 impl Action for GetTablesAction {
-    type Return = serde_json::Value;
-    fn call(&self, state: _State) -> Result<Self::Return, _Error> {
+    type Return = Result<serde_json::Value, _Error>;
+    fn call(&self, state: &_State) -> Self::Return {
         Ok(serde_json::to_value(&json!({ "success": "get table procedure" })).unwrap())
     }
 
