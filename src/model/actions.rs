@@ -13,18 +13,13 @@ use diesel::pg::PgConnection;
 
 use data;
 
-/* TODO: put in actions */
-/*pub struct _State {
-    database: String,
-    user: String,
-}
-*/
-type _State = PooledConnection<ConnectionManager<PgConnection>>;
-type _Error = data::api::Error;
+type State = PooledConnection<ConnectionManager<PgConnection>>;
+type Error = data::api::Error;
+
 
 pub trait Action {
     type Return;
-    fn call(&self, state: &_State) -> Self::Return;
+    fn call(&self, state: &State) -> Self::Return;
 }
 
 #[derive(Deserialize, Debug, Message)]
@@ -36,11 +31,9 @@ pub struct GetTablesAction {
 }
 
 impl Action for GetTablesAction {
-    type Return = Result<serde_json::Value, _Error>;
-    fn call(&self, state: &_State) -> Self::Return {
+    type Return = Result<serde_json::Value, Error>;
+    fn call(&self, state: &State) -> Self::Return {
         Ok(serde_json::to_value(&json!({ "success": "get table procedure" })).unwrap())
     }
 
 }
-
-/* END */

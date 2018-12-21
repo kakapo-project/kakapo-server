@@ -21,9 +21,8 @@ use futures::Future;
 
 
 use super::state::AppState;
-use super::actions::Action;
+use model::actions::Action;
 use futures::Async;
-use view::actions;
 
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
@@ -41,7 +40,7 @@ pub trait ProcedureBuilder<P: Parameters, M: Action> {
     ///
     /// # Returns
     /// an Action
-    fn build(&self, param: P) -> M;
+    fn build(self, param: P) -> M;
 }
 
 /// can use lambdas instead of procedure builder
@@ -49,9 +48,9 @@ impl<P, M, F> ProcedureBuilder<P, M> for F
     where
         P: Parameters,
         M: Action,
-        F: Fn(P) -> M,
+        F: FnOnce(P) -> M,
 {
-    fn build(&self, param: P) -> M {
+    fn build(self, param: P) -> M {
         self(param)
     }
 }
@@ -104,7 +103,7 @@ ProcedureHandler<P, M, PB>
 }
 
 fn handler_function<P: Parameters + 'static, M: Action + Message + Send + 'static, PB: ProcedureBuilder<P, M> + Clone + 'static>
-(procedure_handler: &ProcedureHandler<P, M, PB>, req: HttpRequest<AppState>, params: Json<P>) -> AsyncResponse
+(procedure_handler: ProcedureHandler<P, M, PB>, req: HttpRequest<AppState>, params: Json<P>) -> AsyncResponse
     where
         M::Result: Send,
         DatabaseExecutor: Handler<M>,
@@ -159,7 +158,7 @@ impl CorsBuilderExt for CorsBuilder<AppState> {
             r.method(http::Method::POST).with(
                 move |(req, parameters): (HttpRequest<AppState>, Json<P>)| {
                     let proc = ProcedureHandler::<P, M, PB>::setup(&procedure_builder);
-                    handler_function(&proc, req, parameters)
+                    handler_function(proc, req, parameters)
                 }
             );
         })

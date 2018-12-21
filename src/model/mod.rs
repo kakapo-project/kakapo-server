@@ -7,6 +7,7 @@ pub mod query;
 pub mod script;
 
 pub mod auth;
+pub mod actions;
 
 mod dbdata;
 mod dependencies;

@@ -30,7 +30,7 @@ use data::api;
 // current module
 use super::state::AppState;
 
-use super::actions;
+use model::actions;
 
 use super::procedure::ProcedureBuilder;
 use super::procedure::CorsBuilderExt;
