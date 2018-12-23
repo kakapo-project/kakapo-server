@@ -1,6 +1,12 @@
 
 * Dependency inversion for items in `handlers.rs`
 
+# PERFORMANCE
+
+* if the post request is big, try async message handlers
+
+# OTHER
+
 - Figure out what other sql function we want to have
   - join
   - Groupby

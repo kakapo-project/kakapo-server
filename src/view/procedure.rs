@@ -6,7 +6,7 @@ use actix_web::{
     AsyncResponder, Error as ActixError,
     dev::Handler as MsgHandler, http,
     FromRequest, Json,
-    HttpRequest, HttpResponse,
+    HttpRequest, HttpResponse, ws,
 };
 
 use serde_json;
@@ -21,18 +21,15 @@ use futures::Future;
 
 
 use super::state::AppState;
-use model::actions::Action;
+use model::actions::{ Action, ActionResult};
 use futures::Async;
+use data::api;
 
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
-pub trait Parameters {
-    fn temp();
-}
-
 /// Build `Action` from an http request
-pub trait ProcedureBuilder<P: Parameters, M: Action> {
+pub trait ProcedureBuilder<P, A: Action> {
     /// build an Action
     ///
     /// # Arguments
@@ -40,32 +37,47 @@ pub trait ProcedureBuilder<P: Parameters, M: Action> {
     ///
     /// # Returns
     /// an Action
-    fn build(self, param: P) -> M;
+    fn build(self, param: P) -> A;
 }
 
 /// can use lambdas instead of procedure builder
-impl<P, M, F> ProcedureBuilder<P, M> for F
+impl<P, A, F> ProcedureBuilder<P, A> for F
     where
-        P: Parameters,
-        M: Action,
-        F: FnOnce(P) -> M,
+        A: Action,
+        F: FnOnce(P) -> A,
 {
-    fn build(self, param: P) -> M {
+    fn build(self, param: P) -> A {
         self(param)
     }
 }
 
-impl<M: Action + Message + Send + 'static>
-Handler<M> for DatabaseExecutor
-    where
-        M::Result: Send,
-        <M as Action>::Return: MessageResponse<DatabaseExecutor, M>,
-{
-    type Result = <M as Action>::Return;
 
-    fn handle(&mut self, msg: M, _: &mut Self::Context) -> Self::Result {
+pub struct ActionWrapper<A: Action + Send> {
+    action: A
+}
+
+impl<A: Action + Send> ActionWrapper<A> {
+    pub fn new(action: A) -> Self {
+        Self { action }
+    }
+}
+
+impl<A: Action + Send> Message for ActionWrapper<A>
+    where
+        <A as Action>::Result: 'static
+{
+    type Result = A::Result;
+}
+
+impl<A: Action + Send> Handler<ActionWrapper<A>> for DatabaseExecutor
+    where
+        A::Result: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
+{
+    type Result = A::Result;
+
+    fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
         let conn = self.get_connection();
-        let result = msg.call(&conn);
+        let result = msg.action.call(&conn);
         result
     }
 }
@@ -73,48 +85,47 @@ Handler<M> for DatabaseExecutor
 /// Container struct for implemeting the `dev::Handler<AppState>` trait
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
 pub struct
-ProcedureHandler<P: Parameters + 'static, M: Action + Message + Send + 'static, PB: ProcedureBuilder<P, M> + Clone + 'static>
+ProcedureHandler<P, A: Action + Send + 'static, PB: ProcedureBuilder<P, A> + Clone>
     where
-        M::Result: Send,
-        DatabaseExecutor: Handler<M>,
+        DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<P>: FromRequest<AppState>,
 {
     builder: PB,
-    p: std::marker::PhantomData<P>,
-    ph: std::marker::PhantomData<M>,
+    phantom_p: std::marker::PhantomData<P>,
+    phantom_a: std::marker::PhantomData<A>,
 }
 
 
-impl<P: Parameters + 'static, M: Action + Message + Send + 'static, PB: ProcedureBuilder<P, M> + Clone + 'static>
-ProcedureHandler<P, M, PB>
+impl<P, A: Action + Send, PB: ProcedureBuilder<P, A> + Clone>
+ProcedureHandler<P, A, PB>
     where
-        M::Result: Send,
-        DatabaseExecutor: Handler<M>,
+        DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<P>: FromRequest<AppState>,
+        <A as Action>::Result: Send,
 {
     /// constructor
     pub fn setup(builder: &PB) -> Self {
         ProcedureHandler {
-            builder: builder.clone(),
-            p: std::marker::PhantomData,
-            ph: std::marker::PhantomData,
+            builder: builder.to_owned(),
+            phantom_p: std::marker::PhantomData,
+            phantom_a: std::marker::PhantomData,
         }
     }
 }
 
-fn handler_function<P: Parameters + 'static, M: Action + Message + Send + 'static, PB: ProcedureBuilder<P, M> + Clone + 'static>
-(procedure_handler: ProcedureHandler<P, M, PB>, req: HttpRequest<AppState>, params: Json<P>) -> AsyncResponse
+fn handler_function<P, A: Action + Send, PB: ProcedureBuilder<P, A> + Clone>
+(procedure_handler: ProcedureHandler<P, A, PB>, req: HttpRequest<AppState>, params: Json<P>) -> AsyncResponse
     where
-        M::Result: Send,
-        DatabaseExecutor: Handler<M>,
+        DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<P>: FromRequest<AppState>,
+        <A as Action>::Result: Send,
 {
 
     let message = procedure_handler.builder.build(params.into_inner());
 
     req.state()
         .connect(0 /* use master database connector for authentication */)
-        .send(message)
+        .send(ActionWrapper::new(message))
         .from_err()
         .and_then(|res| {
             let fin = HttpResponse::Ok()
@@ -137,27 +148,27 @@ pub trait CorsBuilderExt {
     /// * `path` - A string representing the url path
     /// * `procedure_builder` - An object extending `ProcedureBuilder` for building a message
     ///
-    fn procedure<P: Parameters + 'static, M: Action + Message + Send + 'static, PB: ProcedureBuilder<P, M> + Clone + 'static>
+    fn procedure<P: 'static, A: Action + Send + 'static, PB: ProcedureBuilder<P, A> + Clone + 'static>
     (&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
-            M::Result: Send,
-            DatabaseExecutor: Handler<M>,
-            Json<P>: FromRequest<AppState>;
+            DatabaseExecutor: Handler<ActionWrapper<A>>,
+            Json<P>: FromRequest<AppState>,
+            <A as Action>::Result: Send;
 
 }
 
 impl CorsBuilderExt for CorsBuilder<AppState> {
-    fn procedure<P: Parameters + 'static, M: Action + Message + Send + 'static, PB: ProcedureBuilder<P, M> + Clone + 'static>
+    fn procedure<P: 'static, A: Action + Send + 'static, PB: ProcedureBuilder<P, A> + Clone + 'static>
     (&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
-            M::Result: Send,
-            DatabaseExecutor: Handler<M>,
+            DatabaseExecutor: Handler<ActionWrapper<A>>,
             Json<P>: FromRequest<AppState>,
+            <A as Action>::Result: Send,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with(
                 move |(req, parameters): (HttpRequest<AppState>, Json<P>)| {
-                    let proc = ProcedureHandler::<P, M, PB>::setup(&procedure_builder);
+                    let proc = ProcedureHandler::<P, A, PB>::setup(&procedure_builder);
                     handler_function(proc, req, parameters)
                 }
             );

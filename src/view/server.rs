@@ -28,13 +28,17 @@ use connection::executor::DatabaseExecutor;
 use data::api;
 
 // current module
-use super::state::AppState;
-
+use view::procedure;
 use model::actions;
 
+use super::state::AppState;
 use super::procedure::ProcedureBuilder;
-use super::procedure::CorsBuilderExt;
-use view::procedure;
+use super::procedure::CorsBuilderExt as CorsBuilderExtProcedure;
+use super::session::CorsBuilderExt as CorsBuilderExtSession;
+
+use view::session::Session;
+use view::session;
+use model::actions::Action;
 
 
 //TODO: implement for own Response Type
@@ -105,9 +109,33 @@ pub struct GetTable {
     pub detailed: bool,
 }
 
-impl procedure::Parameters for GetTable {
-    fn temp() {
-        //...
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum SocketRequest {
+    GetTables { detailed: bool },
+    StopGetTables,
+}
+
+
+#[derive(Clone)]
+struct MySessionListener {
+    a: std::marker::PhantomData<i32>,
+}
+
+
+impl session::SessionListener<SocketRequest> for MySessionListener {
+    fn listen(&self, session: Session, param: SocketRequest) {
+        match param {
+            SocketRequest::GetTables { detailed } => {
+                //session.subscripeTo(action);
+                //session.dispatch(actions::GetTablesAction { detailed });
+            },
+            SocketRequest::StopGetTables => {
+                //session.unsubscribeFrom(actions::sub::GetTables);
+                //session.dispatch(actions::NoAction);
+            },
+        }
     }
 }
 
@@ -150,6 +178,12 @@ pub fn serve() {
                 .procedure(
                     "/manage/getTables",
                     |get_table: GetTable| actions::GetTablesAction { detailed: get_table.detailed })
+                .session(
+                    "/listen",
+                    MySessionListener {
+                        a: std::marker::PhantomData,
+                    },
+                )
                 .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)
