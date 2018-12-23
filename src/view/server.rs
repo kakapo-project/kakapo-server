@@ -119,12 +119,15 @@ pub enum SocketRequest {
 
 
 #[derive(Clone)]
-struct MySessionListener {
-    a: std::marker::PhantomData<i32>,
+struct SessionHandler {}
+
+impl SessionHandler {
+    pub fn new() -> Self {
+        Self {}
+    }
 }
 
-
-impl session::SessionListener<SocketRequest> for MySessionListener {
+impl session::SessionListener<SocketRequest> for SessionHandler {
     fn listen(&self, session: &mut Session<SocketRequest, Self>, param: SocketRequest) {
         match param {
             SocketRequest::GetTables { detailed } => {
@@ -180,9 +183,7 @@ pub fn serve() {
                     |get_table: GetTable| actions::GetTablesAction { detailed: get_table.detailed })
                 .session(
                     "/listen",
-                    MySessionListener {
-                        a: std::marker::PhantomData,
-                    },
+                    SessionHandler::new(),
                 )
                 .register())
             .resource("/", |r| {
