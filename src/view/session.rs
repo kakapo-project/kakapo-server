@@ -10,8 +10,6 @@ use actix_web::{
 };
 
 use serde_json;
-use std::result::Result::Ok;
-
 
 use connection::executor::DatabaseExecutor;
 use actix::dev::MessageResponse;
@@ -24,13 +22,14 @@ use super::state::AppState;
 use model::actions::Action;
 use futures::Async;
 use data::api;
+use view::action_wrapper::ActionWrapper;
 
 
-pub struct Session {
-
+pub struct Session<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> {
+    websocket_context: &'a mut ws::WebsocketContext<SessionActor<P, SL>, AppState>,
 }
 
-impl Session {
+impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL> {
     pub fn subscribeTo() {
 
     }
@@ -38,26 +37,53 @@ impl Session {
     pub fn unsubscribeFrom() {
 
     }
+
+    pub fn dispatch<A: Action + Send + 'static>(&mut self, action: A)
+        where
+            <A as Action>::Result: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + Send + 'static,
+    {
+        self.websocket_context
+            .state()
+            .connect(0)
+            .send(ActionWrapper::new(action))
+            .wait()
+            .or_else(|err| Err(api::Error::TooManyConnections))
+            .and_then(|res| {
+
+                let ok_result = serde_json::to_string(&json!({ "success": "callback from dispatch" })).unwrap();
+
+                self.websocket_context.text(ok_result);
+                Ok(())
+            })
+            .or_else(|err| {
+                println!("encountered error: {:?}", &err);
+                Err(err)
+            });
+    }
 }
 
-pub trait SessionListener<P> {
-    fn listen(&self, session: Session, param: P);
+pub trait SessionListener<P>
+    where Self: Clone
+{
+    fn listen(&self, session: &mut Session<P, Self>, param: P);
 }
 
 
-struct SessionActor<P, SL: SessionListener<P> + Clone> {
+pub struct SessionActor<P: 'static, SL: SessionListener<P> + Clone + 'static> {
     session_id: usize,
     listener: SL,
     phantom_p: std::marker::PhantomData<P>, //spooky
 }
 
-impl<P, SL: SessionListener<P> + Clone> SessionActor<P, SL>
+impl<P: 'static, SL: SessionListener<P> + Clone + 'static> SessionActor<P, SL>
 {
-    fn build_session(
+    fn build_session<'a>(
         &self,
-        /*websocket_context: &mut ws::WebsocketContext<SessionActor<P, A, SL>, AppState>*/
-    ) -> Session {
-        Session {}
+        websocket_context: &'a mut ws::WebsocketContext<SessionActor<P, SL>, AppState>
+    ) -> Session<'a, P, SL> {
+        Session {
+            websocket_context
+        }
     }
 }
 
@@ -99,8 +125,8 @@ StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL>
                         Err(err)
                     })
                     .and_then(|parameter: P| {
-                        let session: Session = self.build_session(/*ctx*/);
-                        self.listener.listen(session, parameter);
+                        let mut session = self.build_session(ctx);
+                        self.listener.listen(&mut session, parameter);
                         Ok(())
                     });
 
@@ -113,42 +139,3 @@ StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL>
     }
 }
 
-/// extend actix cors routes to handle RPC
-pub trait CorsBuilderExt {
-
-    /// Create a websocket session
-    ///
-    /// # Arguments
-    /// * `path` - A string representing the url path
-    /// * `session_builder` - An object extending `SessionBuilder` for building a session
-    ///
-    fn session<
-        P: serde::de::DeserializeOwned + 'static,
-        SL: SessionListener<P> + Clone + 'static>
-    (&mut self, path: &str, session_listener: SL) -> &mut CorsBuilder<AppState>
-        where
-            Json<P>: FromRequest<AppState>,
-            for<'de> P: serde::Deserialize<'de>;
-
-}
-
-impl CorsBuilderExt for CorsBuilder<AppState> {
-
-
-    fn session<
-        P: serde::de::DeserializeOwned + 'static,
-        SL: SessionListener<P> + Clone + 'static>
-    (&mut self, path: &str, session_listener: SL) -> &mut CorsBuilder<AppState>
-        where
-            Json<P>: FromRequest<AppState>,
-            for<'de> P: serde::Deserialize<'de>,
-    {
-        self.resource(path, move |r| {
-            r.method(http::Method::GET).f(
-                move |req: &HttpRequest<AppState>| {
-                    let session = SessionActor::<P, SL>::setup(&session_listener);
-                    ws::start(req, session)
-                })
-        })
-    }
-}

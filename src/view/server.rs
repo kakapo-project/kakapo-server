@@ -33,8 +33,8 @@ use model::actions;
 
 use super::state::AppState;
 use super::procedure::ProcedureBuilder;
-use super::procedure::CorsBuilderExt as CorsBuilderExtProcedure;
-use super::session::CorsBuilderExt as CorsBuilderExtSession;
+use super::extensions::CorsBuilderProcedureExt;
+use super::extensions::CorsBuilderSessionExt;
 
 use view::session::Session;
 use view::session;
@@ -125,15 +125,15 @@ struct MySessionListener {
 
 
 impl session::SessionListener<SocketRequest> for MySessionListener {
-    fn listen(&self, session: Session, param: SocketRequest) {
+    fn listen(&self, session: &mut Session<SocketRequest, Self>, param: SocketRequest) {
         match param {
             SocketRequest::GetTables { detailed } => {
                 //session.subscripeTo(action);
-                //session.dispatch(actions::GetTablesAction { detailed });
+                session.dispatch(actions::GetTablesAction { detailed });
             },
             SocketRequest::StopGetTables => {
                 //session.unsubscribeFrom(actions::sub::GetTables);
-                //session.dispatch(actions::NoAction);
+                session.dispatch(actions::NoAction);
             },
         }
     }
