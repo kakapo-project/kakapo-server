@@ -4,7 +4,7 @@ use actix::prelude::*;
 use actix_web::{
     AsyncResponder, Error as ActixError,
     dev::Handler as MsgHandler, http,
-    FromRequest, Json,
+    FromRequest, Json, Query,
     HttpRequest, HttpResponse, ws,
 };
 
@@ -22,6 +22,7 @@ use super::procedure::ProcedureHandler;
 use super::procedure::handler_function;
 
 use model::actions::{ Action, ActionResult};
+use serde::Serialize;
 
 
 /// extend actix cors routes to handle RPC
@@ -33,28 +34,30 @@ pub trait CorsBuilderProcedureExt {
     /// * `path` - A string representing the url path
     /// * `procedure_builder` - An object extending `ProcedureBuilder` for building a message
     ///
-    fn procedure<P: 'static, A: Action + Send + 'static, PB: ProcedureBuilder<P, A> + Clone + 'static>
+    fn procedure<JP: 'static, QP: 'static, A: Action + Send + 'static, PB: ProcedureBuilder<JP, QP, A> + Clone + 'static>
     (&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
             DatabaseExecutor: Handler<ActionWrapper<A>>,
-            Json<P>: FromRequest<AppState>,
-            <A as Action>::Result: Send;
+            Json<JP>: FromRequest<AppState>,
+            Query<QP>: FromRequest<AppState>,
+            <A as Action>::Result: Send + Serialize;
 
 }
 
 impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
-    fn procedure<P: 'static, A: Action + Send + 'static, PB: ProcedureBuilder<P, A> + Clone + 'static>
+    fn procedure<JP: 'static, QP: 'static, A: Action + Send + 'static, PB: ProcedureBuilder<JP, QP, A> + Clone + 'static>
     (&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
             DatabaseExecutor: Handler<ActionWrapper<A>>,
-            Json<P>: FromRequest<AppState>,
-            <A as Action>::Result: Send,
+            Json<JP>: FromRequest<AppState>,
+            Query<QP>: FromRequest<AppState>,
+            <A as Action>::Result: Send + Serialize,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with(
-                move |(req, parameters): (HttpRequest<AppState>, Json<P>)| {
-                    let proc = ProcedureHandler::<P, A, PB>::setup(&procedure_builder);
-                    handler_function(proc, req, parameters)
+                move |(req, json_params, query_params): (HttpRequest<AppState>, Json<JP>, Query<QP>)| {
+                    let proc = ProcedureHandler::<JP, QP, A, PB>::setup(&procedure_builder);
+                    handler_function(proc, req, json_params, query_params)
                 }
             );
         })

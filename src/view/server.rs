@@ -32,7 +32,7 @@ use view::procedure;
 use model::actions;
 
 use super::state::AppState;
-use super::procedure::ProcedureBuilder;
+use super::procedure::{ ProcedureBuilder, NoQuery };
 use super::extensions::CorsBuilderProcedureExt;
 use super::extensions::CorsBuilderSessionExt;
 
@@ -109,6 +109,12 @@ pub struct GetTable {
     pub detailed: bool,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTableQuery {
+    pub name: String,
+}
+
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -132,11 +138,11 @@ impl session::SessionListener<SocketRequest> for SessionHandler {
         match param {
             SocketRequest::GetTables { detailed } => {
                 //session.subscripeTo(action);
-                session.dispatch(actions::GetTablesAction { detailed });
+                session.dispatch(actions::GetAllTables::new(detailed, true));
             },
             SocketRequest::StopGetTables => {
                 //session.unsubscribeFrom(actions::sub::GetTables);
-                session.dispatch(actions::NoAction);
+                session.dispatch(actions::Nothing);
             },
         }
     }
@@ -180,7 +186,21 @@ pub fn serve() {
                 .max_age(3600)
                 .procedure(
                     "/manage/getTables",
-                    |get_table: GetTable| actions::GetTablesAction { detailed: get_table.detailed })
+                    |get_table: GetTable, _: NoQuery| actions::GetAllTables::new(get_table.detailed, true)
+                )
+                /*.procedure(
+                    "/manage/getQueries",
+                    |get_table: GetTable| actions::GetAllQueries
+                )
+                .procedure(
+                    "/manage/getScripts",
+                    |get_table: GetTable| actions::GetAllScripts
+                )
+                */
+                .procedure(
+                    "/manage/getTable",
+                    |get_table: GetTable, query: GetTableQuery| actions::GetTable::new(query.name)
+                )
                 .session(
                     "/listen",
                     SessionHandler::new(),

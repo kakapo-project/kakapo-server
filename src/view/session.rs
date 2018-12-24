@@ -38,6 +38,7 @@ impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL
 
     }
 
+    /// dispatch a response from action inside the listener
     pub fn dispatch<A: Action + Send + 'static>(&mut self, action: A)
         where
             <A as Action>::Result: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + Send + 'static,
@@ -62,9 +63,7 @@ impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL
     }
 }
 
-pub trait SessionListener<P>
-    where Self: Clone
-{
+pub trait SessionListener<P>: Clone {
     fn listen(&self, session: &mut Session<P, Self>, param: P);
 }
 

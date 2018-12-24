@@ -5,7 +5,7 @@ use actix::prelude::*;
 use actix_web::{
     AsyncResponder, Error as ActixError,
     dev::Handler as MsgHandler, http,
-    FromRequest, Json,
+    FromRequest, Json, Query,
     HttpRequest, HttpResponse, ws,
 };
 
@@ -23,12 +23,17 @@ use model::actions::{ Action, ActionResult};
 use futures::Async;
 use data::api;
 use view::action_wrapper::ActionWrapper;
+use serde::Serialize;
 
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
+#[derive(Deserialize, Debug)]
+pub struct NoQuery;
+
+
 /// Build `Action` from an http request
-pub trait ProcedureBuilder<P, A: Action> {
+pub trait ProcedureBuilder<JP, QP, A: Action> {
     /// build an Action
     ///
     /// # Arguments
@@ -36,63 +41,67 @@ pub trait ProcedureBuilder<P, A: Action> {
     ///
     /// # Returns
     /// an Action
-    fn build(self, param: P) -> A;
+    fn build(self, json_param: JP, query_params: QP) -> A;
 }
 
 /// can use lambdas instead of procedure builder
-impl<P, A, F> ProcedureBuilder<P, A> for F
+impl<JP, QP, A: Action, F: FnOnce(JP, QP) -> A>
+ProcedureBuilder<JP, QP, A> for F
     where
-        A: Action,
-        F: FnOnce(P) -> A,
+        Json<JP>: FromRequest<AppState>,
+        Query<QP>: FromRequest<AppState>,
 {
-    fn build(self, param: P) -> A {
-        self(param)
+    fn build(self, json_param: JP, query_params: QP) -> A {
+        self(json_param, query_params)
     }
 }
-
-
 
 
 /// Container struct for implemeting the `dev::Handler<AppState>` trait
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
 pub struct
-ProcedureHandler<P, A: Action + Send + 'static, PB: ProcedureBuilder<P, A> + Clone>
+ProcedureHandler<JP, QP, A: Action + Send + 'static, PB: ProcedureBuilder<JP, QP, A> + Clone>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        Json<P>: FromRequest<AppState>,
+        Json<JP>: FromRequest<AppState>,
+        Query<QP>: FromRequest<AppState>,
 {
     builder: PB,
-    phantom_p: std::marker::PhantomData<P>,
+    phantom_jp: std::marker::PhantomData<JP>,
+    phantom_qp: std::marker::PhantomData<QP>,
     phantom_a: std::marker::PhantomData<A>,
 }
 
 
-impl<P, A: Action + Send, PB: ProcedureBuilder<P, A> + Clone>
-ProcedureHandler<P, A, PB>
+impl<JP, QP, A: Action + Send, PB: ProcedureBuilder<JP, QP, A> + Clone>
+ProcedureHandler<JP, QP, A, PB>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        Json<P>: FromRequest<AppState>,
+        Json<JP>: FromRequest<AppState>,
+        Query<QP>: FromRequest<AppState>,
         <A as Action>::Result: Send,
 {
     /// constructor
     pub fn setup(builder: &PB) -> Self {
         ProcedureHandler {
             builder: builder.to_owned(),
-            phantom_p: std::marker::PhantomData,
+            phantom_jp: std::marker::PhantomData,
+            phantom_qp: std::marker::PhantomData,
             phantom_a: std::marker::PhantomData,
         }
     }
 }
 
-pub fn handler_function<P, A: Action + Send, PB: ProcedureBuilder<P, A> + Clone>
-(procedure_handler: ProcedureHandler<P, A, PB>, req: HttpRequest<AppState>, params: Json<P>) -> AsyncResponse
+pub fn handler_function<JP, QP, A: Action + Send, PB: ProcedureBuilder<JP, QP, A> + Clone>
+(procedure_handler: ProcedureHandler<JP, QP, A, PB>, req: HttpRequest<AppState>, json_params: Json<JP>, query_params: Query<QP>) -> AsyncResponse
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        Json<P>: FromRequest<AppState>,
-        <A as Action>::Result: Send,
+        Json<JP>: FromRequest<AppState>,
+        Query<QP>: FromRequest<AppState>,
+        <A as Action>::Result: Send + Serialize,
 {
 
-    let action = procedure_handler.builder.build(params.into_inner());
+    let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());
 
     req.state()
         .connect(0 /* use master database connector for authentication */)
@@ -101,7 +110,7 @@ pub fn handler_function<P, A: Action + Send, PB: ProcedureBuilder<P, A> + Clone>
         .and_then(|res| {
             let fin = HttpResponse::Ok()
                 .content_type("application/json")
-                .body(serde_json::to_string(&json!({ "success": "all is well" }))
+                .body(serde_json::to_string(&res)
                     .unwrap_or_default());
 
             Ok(fin)
