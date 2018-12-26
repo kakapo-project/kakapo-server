@@ -19,6 +19,7 @@ use futures::Future;
 
 
 use super::state::AppState;
+use model::actions;
 use model::actions::Action;
 use futures::Async;
 use data::api;
@@ -39,9 +40,9 @@ impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL
     }
 
     /// dispatch a response from action inside the listener
-    pub fn dispatch<A: Action + Send + 'static>(&mut self, action: A)
+    pub fn dispatch<A: Action + 'static>(&mut self, action: A)
         where
-            <A as Action>::Result: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + Send + 'static,
+            Result<A::Ret, actions::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
     {
         self.websocket_context
             .state()

@@ -19,6 +19,12 @@ use super::super::schema::{entity, table_schema, table_schema_history, query, qu
 use super::super::dbdata::*;
 
 use super::utils::{get_modification_commits, unroll_modification_commits, update_migration, generate_error};
+type DataQuery = RawQuery;
+type DataQueryHistory = RawQueryHistory;
+type TableSchema = RawTable;
+type TableSchemaHistory = RawTableHistory;
+type DataScript = RawScript;
+type DataScriptHistory = RawScriptHistory;
 
 pub fn create_table_internal(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
@@ -44,14 +50,14 @@ pub fn create_table_internal(
                 }
 
                 let entity = insert_into(entity::table)
-                    .values(&NewEntity {
+                    .values(&NewRawEntity {
                         scope_id: 1,
                         created_by: user_id,
                     })
-                    .get_result::<Entity>(conn)?;
+                    .get_result::<RawEntity>(conn)?;
 
                 let result = insert_into(table_schema::table)
-                    .values(&NewTableSchema {
+                    .values(&NewRawTable {
                         entity_id: entity.entity_id,
                         name: table_name.to_string(),
                     })
@@ -89,7 +95,7 @@ pub fn create_table_internal(
                 })?;
 
             let table_schema_history = insert_into(table_schema_history::table)
-                .values(&NewTableSchemaHistory {
+                .values(&NewRawTableHistory {
                     table_schema_id: table_schema.table_schema_id,
                     description: post_table.description.to_string(),
                     modification: json_schema_action,
@@ -142,14 +148,14 @@ pub fn create_query_internal(
                 }
 
                 let entity = insert_into(entity::table)
-                    .values(&NewEntity {
+                    .values(&NewRawEntity {
                         scope_id: 1,
                         created_by: user_id,
                     })
-                    .get_result::<Entity>(conn)?;
+                    .get_result::<RawEntity>(conn)?;
 
                 let result = insert_into(query::table)
-                    .values(&NewDataQuery {
+                    .values(&NewRawQuery {
                         entity_id: entity.entity_id,
                         name: query_name.to_string(),
                     })
@@ -170,7 +176,7 @@ pub fn create_query_internal(
                 .get_result::<DataQueryHistory>(conn)?
         } else {
             insert_into(query_history::table)
-                .values(&NewDataQueryHistory {
+                .values(&NewRawQueryHistory {
                     query_id: data_query.query_id,
                     description: post_query.description.to_string(),
                     statement: post_query.statement.to_string(),
@@ -223,14 +229,14 @@ fn create_script_internal(
                     return Err(error);
                 }
                 let entity = insert_into(entity::table)
-                    .values(&NewEntity {
+                    .values(&NewRawEntity {
                         scope_id: 1,
                         created_by: user_id,
                     })
-                    .get_result::<Entity>(conn)?;
+                    .get_result::<RawEntity>(conn)?;
 
                 let result = insert_into(script::table)
-                    .values(&NewDataScript {
+                    .values(&NewRawScript {
                         entity_id: entity.entity_id,
                         name: script_name.to_string(),
                     })
@@ -251,7 +257,7 @@ fn create_script_internal(
                 .get_result::<DataScriptHistory>(conn)?
         } else {
             insert_into(script_history::table)
-                .values(&NewDataScriptHistory {
+                .values(&NewRawScriptHistory {
                     script_id: data_script.script_id,
                     description: post_script.description.to_string(),
                     script_language: "Python3".to_string(), //only python3 currently supported

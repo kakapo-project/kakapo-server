@@ -23,7 +23,6 @@ use model::actions::{ Action, ActionResult};
 use futures::Async;
 use data::api;
 use view::action_wrapper::ActionWrapper;
-use serde::Serialize;
 
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
@@ -60,7 +59,7 @@ ProcedureBuilder<JP, QP, A> for F
 /// Container struct for implemeting the `dev::Handler<AppState>` trait
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
 pub struct
-ProcedureHandler<JP, QP, A: Action + Send + 'static, PB: ProcedureBuilder<JP, QP, A> + Clone>
+ProcedureHandler<JP, QP, A: Action + 'static, PB: ProcedureBuilder<JP, QP, A> + Clone>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<JP>: FromRequest<AppState>,
@@ -73,13 +72,12 @@ ProcedureHandler<JP, QP, A: Action + Send + 'static, PB: ProcedureBuilder<JP, QP
 }
 
 
-impl<JP, QP, A: Action + Send, PB: ProcedureBuilder<JP, QP, A> + Clone>
+impl<JP, QP, A: Action, PB: ProcedureBuilder<JP, QP, A> + Clone>
 ProcedureHandler<JP, QP, A, PB>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
-        <A as Action>::Result: Send,
 {
     /// constructor
     pub fn setup(builder: &PB) -> Self {
@@ -92,13 +90,12 @@ ProcedureHandler<JP, QP, A, PB>
     }
 }
 
-pub fn handler_function<JP, QP, A: Action + Send, PB: ProcedureBuilder<JP, QP, A> + Clone>
+pub fn handler_function<JP, QP, A: Action, PB: ProcedureBuilder<JP, QP, A> + Clone>
 (procedure_handler: ProcedureHandler<JP, QP, A, PB>, req: HttpRequest<AppState>, json_params: Json<JP>, query_params: Query<QP>) -> AsyncResponse
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
-        <A as Action>::Result: Send + Serialize,
 {
 
     let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());

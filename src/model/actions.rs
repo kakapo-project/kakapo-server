@@ -32,18 +32,71 @@ use data::api::UpdateTableDataResult;
 use data::api::DeleteTableDataResult;
 use data::api::RunQueryResult;
 use data::api::RunScriptResult;
+use model::entity;
 
-type State = PooledConnection<ConnectionManager<PgConnection>>;
-type Error = data::api::Error;
+use super::schema;
+use model::dbdata::RawQueryHistory as DataQueryHistory;
+use model::dbdata::RawQuery as DataQuery;
+
+type State = PooledConnection<ConnectionManager<PgConnection>>; //TODO: should include user data
+pub type Error = ();
+
 
 pub type ActionResult = Result<(), ()>;
 
-pub trait Action {
-    type Result;
-    fn call(&self, state: &State) -> Self::Result;
+pub trait Action: Send
+    where
+        Self::Ret: Send + serde::Serialize
+{
+    type Ret;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error>;
 }
 
-//get all actions
+///decorator for permission
+pub struct WithPermissionRequired<A: Action> {
+    action: A,
+    //permission: ...
+}
+
+impl<A: Action> Action for WithPermissionRequired<A> {
+    type Ret = A::Ret; //TODO: 403 error
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+        self.action.call(state)
+    }
+}
+
+impl<A: Action> WithPermissionRequired<A> {
+    pub fn new(action: A/*, permission: Permission*/) -> Self {
+        Self {
+            action,
+            //permission,
+        }
+    }
+}
+
+///decorator for transactions
+pub struct WithTransaction<A: Action> {
+    action: A,
+    //permission: ...
+}
+
+impl<A: Action> Action for WithTransaction<A> {
+    type Ret = A::Ret;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+        //TODO: transactions
+        self.action.call(state)
+    }
+}
+
+impl<A: Action> WithTransaction<A> {
+    pub fn new(action: A) -> Self {
+        Self {
+            action,
+        }
+    }
+}
+
+///get all tables
 #[derive(Debug)]
 pub struct GetAllTables {
     //pub detailed: bool, //TODO: is this needed?
@@ -59,43 +112,45 @@ impl GetAllTables {
 }
 
 impl Action for GetAllTables {
-    type Result = Result<GetTablesResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = GetTablesResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::retrieve::get_tables(&state, false, self.show_deleted)
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///get all queries
 #[derive(Debug)]
 pub struct GetAllQueries {
     pub show_deleted: bool,
 }
 
 impl Action for GetAllQueries {
-    type Result = Result<GetQueriesResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = GetQueriesResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::retrieve::get_queries(&state, self.show_deleted)
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///get all scripts
 #[derive(Debug)]
 pub struct GetAllScripts {
     pub show_deleted: bool,
 }
 
 impl Action for GetAllScripts {
-    type Result = Result<GetScriptsResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = GetScriptsResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::retrieve::get_scripts(&state) //TODO: why no show_deleted?
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
-//get one actions
+///get one table
 #[derive(Debug)]
 pub struct GetTable {
     pub name: String,
@@ -103,51 +158,69 @@ pub struct GetTable {
 }
 
 impl GetTable {
-    pub fn new(name: String) -> Self {
-        Self {
+    pub fn new(name: String) -> impl Action<Ret = GetTableResult> { //weird syntax but ok
+        let action = Self {
             name,
-        }
+        };
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission = WithPermissionRequired::new(action_with_transaction /*, ... */);
+
+        action_with_permission
     }
 }
 
 impl Action for GetTable {
-    type Result = Result<GetTableResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
-        let result = manage::retrieve::get_table(&state, self.name.to_owned(), false)
-            .or_else(|err| Err(()))?;
-        Ok(result)
+    type Ret = GetTableResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+        //entity::Retriever::get_one/*::<Table>*/(&state, self.name.to_owned())
+        Err(())
     }
 }
 
+///get one query
 #[derive(Debug)]
 pub struct GetQuery {
     pub name: String,
 }
 
-impl Action for GetQuery {
-    type Result = Result<GetQueryResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
-        let result = manage::retrieve::get_query(&state, self.name.to_owned())
-            .or_else(|err| Err(()))?;
-        Ok(result)
+impl GetQuery {
+    pub fn new(name: String) -> impl Action<Ret = GetQueryResult> { //weird syntax but ok
+        let action = Self {
+            name,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+
+        let action_with_permission = WithPermissionRequired::new(action_with_transaction /*, ... */);
+
+        action_with_permission
     }
 }
 
+impl Action for GetQuery {
+    type Ret = GetQueryResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+        let query: Vec<data::Query> = entity::query::Retriever::get_all(&state);
+        Err(())
+    }
+}
+
+///get one script
 #[derive(Debug)]
 pub struct GetScript {
     pub name: String,
 }
 
 impl Action for GetScript {
-    type Result = Result<GetScriptResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = GetScriptResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::retrieve::get_script(&state, self.name.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
-// create actions
+///create one table
 #[derive(Debug)]
 pub struct CreateTable {
     pub reqdata: api::PostTable,
@@ -155,14 +228,15 @@ pub struct CreateTable {
 }
 
 impl Action for CreateTable {
-    type Result = Result<CreateTableResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = CreateTableResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::create_table(&state, api::OnDuplicate::default(), self.reqdata.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///create one query
 #[derive(Debug)]
 pub struct CreateQuery {
     pub reqdata: api::PostQuery,
@@ -170,14 +244,15 @@ pub struct CreateQuery {
 }
 
 impl Action for CreateQuery {
-    type Result = Result<CreateQueryResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = CreateQueryResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::create_query(&state, api::OnDuplicate::default(), self.reqdata.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///create one script
 #[derive(Debug)]
 pub struct CreateScript {
     pub reqdata: api::PostScript,
@@ -185,15 +260,15 @@ pub struct CreateScript {
 }
 
 impl Action for CreateScript {
-    type Result = Result<CreateScriptResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = CreateScriptResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::create_script(&state, api::OnDuplicate::default(), self.reqdata.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
-// update actions
+///update table
 #[derive(Debug)]
 pub struct UpdateTable {
     pub name: String,
@@ -201,14 +276,15 @@ pub struct UpdateTable {
 }
 
 impl Action for UpdateTable {
-    type Result = Result<CreateTableResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = CreateTableResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::update_table(&state, self.name.to_owned(), self.reqdata.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///update query
 #[derive(Debug)]
 pub struct UpdateQuery {
     pub name: String,
@@ -216,14 +292,15 @@ pub struct UpdateQuery {
 }
 
 impl Action for UpdateQuery {
-    type Result = Result<CreateQueryResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = CreateQueryResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::update_query(&state, self.name.to_owned(), self.reqdata.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///update script
 #[derive(Debug)]
 pub struct UpdateScript {
     pub name: String,
@@ -231,51 +308,53 @@ pub struct UpdateScript {
 }
 
 impl Action for UpdateScript {
-    type Result = Result<CreateScriptResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = CreateScriptResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::update_script(&state, self.name.to_owned(), self.reqdata.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
-// delete actions
+///delete table
 #[derive(Debug)]
 pub struct DeleteTable {
     pub name: String,
 }
 
 impl Action for DeleteTable {
-    type Result = Result<(), ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = ();
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::delete_table(&state, self.name.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///delete query
 #[derive(Debug)]
 pub struct DeleteQuery {
     pub name: String,
 }
 
 impl Action for DeleteQuery {
-    type Result = Result<(), ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = ();
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::delete_query(&state, self.name.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
     }
 }
 
+///delete script
 #[derive(Debug)]
 pub struct DeleteScript {
     pub name: String,
 }
 
 impl Action for DeleteScript {
-    type Result = Result<(), ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = ();
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = manage::create::delete_script(&state, self.name.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
@@ -292,8 +371,8 @@ pub struct QueryTableData {
 }
 
 impl Action for QueryTableData {
-    type Result = Result<GetTableDataResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = GetTableDataResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = table::get_table_data(&state, self.name.to_owned(), self.format.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
@@ -310,8 +389,8 @@ pub struct CreateTableData {
 }
 
 impl Action for CreateTableData {
-    type Result = Result<InsertTableDataResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = InsertTableDataResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = table::insert_table_data(
             &state,
             self.name.to_owned(), self.data.to_owned(), self.format.to_owned(), api::CreationMethod::default())
@@ -329,8 +408,8 @@ pub struct UpdateTableData {
 }
 
 impl Action for UpdateTableData {
-    type Result = Result<UpdateTableDataResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = UpdateTableDataResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = table::update_table_data(
             &state,
             self.name.to_owned(), self.key.to_owned(), self.data.to_owned(), self.format.to_owned())
@@ -346,8 +425,8 @@ pub struct DeleteTableData {
 }
 
 impl Action for DeleteTableData {
-    type Result = Result<DeleteTableDataResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = DeleteTableDataResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = table::delete_table_data(&state, self.name.to_owned(), self.key.to_owned())
             .or_else(|err| Err(()))?;
         Ok(result)
@@ -365,8 +444,8 @@ pub struct RunQuery {
 }
 
 impl Action for RunQuery {
-    type Result = Result<RunQueryResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = RunQueryResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = query::run_query(
             &state,
             self.name.to_owned(), self.format.to_owned(), self.params.to_owned())
@@ -384,8 +463,8 @@ pub struct RunScript {
 }
 
 impl Action for RunScript {
-    type Result = Result<RunScriptResult, ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = RunScriptResult;
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         let result = script::run_script(
             &state,
             self.py_runner.to_owned(), self.name.to_owned(), self.params.to_owned())
@@ -400,8 +479,8 @@ pub struct Nothing;
 
 
 impl Action for Nothing {
-    type Result = Result<(), ()>;
-    fn call(&self, state: &State) -> Self::Result {
+    type Ret = ();
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         Ok(())
     }
 }

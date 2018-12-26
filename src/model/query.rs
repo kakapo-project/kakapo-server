@@ -9,6 +9,8 @@ use data::api;
 use super::dbdata::*;
 use super::schema::{query, query_history};
 use super::database;
+type DataQuery = RawQuery;
+type DataQueryHistory = RawQueryHistory;
 
 fn get_query(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,

@@ -13,7 +13,12 @@ use super::super::schema::{table_schema, query, query_history, script, script_hi
 use super::super::dbdata::*;
 
 use super::utils::{get_single_table, unroll_table};
-
+type DataQuery = RawQuery;
+type DataQueryHistory = RawQueryHistory;
+type TableSchema = RawTable;
+type TableSchemaHistory = RawTableHistory;
+type DataScript = RawScript;
+type DataScriptHistory = RawScriptHistory;
 
 pub fn get_tables(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,

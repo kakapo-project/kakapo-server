@@ -14,7 +14,12 @@ use data::error::StateError;
 use super::super::schema::{table_schema_history};
 
 use super::super::dbdata::*;
-
+type DataQuery = RawQuery;
+type DataQueryHistory = RawQueryHistory;
+type TableSchema = RawTable;
+type TableSchemaHistory = RawTableHistory;
+type DataScript = RawScript;
+type DataScriptHistory = RawScriptHistory;
 
 pub fn generate_error(fmt: &str) -> Error {
     Error::SerializationError(

@@ -201,6 +201,10 @@ pub fn serve() {
                     "/manage/getTable",
                     |get_table: GetTable, query: GetTableQuery| actions::GetTable::new(query.name)
                 )
+                .procedure(
+                    "/manage/getQuery",
+                    |get_table: GetTable, query: GetTableQuery| actions::GetQuery::new(query.name)
+                )
                 .session(
                     "/listen",
                     SessionHandler::new(),

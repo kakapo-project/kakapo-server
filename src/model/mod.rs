@@ -1,4 +1,3 @@
-
 pub mod schema;
 
 pub mod manage;
@@ -9,6 +8,6 @@ pub mod script;
 pub mod auth;
 pub mod actions;
 
+mod entity;
 mod dbdata;
-mod dependencies;
 mod database;

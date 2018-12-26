@@ -14,6 +14,13 @@ use super::schema::table_schema;
 use super::manage::utils::{get_single_table, unroll_table};
 use super::database;
 
+type DataQuery = RawQuery;
+type DataQueryHistory = RawQueryHistory;
+type TableSchema = RawTable;
+type TableSchemaHistory = RawTableHistory;
+type DataScript = RawScript;
+type DataScriptHistory = RawScriptHistory;
+
 fn get_table(
     conn: &PooledConnection<ConnectionManager<PgConnection>>,
     table_name: String

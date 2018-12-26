@@ -40,7 +40,7 @@ pub trait CorsBuilderProcedureExt {
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             Json<JP>: FromRequest<AppState>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Result: Send + Serialize;
+            <A as Action>::Ret: Send + Serialize;
 
 }
 
@@ -51,7 +51,7 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             Json<JP>: FromRequest<AppState>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Result: Send + Serialize,
+            <A as Action>::Ret: Send + Serialize,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with(
