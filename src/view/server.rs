@@ -106,7 +106,7 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 #[serde(rename_all = "camelCase")]
 pub struct GetTable {
     #[serde(default)]
-    pub detailed: bool,
+    pub show_deleted: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -119,7 +119,7 @@ pub struct GetTableQuery {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum SocketRequest {
-    GetTables { detailed: bool },
+    GetTables { show_deleted: bool },
     StopGetTables,
 }
 
@@ -136,9 +136,9 @@ impl SessionHandler {
 impl session::SessionListener<SocketRequest> for SessionHandler {
     fn listen(&self, session: &mut Session<SocketRequest, Self>, param: SocketRequest) {
         match param {
-            SocketRequest::GetTables { detailed } => {
+            SocketRequest::GetTables { show_deleted } => {
                 //session.subscripeTo(action);
-                session.dispatch(actions::GetAllTables::new(detailed, true));
+                session.dispatch(actions::GetAllTables::new(show_deleted));
             },
             SocketRequest::StopGetTables => {
                 //session.unsubscribeFrom(actions::sub::GetTables);
@@ -186,13 +186,13 @@ pub fn serve() {
                 .max_age(3600)
                 .procedure(
                     "/manage/getTables",
-                    |get_table: GetTable, _: NoQuery| actions::GetAllTables::new(get_table.detailed, true)
-                )
-                /*.procedure(
-                    "/manage/getQueries",
-                    |get_table: GetTable| actions::GetAllQueries
+                    |get_tables: GetTable, _: NoQuery| actions::GetAllTables::new(get_tables.show_deleted)
                 )
                 .procedure(
+                    "/manage/getQueries",
+                    |get_queries: GetTable, _: NoQuery| actions::GetAllQueries::new(get_queries.show_deleted)
+                )
+                /*.procedure(
                     "/manage/getScripts",
                     |get_table: GetTable| actions::GetAllScripts
                 )

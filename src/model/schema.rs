@@ -16,6 +16,14 @@ table! {
 }
 
 table! {
+    entity_usage (entity_usage_id) {
+        entity_usage_id -> Int8,
+        used_at -> Timestamp,
+        used_by -> Int8,
+    }
+}
+
+table! {
     permission (permission_id) {
         permission_id -> Int8,
         name -> Varchar,
@@ -29,13 +37,6 @@ table! {
         query_id -> Int8,
         entity_id -> Int8,
         name -> Varchar,
-    }
-}
-
-table! {
-    query_history (query_history_id) {
-        query_history_id -> Int8,
-        query_id -> Int8,
         description -> Varchar,
         statement -> Varchar,
         query_info -> Json,
@@ -76,13 +77,6 @@ table! {
         script_id -> Int8,
         entity_id -> Int8,
         name -> Varchar,
-    }
-}
-
-table! {
-    script_history (script_history_id) {
-        script_history_id -> Int8,
-        script_id -> Int8,
         description -> Varchar,
         script_language -> Varchar,
         script_text -> Varchar,
@@ -98,15 +92,9 @@ table! {
         table_schema_id -> Int8,
         entity_id -> Int8,
         name -> Varchar,
-    }
-}
-
-table! {
-    table_schema_history (table_schema_history_id) {
-        table_schema_history_id -> Int8,
-        table_schema_id -> Int8,
         description -> Varchar,
-        modification -> Json,
+        table_data -> Json,
+        is_deleted -> Bool,
         modified_at -> Timestamp,
         modified_by -> Int8,
     }
@@ -161,14 +149,15 @@ joinable!(entity -> scope (scope_id));
 joinable!(entity -> user_account (created_by));
 joinable!(entity_tag -> entity (entity_id));
 joinable!(entity_tag -> tag (tag_id));
-joinable!(query_history -> query (query_id));
-joinable!(query_history -> user_account (modified_by));
+joinable!(entity_usage -> user_account (used_by));
+joinable!(query -> entity (entity_id));
+joinable!(query -> user_account (modified_by));
 joinable!(role_permission -> permission (permission_id));
 joinable!(role_permission -> role (role_id));
-joinable!(script_history -> script (script_id));
-joinable!(script_history -> user_account (modified_by));
-joinable!(table_schema_history -> table_schema (table_schema_id));
-joinable!(table_schema_history -> user_account (modified_by));
+joinable!(script -> entity (entity_id));
+joinable!(script -> user_account (modified_by));
+joinable!(table_schema -> entity (entity_id));
+joinable!(table_schema -> user_account (modified_by));
 joinable!(table_schema_transaction -> table_schema (table_schema_id));
 joinable!(table_schema_transaction -> user_account (made_by));
 joinable!(user_account_role -> role (role_id));
@@ -177,16 +166,14 @@ joinable!(user_account_role -> user_account (user_account_id));
 allow_tables_to_appear_in_same_query!(
     entity,
     entity_tag,
+    entity_usage,
     permission,
     query,
-    query_history,
     role,
     role_permission,
     scope,
     script,
-    script_history,
     table_schema,
-    table_schema_history,
     table_schema_transaction,
     tag,
     user_account,

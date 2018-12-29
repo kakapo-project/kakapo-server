@@ -1,13 +1,9 @@
-pub mod schema;
-
-pub mod manage;
-pub mod table;
-pub mod query;
-pub mod script;
+mod schema;
 
 pub mod auth;
 pub mod actions;
 
+mod conversion;
 mod entity;
 mod dbdata;
 mod database;

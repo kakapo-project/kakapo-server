@@ -27,8 +27,7 @@ use view::action_wrapper::ActionWrapper;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
-#[derive(Deserialize, Debug)]
-pub struct NoQuery;
+pub type NoQuery = ();
 
 
 /// Build `Action` from an http request
