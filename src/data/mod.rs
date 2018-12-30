@@ -1,6 +1,4 @@
 
-pub mod api;
-
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 
@@ -13,6 +11,8 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::de;
 use std::fmt;
+
+pub mod utils;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

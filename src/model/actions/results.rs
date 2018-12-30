@@ -7,7 +7,6 @@ use serde_json;
 use std::result::Result;
 use std::result::Result::Ok;
 
-use data::api;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::pg::PgConnection;
 
@@ -41,13 +40,7 @@ pub struct GetAllScriptsResult(pub Vec<data::Script>);
 pub struct GetScriptResult(pub data::Script);
 
 #[derive(Debug, Serialize)]
-pub struct CreateTableResult(pub data::Table);
-
-#[derive(Debug, Serialize)]
-pub struct CreateQueryResult(pub data::Query);
-
-#[derive(Debug, Serialize)]
-pub struct CreateScriptResult(pub data::Script);
+pub struct CreateEntityResult<T>(pub T);
 
 #[derive(Debug, Serialize)]
 pub struct GetTableDataResult(pub data::TableData);
@@ -96,15 +89,15 @@ impl NamedActionResult for GetScriptResult {
 }
 
 
-impl NamedActionResult for CreateTableResult {
+impl NamedActionResult for CreateEntityResult<data::Table> {
     const ACTION_NAME: &'static str = "CreateTable";
 }
 
-impl NamedActionResult for CreateQueryResult {
+impl NamedActionResult for CreateEntityResult<data::Query> {
     const ACTION_NAME: &'static str = "CreateQuery";
 }
 
-impl NamedActionResult for CreateScriptResult {
+impl NamedActionResult for CreateEntityResult<data::Script> {
     const ACTION_NAME: &'static str = "CreateScript";
 }
 

@@ -21,7 +21,6 @@ use super::state::AppState;
 use model::actions;
 use model::actions::Action;
 use futures::Async;
-use data::api;
 
 pub struct ActionWrapper<A: Action + Send> {
     action: A

@@ -10,7 +10,6 @@ use serde_json;
 use std::result::Result;
 use std::result::Result::Ok;
 
-use data::api;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::pg::PgConnection;
 
@@ -28,6 +27,14 @@ use model::schema;
 use model::actions::results::*;
 use model::actions::error::Error;
 use model::actions::results::NamedActionResult;
+use data::utils::OnDuplicate;
+use model::entity::results::Upserted;
+use model::entity::results::Created;
+use data::utils::OnNotFound;
+use serde::Serialize;
+use model::entity::conversion;
+use model::dbdata::RawEntityTypes;
+use model::entity::Modifier;
 
 type State = PooledConnection<ConnectionManager<PgConnection>>; //TODO: should include user data
 
@@ -254,79 +261,73 @@ impl Action for GetScript {
 
 ///create one table
 #[derive(Debug)]
-pub struct CreateTable {
-    pub data: data::Table,
-    //pub on_duplicate: api::OnDuplicate,
+pub struct CreateEntity<T>
+    where
+        T: Serialize + Send + Clone,
+        T: RawEntityTypes,
+        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+{
+    pub data: T,
+    pub on_duplicate: OnDuplicate,
 }
 
-impl CreateTable {
-    pub fn new(data: data::Table) -> impl Action<Ret = CreateTableResult> {
+impl<T> CreateEntity<T>
+    where
+        T: Serialize + Send + Clone,
+        T: RawEntityTypes,
+        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+{
+    pub fn new(data: T) -> Self {
         Self {
-            data
+            data,
+            on_duplicate: OnDuplicate::Ignore,
         }
     }
 }
 
-impl Action for CreateTable {
-    type Ret = CreateTableResult;
+impl<T> Action for CreateEntity<T>
+    where
+        CreateEntityResult<T>: NamedActionResult,
+        T: Serialize + Send + Clone,
+        T: RawEntityTypes,
+        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        Modifier: ModifierFunctions<T, T>,
+{
+    type Ret = CreateEntityResult<T>;
     fn call(&self, state: &State) -> Result<Self::Ret, Error> {
-        //let result = manage::create::create_table(&state, api::OnDuplicate::default(), self.reqdata.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
+        match &self.on_duplicate {
+            OnDuplicate::Update => {
+                entity::Modifier::upsert(&state, self.data.clone())
+                    .or_else(|err| Err(Error::DB(err)))
+                    .and_then(|res| {
+                        match res {
+                            Upserted::Update { old, new } => Ok(new),
+                            Upserted::Create { new } => Ok(new),
+                        }
+                    })
+            },
+            OnDuplicate::Ignore => {
+                entity::Modifier::create(&state, self.data.clone())
+                    .or_else(|err| Err(Error::DB(err)))
+                    .and_then(|res| {
+                        match res {
+                            Created::Success { new } => Ok(new),
+                            Created::Fail { old, .. } => Ok(old),
+                        }
+                    })
 
-        entity::Modifier::create(&state, self.data.to_owned());
-
-        Err(Error::Unknown)
-    }
-}
-
-///create one query
-#[derive(Debug)]
-pub struct CreateQuery {
-    pub data: data::Query,
-    //pub on_duplicate: api::OnDuplicate,
-}
-
-impl CreateQuery {
-    pub fn new(data: data::Query) -> impl Action<Ret = CreateQueryResult> {
-        Self {
-            data
-        }
-    }
-}
-
-impl Action for CreateQuery {
-    type Ret = CreateQueryResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
-        //let result = manage::create::create_query(&state, api::OnDuplicate::default(), self.reqdata.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
-    }
-}
-
-///create one script
-#[derive(Debug)]
-pub struct CreateScript {
-    pub data: data::Script,
-    //pub on_duplicate: api::OnDuplicate,
-}
-
-impl CreateScript {
-    pub fn new(data: data::Script) -> impl Action<Ret = CreateScriptResult> {
-        Self {
-            data
-        }
-    }
-}
-
-impl Action for CreateScript {
-    type Ret = CreateScriptResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
-        //let result = manage::create::create_script(&state, api::OnDuplicate::default(), self.reqdata.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
+            },
+            OnDuplicate::Fail => {
+                entity::Modifier::create(&state, self.data.clone())
+                    .or_else(|err| Err(Error::DB(err)))
+                    .and_then(|res| {
+                        match res {
+                            Created::Success { new } => Ok(new),
+                            Created::Fail { .. } => Err(Error::AlreadyExists),
+                        }
+                    })
+            },
+        }.and_then(|res| Ok(CreateEntityResult::<T>(res)))
     }
 }
 
@@ -335,19 +336,21 @@ impl Action for CreateScript {
 pub struct UpdateTable {
     pub name: String,
     pub data: data::Table,
+    pub on_not_found: OnNotFound,
 }
 
 impl UpdateTable {
-    pub fn new(name: String, data: data::Table) -> impl Action<Ret = CreateTableResult> {
+    pub fn new(name: String, data: data::Table) -> impl Action<Ret = CreateEntityResult<data::Table>> {
         Self {
             name,
             data,
+            on_not_found: OnNotFound::Ignore,
         }
     }
 }
 
 impl Action for UpdateTable {
-    type Ret = CreateTableResult;
+    type Ret = CreateEntityResult<data::Table>;
     fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         //let result = manage::create::update_table(&state, self.name.to_owned(), self.reqdata.to_owned())
         //    .or_else(|err| Err(()))?;
@@ -361,19 +364,21 @@ impl Action for UpdateTable {
 pub struct UpdateQuery {
     pub name: String,
     pub data: data::Query,
+    pub on_not_found: OnNotFound,
 }
 
 impl UpdateQuery {
-    pub fn new(name: String, data: data::Query) -> impl Action<Ret = CreateQueryResult> {
+    pub fn new(name: String, data: data::Query) -> impl Action<Ret = CreateEntityResult<data::Query>> {
         Self {
             name,
             data,
+            on_not_found: OnNotFound::Ignore,
         }
     }
 }
 
 impl Action for UpdateQuery {
-    type Ret = CreateQueryResult;
+    type Ret = CreateEntityResult<data::Query>;
     fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         //let result = manage::create::update_query(&state, self.name.to_owned(), self.reqdata.to_owned())
         //    .or_else(|err| Err(()))?;
@@ -387,19 +392,21 @@ impl Action for UpdateQuery {
 pub struct UpdateScript {
     pub name: String,
     pub data: data::Script,
+    pub on_not_found: OnNotFound,
 }
 
 impl UpdateScript {
-    pub fn new(name: String, data: data::Script) -> impl Action<Ret = CreateScriptResult> {
+    pub fn new(name: String, data: data::Script) -> impl Action<Ret = CreateEntityResult<data::Script>> {
         Self {
             name,
             data,
+            on_not_found: OnNotFound::Ignore,
         }
     }
 }
 
 impl Action for UpdateScript {
-    type Ret = CreateScriptResult;
+    type Ret = CreateEntityResult<data::Script>;
     fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         //let result = manage::create::update_script(&state, self.name.to_owned(), self.reqdata.to_owned())
         //    .or_else(|err| Err(()))?;
@@ -412,12 +419,14 @@ impl Action for UpdateScript {
 #[derive(Debug)]
 pub struct DeleteTable {
     pub name: String,
+    pub on_not_found: OnNotFound,
 }
 
 impl DeleteTable {
     pub fn new(name: String) -> impl Action<Ret = ()> {
         Self {
-            name
+            name,
+            on_not_found: OnNotFound::Ignore,
         }
     }
 }
@@ -436,12 +445,14 @@ impl Action for DeleteTable {
 #[derive(Debug)]
 pub struct DeleteQuery {
     pub name: String,
+    pub on_not_found: OnNotFound,
 }
 
 impl DeleteQuery {
     pub fn new(name: String) -> impl Action<Ret = ()> {
         Self {
-            name
+            name,
+            on_not_found: OnNotFound::Ignore,
         }
     }
 }
@@ -460,12 +471,14 @@ impl Action for DeleteQuery {
 #[derive(Debug)]
 pub struct DeleteScript {
     pub name: String,
+    pub on_not_found: OnNotFound,
 }
 
 impl DeleteScript {
     pub fn new(name: String) -> impl Action<Ret = ()> {
         Self {
-            name
+            name,
+            on_not_found: OnNotFound::Ignore,
         }
     }
 }

@@ -6,6 +6,7 @@ use serde_json;
 use super::schema::{entity, table_schema, query, script, user_account};
 use model::schema;
 use diesel::expression_methods::ExpressionMethods;
+use data;
 
 
 // Queryables
@@ -50,8 +51,7 @@ pub struct NewRawTable {
     pub modified_by: i64,
 }
 
-pub struct RawTableEntityTypes;
-impl RawEntityTypes for RawTableEntityTypes {
+impl RawEntityTypes for data::Table {
     type Data = RawTable;
     type NewData = NewRawTable;
 }
@@ -84,8 +84,7 @@ pub struct NewRawQuery {
     pub modified_by: i64,
 }
 
-pub struct RawQueryEntityTypes;
-impl RawEntityTypes for RawQueryEntityTypes {
+impl RawEntityTypes for data::Query {
     type Data = RawQuery;
     type NewData = NewRawQuery;
 }
@@ -119,8 +118,7 @@ pub struct NewRawScript {
     pub modified_by: i64,
 }
 
-pub struct RawScriptEntityTypes;
-impl RawEntityTypes for RawScriptEntityTypes {
+impl RawEntityTypes for data::Script {
     type Data = RawScript;
     type NewData = NewRawScript;
 }

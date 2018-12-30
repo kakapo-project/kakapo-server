@@ -16,7 +16,7 @@ use model::entity::results::*;
 //TODO: thesse macros are really bad. Use generics
 macro_rules! implement_retriever_and_modifier {
 
-    ($DataEntityType:ident, $data_table:ident) => {
+    ($DataEntityType:ty, $data_table:ident) => {
 
         use super::*;
 
@@ -182,19 +182,13 @@ macro_rules! implement_retriever_and_modifier {
 }
 
 pub mod table {
-    use model::dbdata::RawTableEntityTypes;
-
-    implement_retriever_and_modifier!(RawTableEntityTypes, table_schema);
+    implement_retriever_and_modifier!(data::Table, table_schema);
 }
 
 pub mod query {
-    use model::dbdata::RawQueryEntityTypes;
-
-    implement_retriever_and_modifier!(RawQueryEntityTypes, query);
+    implement_retriever_and_modifier!(data::Query, query);
 }
 
 pub mod script {
-    use model::dbdata::RawScriptEntityTypes;
-
-    implement_retriever_and_modifier!(RawScriptEntityTypes, script);
+    implement_retriever_and_modifier!(data::Script, script);
 }

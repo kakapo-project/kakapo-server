@@ -244,6 +244,30 @@ pub fn serve() {
                     "/manage/deleteScript",
                     |_: NoQuery, _: NoQuery| actions::Nothing
                 )
+                .procedure(
+                    "/manage/queryTableData",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/insertTableData",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/updateTableData",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/deleteTableData",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/runQuery",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/runScript",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
                 .session(
                     "/listen",
                     SessionHandler::new(),

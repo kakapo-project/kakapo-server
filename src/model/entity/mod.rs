@@ -60,9 +60,9 @@ macro_rules! make_retrievers {
     );
 }
 
-make_retrievers!(table, dbdata::RawTableEntityTypes);
-make_retrievers!(query, dbdata::RawQueryEntityTypes);
-make_retrievers!(script, dbdata::RawScriptEntityTypes);
+make_retrievers!(table, data::Table);
+make_retrievers!(query, data::Query);
+make_retrievers!(script, data::Script);
 
 pub struct Modifier;
 pub trait ModifierFunctions<ET: RawEntityTypes, O>
@@ -117,64 +117,72 @@ pub trait ModifierFunctions<ET: RawEntityTypes, O>
 }
 
 
-impl<O> ModifierFunctions<dbdata::RawTableEntityTypes, O> for Modifier
-    where
-        O: GenerateRaw<<dbdata::RawTableEntityTypes as RawEntityTypes>::NewData>,
-{
+macro_rules! make_modifiers {
+    ($entity:ident, $EntityType:ty) => (
+        impl<O> ModifierFunctions<$EntityType, O> for Modifier
+            where
+                O: GenerateRaw<<$EntityType as RawEntityTypes>::NewData>,
+        {
 
-    fn create(
-        conn: &Conn,
-        object: O,
-    ) -> Result<Created<O>, DBError> {
-        internals::table::Modifier::create::<O>(conn, object)
-    }
+            fn create(
+                conn: &Conn,
+                object: O,
+            ) -> Result<Created<O>, DBError> {
+                internals::$entity::Modifier::create::<O>(conn, object)
+            }
 
-    fn create_many(
-        conn: &Conn,
-        objects: &[O],
-    ) -> Result<CreatedSet<O>, DBError> {
-        internals::table::Modifier::create_many::<O>(conn, objects)
-    }
+            fn create_many(
+                conn: &Conn,
+                objects: &[O],
+            ) -> Result<CreatedSet<O>, DBError> {
+                internals::$entity::Modifier::create_many::<O>(conn, objects)
+            }
 
-    fn upsert(
-        conn: &Conn,
-        object: O,
-    ) -> Result<Upserted<O>, DBError> {
-        internals::table::Modifier::upsert::<O>(conn, object)
-    }
+            fn upsert(
+                conn: &Conn,
+                object: O,
+            ) -> Result<Upserted<O>, DBError> {
+                internals::$entity::Modifier::upsert::<O>(conn, object)
+            }
 
-    fn upsert_many(
-        conn: &Conn,
-        objects: &[O],
-    ) -> Result<UpsertedSet<O>, DBError> {
-        internals::table::Modifier::upsert_many::<O>(conn, objects)
-    }
+            fn upsert_many(
+                conn: &Conn,
+                objects: &[O],
+            ) -> Result<UpsertedSet<O>, DBError> {
+                internals::$entity::Modifier::upsert_many::<O>(conn, objects)
+            }
 
-    fn update(
-        conn: &Conn,
-        name_object: (&str, O),
-    ) -> Result<Updated<O>, DBError> {
-        internals::table::Modifier::update::<O>(conn, name_object)
-    }
+            fn update(
+                conn: &Conn,
+                name_object: (&str, O),
+            ) -> Result<Updated<O>, DBError> {
+                internals::$entity::Modifier::update::<O>(conn, name_object)
+            }
 
-    fn update_many(
-        conn: &Conn,
-        names_objects: &[(&str, O)],
-    ) -> Result<UpdatedSet<O>, DBError> {
-        internals::table::Modifier::update_many::<O>(conn, names_objects)
-    }
+            fn update_many(
+                conn: &Conn,
+                names_objects: &[(&str, O)],
+            ) -> Result<UpdatedSet<O>, DBError> {
+                internals::$entity::Modifier::update_many::<O>(conn, names_objects)
+            }
 
-    fn delete(
-        conn: &Conn,
-        name: &str,
-    ) -> Result<Deleted<O>, DBError> {
-        internals::table::Modifier::delete::<O>(conn, name)
-    }
+            fn delete(
+                conn: &Conn,
+                name: &str,
+            ) -> Result<Deleted<O>, DBError> {
+                internals::$entity::Modifier::delete::<O>(conn, name)
+            }
 
-    fn delete_many(
-        conn: &Conn,
-        names: &[&str],
-    ) -> Result<DeletedSet<O>, DBError> {
-        internals::table::Modifier::delete_many::<O>(conn, names)
-    }
+            fn delete_many(
+                conn: &Conn,
+                names: &[&str],
+            ) -> Result<DeletedSet<O>, DBError> {
+                internals::$entity::Modifier::delete_many::<O>(conn, names)
+            }
+        }
+    );
 }
+
+make_modifiers!(table, data::Table);
+make_modifiers!(query, data::Query);
+make_modifiers!(script, data::Script);
