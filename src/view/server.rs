@@ -103,14 +103,14 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetTable {
+pub struct GetAllEntities {
     #[serde(default)]
     pub show_deleted: bool,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetTableQuery {
+pub struct GetEntity {
     pub name: String,
 }
 
@@ -184,25 +184,65 @@ pub fn serve() {
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
                 .procedure(
-                    "/manage/getTables",
-                    |get_tables: GetTable, _: NoQuery| actions::GetAllTables::new(get_tables.show_deleted)
+                    "/manage/getAllTables",
+                    |get_all_entities: GetAllEntities, _: NoQuery| actions::GetAllTables::new(get_all_entities.show_deleted)
                 )
                 .procedure(
-                    "/manage/getQueries",
-                    |get_queries: GetTable, _: NoQuery| actions::GetAllQueries::new(get_queries.show_deleted)
+                    "/manage/getAllQueries",
+                    |get_all_entities: GetAllEntities, _: NoQuery| actions::GetAllQueries::new(get_all_entities.show_deleted)
                 )
-                /*.procedure(
-                    "/manage/getScripts",
-                    |get_table: GetTable| actions::GetAllScripts
+                .procedure(
+                    "/manage/getAllScripts",
+                    |get_all_entities: GetAllEntities, _: NoQuery| actions::GetAllScripts::new(get_all_entities.show_deleted)
                 )
-                */
+
                 .procedure(
                     "/manage/getTable",
-                    |get_table: GetTable, query: GetTableQuery| actions::GetTable::new(query.name)
+                    |get_entity: GetEntity, _: NoQuery| actions::GetTable::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getQuery",
-                    |get_table: GetTable, query: GetTableQuery| actions::GetQuery::new(query.name)
+                    |get_entity: GetEntity, _: NoQuery| actions::GetQuery::new(get_entity.name)
+                )
+                .procedure(
+                    "/manage/getScript",
+                    |get_entity: GetEntity, _: NoQuery| actions::GetScript::new(get_entity.name)
+                )
+                .procedure(
+                    "/manage/createTable",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/createQuery",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/createScript",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/updateTable",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/updateQuery",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/updateScript",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/deleteTable",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/deleteQuery",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
+                )
+                .procedure(
+                    "/manage/deleteScript",
+                    |_: NoQuery, _: NoQuery| actions::Nothing
                 )
                 .session(
                     "/listen",
