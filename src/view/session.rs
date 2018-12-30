@@ -24,7 +24,9 @@ use model::actions::Action;
 use futures::Async;
 use data::api;
 use view::action_wrapper::ActionWrapper;
+use model::actions::results::NamedActionResult;
 
+use view::error;
 
 pub struct Session<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> {
     websocket_context: &'a mut ws::WebsocketContext<SessionActor<P, SL>, AppState>,
@@ -42,19 +44,23 @@ impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL
     /// dispatch a response from action inside the listener
     pub fn dispatch<A: Action + 'static>(&mut self, action: A)
         where
-            Result<A::Ret, actions::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
+            Result<A::Ret, actions::error::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
     {
         self.websocket_context
             .state()
             .connect(0)
             .send(ActionWrapper::new(action))
             .wait()
-            .or_else(|err| Err(api::Error::TooManyConnections))
+            .or_else(|err| Err(error::Error::TooManyConnections))
             .and_then(|res| {
 
-                let ok_result = serde_json::to_string(&json!({ "success": "callback from dispatch" })).unwrap();
+                let ok_result = res.or_else(|err| Err(error::Error::TooManyConnections))?;
+                let return_val = serde_json::to_string(&json!({
+                    "action": <A::Ret as NamedActionResult>::ACTION_NAME,
+                    "success": "callback from dispatch"
+                })).unwrap();
 
-                self.websocket_context.text(ok_result);
+                self.websocket_context.text(return_val);
                 Ok(())
             })
             .or_else(|err| {

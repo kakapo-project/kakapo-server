@@ -6,15 +6,17 @@ use data;
 
 use connection::executor::Conn;
 
-use model::conversion::*;
+use model::entity::conversion::*;
 use model::dbdata::RawEntityTypes;
 
 mod internals;
 pub mod error;
 pub mod results;
+pub mod conversion;
 
 use self::error::DBError;
 use self::results::*;
+
 
 
 pub struct Retriever;
@@ -35,28 +37,37 @@ pub trait RetrieverFunctions<ET: RawEntityTypes, O>
     ) -> Result<Option<O>, DBError>;
 }
 
-impl<O> RetrieverFunctions<dbdata::RawTableEntityTypes, O> for Retriever
-    where
-        O: ConvertRaw<<dbdata::RawTableEntityTypes as RawEntityTypes>::Data>
-{
-    fn get_all(
-        conn: &Conn
-    ) -> Result<Vec<O>, DBError> {
-        internals::table::Retriever::get_all::<O>(conn)
-    }
+macro_rules! make_retrievers {
+    ($entity:ident, $EntityType:ty) => (
 
-    fn get_one(
-        conn: &Conn,
-        name: &str,
-    ) -> Result<Option<O>, DBError> {
-        internals::table::Retriever::get_one::<O>(conn, name)
-    }
+        impl<O> RetrieverFunctions<$EntityType, O> for Retriever
+            where
+                O: ConvertRaw<<$EntityType as RawEntityTypes>::Data>
+        {
+            fn get_all(
+                conn: &Conn
+            ) -> Result<Vec<O>, DBError> {
+                internals::$entity::Retriever::get_all::<O>(conn)
+            }
+
+            fn get_one(
+                conn: &Conn,
+                name: &str,
+            ) -> Result<Option<O>, DBError> {
+                internals::$entity::Retriever::get_one::<O>(conn, name)
+            }
+        }
+    );
 }
+
+make_retrievers!(table, dbdata::RawTableEntityTypes);
+make_retrievers!(query, dbdata::RawQueryEntityTypes);
+make_retrievers!(script, dbdata::RawScriptEntityTypes);
 
 pub struct Modifier;
 pub trait ModifierFunctions<ET: RawEntityTypes, O>
     where
-        O: ConvertRaw<ET::Data>
+        O: GenerateRaw<ET::NewData>,
 {
     ///creates the object if creation succeeded
     /// if name conflict, return the old value, creates nothing
@@ -108,7 +119,7 @@ pub trait ModifierFunctions<ET: RawEntityTypes, O>
 
 impl<O> ModifierFunctions<dbdata::RawTableEntityTypes, O> for Modifier
     where
-        O: ConvertRaw<<dbdata::RawTableEntityTypes as RawEntityTypes>::Data>
+        O: GenerateRaw<<dbdata::RawTableEntityTypes as RawEntityTypes>::NewData>,
 {
 
     fn create(

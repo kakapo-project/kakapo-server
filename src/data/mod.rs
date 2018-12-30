@@ -1,5 +1,4 @@
 
-pub mod error;
 pub mod api;
 
 use std::collections::HashMap;
@@ -14,47 +13,6 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::de;
 use std::fmt;
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum OnDuplicate {
-    Update,
-    Ignore,
-    Fail,
-}
-
-impl Default for OnDuplicate {
-    fn default() -> Self {
-        OnDuplicate::Update
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum CreationMethod {
-    Update,
-    IgnoreIfExists,
-    FailIfExists,
-    FailIfNotExists,
-}
-
-
-impl Default for CreationMethod {
-    fn default() -> Self {
-        CreationMethod::Update
-    }
-}
-
-impl OnDuplicate {
-    pub fn into_method(self) -> CreationMethod {
-        match self {
-            OnDuplicate::Update => CreationMethod::Update,
-            OnDuplicate::Ignore => CreationMethod::IgnoreIfExists,
-            OnDuplicate::Fail => CreationMethod::FailIfExists,
-        }
-    }
-}
-
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -430,15 +388,6 @@ impl Default for SchemaModification {
 pub struct SchemaModificationCommit {
     pub date: NaiveDateTime,
     pub action: SchemaModification,
-}
-
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DetailedTable {
-    pub name: String, //TODO: make sure this is an alphanumeric
-    pub description: String,
-    pub schema: Vec<SchemaModificationCommit>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

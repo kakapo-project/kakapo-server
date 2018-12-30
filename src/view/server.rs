@@ -3,7 +3,7 @@ use actix::prelude::*;
 
 use actix_web::{
     App, Error as ActixError,
-    dev::JsonConfig, error, http, http::NormalizePath, middleware,
+    dev::JsonConfig, error as http_error, http, http::NormalizePath, middleware,
     HttpRequest, HttpResponse, fs, fs::{NamedFile},
     ResponseError, State,
 };
@@ -17,7 +17,6 @@ use chrono::Duration;
 
 use serde_json;
 
-use std::error::Error;
 use std::result::Result;
 use std::result::Result::Ok;
 use std::path::Path as fsPath;
@@ -25,7 +24,6 @@ use std::env;
 
 use connection;
 use connection::executor::DatabaseExecutor;
-use data::api;
 
 // current module
 use view::procedure;
@@ -38,11 +36,12 @@ use super::extensions::CorsBuilderSessionExt;
 
 use view::session::Session;
 use view::session;
-use model::actions::Action;
+use view::error;
 
+use std::error::Error;
 
 //TODO: implement for own Response Type
-impl ResponseError for api::Error {
+impl ResponseError for error::Error {
     fn error_response(&self) -> HttpResponse {
         HttpResponse::InternalServerError()
             .content_type("application/json")
@@ -96,7 +95,7 @@ fn config(cfg: &mut JsonConfig<AppState>) -> () {
                 .content_type("application/json")
                 .body(serde_json::to_string(&json!({ "error": err.to_string() }))
                     .unwrap_or_default());
-            error::InternalError::from_response(
+            http_error::InternalError::from_response(
                 err, response).into()
         });
 }

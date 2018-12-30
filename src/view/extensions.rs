@@ -21,7 +21,7 @@ use super::procedure::ProcedureBuilder;
 use super::procedure::ProcedureHandler;
 use super::procedure::handler_function;
 
-use model::actions::{ Action, ActionResult};
+use model::actions::Action;
 use serde::Serialize;
 
 

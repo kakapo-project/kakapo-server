@@ -19,7 +19,7 @@ use futures::Future;
 
 
 use super::state::AppState;
-use model::actions::{ Action, ActionResult};
+use model::actions::Action;
 use futures::Async;
 use data::api;
 use view::action_wrapper::ActionWrapper;

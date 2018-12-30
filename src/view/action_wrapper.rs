@@ -19,7 +19,7 @@ use futures::Future;
 
 use super::state::AppState;
 use model::actions;
-use model::actions::{Action, ActionResult};
+use model::actions::Action;
 use futures::Async;
 use data::api;
 
@@ -36,17 +36,17 @@ impl<A: Action + Send> ActionWrapper<A> {
 impl<A: Action + Send> Message for ActionWrapper<A>
     where
         A::Ret: 'static,
-        Result<A::Ret, actions::Error>: 'static,
+        Result<A::Ret, actions::error::Error>: 'static,
 {
-    type Result = Result<A::Ret, actions::Error>;
+    type Result = Result<A::Ret, actions::error::Error>;
 }
 
 impl<A: Action + Send> Handler<ActionWrapper<A>> for DatabaseExecutor
     where
         A::Ret: 'static,
-        Result<A::Ret, actions::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
+        Result<A::Ret, actions::error::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
 {
-    type Result = Result<A::Ret, actions::Error>;
+    type Result = Result<A::Ret, actions::error::Error>;
 
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
         let conn = self.get_connection();

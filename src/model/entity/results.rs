@@ -9,25 +9,50 @@ pub struct UpdateSuccess<T> {
     new: T,
 }
 
-pub struct CreatedSuccess<T> {
-    new: T,
-}
-
 pub struct DeletedSuccess<T> {
     old: T,
 }
 
 
 // compounds
-
 pub enum Upserted<T> {
-    Update(UpdateSuccess<T>),
-    Create(CreatedSuccess<T>),
+    Update {
+        old: T,
+        new: T,
+    },
+    Create {
+        new: T,
+    },
+}
+pub enum Created<T> {
+    Success {
+        new: T,
+    },
+    Fail {
+        old: T,
+        requested: T,
+    }
 }
 
-pub type Updated<T> = Option<UpdateSuccess<T>>;
-pub type Created<T> = Option<CreatedSuccess<T>>;
-pub type Deleted<T> = Option<DeletedSuccess<T>>;
+pub enum Updated<T> {
+    Success {
+        old: T,
+        new: T,
+    },
+    Fail {
+        name: String,
+        requested: T, //TODO: can this be a partial update?
+    }
+}
+
+pub enum Deleted<T> {
+    Success {
+        old: T,
+    },
+    Fail {
+        name: String,
+    }
+}
 
 pub type UpsertedSet<T> = Vec<Upserted<T>>;
 pub type UpdatedSet<T> = Vec<Updated<T>>;

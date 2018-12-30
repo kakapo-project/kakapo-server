@@ -8,72 +8,10 @@ use model::schema;
 use diesel::expression_methods::ExpressionMethods;
 
 
-/*
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "entity"]
-pub struct NewRawEntity {
-    pub scope_id: i64,
-    pub created_by: i64,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "table_schema"]
-pub struct NewRawTable {
-    pub entity_id: i64,
-    pub name: String,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "table_schema_history"]
-pub struct NewRawTableHistory {
-    pub table_schema_id: i64,
-    pub description: String,
-    pub modification: serde_json::Value,
-    pub modified_by: i64,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "query"]
-pub struct NewRawQuery {
-    pub entity_id: i64,
-    pub name: String,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "query_history"]
-pub struct NewRawQueryHistory {
-    pub query_id: i64,
-    pub description: String,
-    pub statement: String,
-    pub query_info: serde_json::Value,
-    pub is_deleted: bool,
-    pub modified_by: i64,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "script"]
-pub struct NewRawScript {
-    pub entity_id: i64,
-    pub name: String,
-}
-
-#[derive(Debug, Deserialize, Insertable)]
-#[table_name = "script_history"]
-pub struct NewRawScriptHistory {
-    pub script_id: i64,
-    pub description: String,
-    pub script_language: String,
-    pub script_text: String,
-    pub script_info: serde_json::Value,
-    pub is_deleted: bool,
-    pub modified_by: i64,
-}
-*/
-
 // Queryables
 pub trait RawEntityTypes {
-    type Meta;
     type Data;
+    type NewData;
 }
 
 #[derive(Identifiable, Debug, Queryable, Clone)]
@@ -99,14 +37,23 @@ pub struct RawTable {
     pub is_deleted: bool,
     pub modified_at: NaiveDateTime,
     pub modified_by: i64,
-
 }
 
 
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "table_schema"]
+pub struct NewRawTable {
+    pub entity_id: i64,
+    pub name: String,
+    pub description: String,
+    pub table_data: serde_json::Value,
+    pub modified_by: i64,
+}
+
 pub struct RawTableEntityTypes;
 impl RawEntityTypes for RawTableEntityTypes {
-    type Meta = RawEntity;
     type Data = RawTable;
+    type NewData = NewRawTable;
 }
 
 
@@ -126,10 +73,21 @@ pub struct RawQuery {
     pub modified_by: i64,
 }
 
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "query"]
+pub struct NewRawQuery {
+    pub entity_id: i64,
+    pub name: String,
+    pub description: String,
+    pub statement: String,
+    pub query_info: serde_json::Value,
+    pub modified_by: i64,
+}
+
 pub struct RawQueryEntityTypes;
 impl RawEntityTypes for RawQueryEntityTypes {
-    type Meta = RawEntity;
     type Data = RawQuery;
+    type NewData = NewRawQuery;
 }
 
 #[derive(Identifiable, Associations, Debug, Queryable, Clone)]
@@ -149,11 +107,22 @@ pub struct RawScript {
     pub modified_by: i64,
 }
 
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "script"]
+pub struct NewRawScript {
+    pub entity_id: i64,
+    pub name: String,
+    pub description: String,
+    pub script_language: String,
+    pub script_text: String,
+    pub script_info: serde_json::Value,
+    pub modified_by: i64,
+}
 
 pub struct RawScriptEntityTypes;
 impl RawEntityTypes for RawScriptEntityTypes {
-    type Meta = RawEntity;
     type Data = RawScript;
+    type NewData = NewRawScript;
 }
 
 

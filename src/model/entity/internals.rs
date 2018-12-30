@@ -7,7 +7,7 @@ use data;
 
 use connection::executor::Conn;
 
-use model::conversion::*;
+use model::entity::conversion::*;
 use model::dbdata::RawEntityTypes;
 
 use model::entity::error::DBError;
@@ -21,6 +21,7 @@ macro_rules! implement_retriever_and_modifier {
         use super::*;
 
         type RD = <$DataEntityType as dbdata::RawEntityTypes>::Data;
+        type NRD = <$DataEntityType as dbdata::RawEntityTypes>::NewData;
 
         pub struct Retriever;
         impl Retriever {
@@ -98,8 +99,9 @@ macro_rules! implement_retriever_and_modifier {
                 object: O,
             ) -> Result<Created<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>,
             {
+                //let db_object = object.
                 Err(DBError::Unknown)
             }
 
@@ -108,8 +110,11 @@ macro_rules! implement_retriever_and_modifier {
                 objects: &[O],
             ) -> Result<CreatedSet<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
+                for i in objects {
+
+                }
                 Err(DBError::Unknown)
             }
 
@@ -118,7 +123,7 @@ macro_rules! implement_retriever_and_modifier {
                 object: O,
             ) -> Result<Upserted<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
                 Err(DBError::Unknown)
             }
@@ -128,7 +133,7 @@ macro_rules! implement_retriever_and_modifier {
                 objects: &[O],
             ) -> Result<UpsertedSet<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
                 Err(DBError::Unknown)
             }
@@ -138,7 +143,7 @@ macro_rules! implement_retriever_and_modifier {
                 name_object: (&str, O),
             ) -> Result<Updated<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
                 Err(DBError::Unknown)
             }
@@ -148,7 +153,7 @@ macro_rules! implement_retriever_and_modifier {
                 names_objects: &[(&str, O)],
             ) -> Result<UpdatedSet<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
                 Err(DBError::Unknown)
             }
@@ -158,7 +163,7 @@ macro_rules! implement_retriever_and_modifier {
                 name: &str,
             ) -> Result<Deleted<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
                 Err(DBError::Unknown)
             }
@@ -168,7 +173,7 @@ macro_rules! implement_retriever_and_modifier {
                 names: &[&str],
             ) -> Result<DeletedSet<O>, DBError>
             where
-                O: ConvertRaw<RD>,
+                O: GenerateRaw<NRD>
             {
                 Err(DBError::Unknown)
             }

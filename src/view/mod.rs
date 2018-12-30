@@ -6,3 +6,4 @@ mod extensions;
 mod state;
 mod session;
 mod procedure;
+mod error;

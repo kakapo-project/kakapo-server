@@ -1,24 +1,13 @@
 
+
 use data;
 
 use diesel;
 use std::fmt;
 use std;
 
-pub type TableData = data::TableData;
-pub type RowData = data::RowData;
-pub type TableDataFormat = data::TableDataFormat;
-pub type QueryParams = data::QueryParams;
-pub type ScriptParam = data::ScriptParam;
-
-
-pub const FLAT_TABLE_DATA_FORMAT: TableDataFormat = data::TableDataFormat::FlatRows;
-
-/*
-
 #[derive(Debug)]
 pub enum Error {
-    DatabaseError(diesel::result::Error),
     ScriptError(String),
     InvalidStateError,
     TableNotFound,
@@ -38,7 +27,6 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {
     fn description(&self) -> &str {
         match self {
-            Error::DatabaseError(x) => x.description(),
             Error::ScriptError(x) => &x[..],
             Error::InvalidStateError => "The state of the data is broken",
             Error::TableNotFound => "Table could not be found",
@@ -50,6 +38,3 @@ impl std::error::Error for Error {
         }
     }
 }
-
-
-*/
