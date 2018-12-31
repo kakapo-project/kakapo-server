@@ -39,6 +39,7 @@ use view::session;
 use view::error;
 
 use std::error::Error;
+use data;
 
 //TODO: implement for own Response Type
 impl ResponseError for error::Error {
@@ -137,7 +138,7 @@ impl session::SessionListener<SocketRequest> for SessionHandler {
         match param {
             SocketRequest::GetTables { show_deleted } => {
                 //session.subscripeTo(action);
-                session.dispatch(actions::GetAllTables::new(show_deleted));
+                session.dispatch(actions::GetAllEntities::<data::Table>::new(show_deleted));
             },
             SocketRequest::StopGetTables => {
                 //session.unsubscribeFrom(actions::sub::GetTables);
@@ -154,11 +155,7 @@ pub fn serve() {
     let database_url = env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
 
-    let connection = vec![
-        connection::executor::create(&database_url),
-        //TODO: a connection for each user
-    ];
-
+    let connection = connection::executor::create(&database_url);
 
     actix_web::server::new(move || {
 
@@ -185,32 +182,35 @@ pub fn serve() {
                 .max_age(3600)
                 .procedure(
                     "/manage/getAllTables",
-                    |get_all_entities: GetAllEntities, _: NoQuery| actions::GetAllTables::new(get_all_entities.show_deleted)
+                    |get_all_entities: GetAllEntities, _: NoQuery|
+                        actions::GetAllEntities::<data::Table>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllQueries",
-                    |get_all_entities: GetAllEntities, _: NoQuery| actions::GetAllQueries::new(get_all_entities.show_deleted)
+                    |get_all_entities: GetAllEntities, _: NoQuery|
+                        actions::GetAllEntities::<data::Query>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllScripts",
-                    |get_all_entities: GetAllEntities, _: NoQuery| actions::GetAllScripts::new(get_all_entities.show_deleted)
+                    |get_all_entities: GetAllEntities, _: NoQuery|
+                        actions::GetAllEntities::<data::Script>::new(get_all_entities.show_deleted)
                 )
 
                 .procedure(
                     "/manage/getTable",
-                    |get_entity: GetEntity, _: NoQuery| actions::GetTable::new(get_entity.name)
+                    |get_entity: GetEntity, _: NoQuery| actions::GetEntity::<data::Table>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getQuery",
-                    |get_entity: GetEntity, _: NoQuery| actions::GetQuery::new(get_entity.name)
+                    |get_entity: GetEntity, _: NoQuery| actions::GetEntity::<data::Query>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getScript",
-                    |get_entity: GetEntity, _: NoQuery| actions::GetScript::new(get_entity.name)
+                    |get_entity: GetEntity, _: NoQuery| actions::GetEntity::<data::Script>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/createTable",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |entity: data::Table, _: NoQuery| actions::CreateEntity::<data::Table>::new(entity)
                 )
                 .procedure(
                     "/manage/createQuery",
@@ -222,7 +222,7 @@ pub fn serve() {
                 )
                 .procedure(
                     "/manage/updateTable",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |entity: data::Table, _: NoQuery| actions::UpdateEntity::<data::Table>::new("tmp".to_string(), entity)
                 )
                 .procedure(
                     "/manage/updateQuery",
@@ -234,7 +234,7 @@ pub fn serve() {
                 )
                 .procedure(
                     "/manage/deleteTable",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery| actions::DeleteEntity::<data::Table>::new("tmp".to_string())
                 )
                 .procedure(
                     "/manage/deleteQuery",

@@ -23,6 +23,7 @@ use model::actions::Action;
 use futures::Async;
 use view::action_wrapper::ActionWrapper;
 
+use view::serializers::Serializable;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -94,21 +95,32 @@ pub fn handler_function<JP, QP, A: Action, PB: ProcedureBuilder<JP, QP, A> + Clo
         DatabaseExecutor: Handler<ActionWrapper<A>>,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
+        <A as Action>::Ret: Serializable,
 {
 
     let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());
 
     req.state()
-        .connect(0 /* use master database connector for authentication */)
+        .connect()
         .send(ActionWrapper::new(action))
         .from_err()
         .and_then(|res| {
-            let fin = HttpResponse::Ok()
-                .content_type("application/json")
-                .body(serde_json::to_string(&res)
-                    .unwrap_or_default());
 
-            Ok(fin)
+            res.and_then(|ok_res| {
+                let response = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(serde_json::to_string(&ok_res.into_serialize())
+                        .unwrap_or_default());
+
+                Ok(response)
+            }).or_else(|err| {
+                let response = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(serde_json::to_string(&json!({}))
+                        .unwrap_or_default());
+
+                Ok(response)
+            })
         })
         .responder()
 }

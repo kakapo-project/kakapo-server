@@ -7,13 +7,13 @@ use connection::py::PyRunner;
 
 #[derive(Clone)]
 pub struct AppState {
-    db_connections: Vec<Addr<DatabaseExecutor>>,
+    db_connections: Addr<DatabaseExecutor>,
     py_runner: PyRunner,
     pub app_name: String,
 }
 
 impl AppState {
-    pub fn new(connections: Vec<Addr<DatabaseExecutor>>, script_path: &str, app_name: &str) -> Self {
+    pub fn new(connections: Addr<DatabaseExecutor>, script_path: &str, app_name: &str) -> Self {
         AppState {
             db_connections: connections,
             py_runner: PyRunner::new(script_path.to_string()),
@@ -21,8 +21,8 @@ impl AppState {
         }
     }
 
-    pub fn connect<'a>(&'a self, idx: usize) -> &'a Addr<DatabaseExecutor> {
-        &self.db_connections[idx]
+    pub fn connect<'a>(&'a self) -> &'a Addr<DatabaseExecutor> {
+        &self.db_connections
     }
 
     pub fn get_py_runner(&self) -> PyRunner {

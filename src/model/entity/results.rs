@@ -1,21 +1,4 @@
 
-
-pub trait ModResult<T> {
-
-}
-
-pub struct UpdateSuccess<T> {
-    old: T,
-    new: T,
-}
-
-pub struct DeletedSuccess<T> {
-    old: T,
-}
-
-
-
-// compounds
 pub enum Upserted<T> {
     Update {
         old: T,
@@ -30,8 +13,7 @@ pub enum Created<T> {
         new: T,
     },
     Fail {
-        old: T,
-        requested: T,
+        existing: T,
     }
 }
 
@@ -40,19 +22,14 @@ pub enum Updated<T> {
         old: T,
         new: T,
     },
-    Fail {
-        name: String,
-        requested: T, //TODO: can this be a partial update?
-    }
+    Fail
 }
 
 pub enum Deleted<T> {
     Success {
         old: T,
     },
-    Fail {
-        name: String,
-    }
+    Fail
 }
 
 pub type UpsertedSet<T> = Vec<Upserted<T>>;

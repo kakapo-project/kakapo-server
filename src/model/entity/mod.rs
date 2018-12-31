@@ -13,6 +13,7 @@ mod internals;
 pub mod error;
 pub mod results;
 pub mod conversion;
+mod post_modification;
 
 use self::error::DBError;
 use self::results::*;
@@ -20,9 +21,10 @@ use self::results::*;
 
 
 pub struct Retriever;
-pub trait RetrieverFunctions<ET: RawEntityTypes, O>
+pub trait RetrieverFunctions<O>
     where
-        O: ConvertRaw<ET::Data>
+        O: RawEntityTypes,
+        O: ConvertRaw<<O as RawEntityTypes>::Data>
 {
     /// get all values and returns a list of all database values
     fn get_all(
@@ -40,21 +42,18 @@ pub trait RetrieverFunctions<ET: RawEntityTypes, O>
 macro_rules! make_retrievers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl<O> RetrieverFunctions<$EntityType, O> for Retriever
-            where
-                O: ConvertRaw<<$EntityType as RawEntityTypes>::Data>
-        {
+        impl RetrieverFunctions<$EntityType> for Retriever {
             fn get_all(
                 conn: &Conn
-            ) -> Result<Vec<O>, DBError> {
-                internals::$entity::Retriever::get_all::<O>(conn)
+            ) -> Result<Vec<$EntityType>, DBError> {
+                internals::$entity::Retriever::get_all::<$EntityType>(conn)
             }
 
             fn get_one(
                 conn: &Conn,
                 name: &str,
-            ) -> Result<Option<O>, DBError> {
-                internals::$entity::Retriever::get_one::<O>(conn, name)
+            ) -> Result<Option<$EntityType>, DBError> {
+                internals::$entity::Retriever::get_one::<$EntityType>(conn, name)
             }
         }
     );
@@ -65,9 +64,10 @@ make_retrievers!(query, data::Query);
 make_retrievers!(script, data::Script);
 
 pub struct Modifier;
-pub trait ModifierFunctions<ET: RawEntityTypes, O>
+pub trait ModifierFunctions<O>
     where
-        O: GenerateRaw<ET::NewData>,
+        O: RawEntityTypes,
+        O: GenerateRaw<<O as RawEntityTypes>::NewData>,
 {
     ///creates the object if creation succeeded
     /// if name conflict, return the old value, creates nothing
@@ -119,65 +119,62 @@ pub trait ModifierFunctions<ET: RawEntityTypes, O>
 
 macro_rules! make_modifiers {
     ($entity:ident, $EntityType:ty) => (
-        impl<O> ModifierFunctions<$EntityType, O> for Modifier
-            where
-                O: GenerateRaw<<$EntityType as RawEntityTypes>::NewData>,
-        {
+        impl ModifierFunctions<$EntityType> for Modifier {
 
             fn create(
                 conn: &Conn,
-                object: O,
-            ) -> Result<Created<O>, DBError> {
-                internals::$entity::Modifier::create::<O>(conn, object)
+                object: $EntityType,
+            ) -> Result<Created<$EntityType>, DBError> {
+                internals::$entity::Modifier::create::<$EntityType>(conn, object)
             }
 
             fn create_many(
                 conn: &Conn,
-                objects: &[O],
-            ) -> Result<CreatedSet<O>, DBError> {
-                internals::$entity::Modifier::create_many::<O>(conn, objects)
+                objects: &[$EntityType],
+            ) -> Result<CreatedSet<$EntityType>, DBError> {
+                internals::$entity::Modifier::create_many::<$EntityType>(conn, objects)
             }
 
             fn upsert(
                 conn: &Conn,
-                object: O,
-            ) -> Result<Upserted<O>, DBError> {
-                internals::$entity::Modifier::upsert::<O>(conn, object)
+                object: $EntityType,
+            ) -> Result<Upserted<$EntityType>, DBError> {
+                internals::$entity::Modifier::upsert::<$EntityType>(conn, object)
             }
 
             fn upsert_many(
                 conn: &Conn,
-                objects: &[O],
-            ) -> Result<UpsertedSet<O>, DBError> {
-                internals::$entity::Modifier::upsert_many::<O>(conn, objects)
+                objects: &[$EntityType],
+            ) -> Result<UpsertedSet<$EntityType>, DBError> {
+                internals::$entity::Modifier::upsert_many::<$EntityType>(conn, objects)
             }
 
             fn update(
                 conn: &Conn,
-                name_object: (&str, O),
-            ) -> Result<Updated<O>, DBError> {
-                internals::$entity::Modifier::update::<O>(conn, name_object)
+                name_object: (&str, $EntityType),
+            ) -> Result<Updated<$EntityType>, DBError> {
+                internals::$entity::Modifier::update::<$EntityType>(conn, name_object)
             }
 
             fn update_many(
                 conn: &Conn,
-                names_objects: &[(&str, O)],
-            ) -> Result<UpdatedSet<O>, DBError> {
-                internals::$entity::Modifier::update_many::<O>(conn, names_objects)
+                names_objects: &[(&str, $EntityType)],
+            ) -> Result<UpdatedSet<$EntityType>, DBError> {
+                internals::$entity::Modifier::update_many::<$EntityType>(conn, names_objects)
             }
 
             fn delete(
                 conn: &Conn,
                 name: &str,
-            ) -> Result<Deleted<O>, DBError> {
-                internals::$entity::Modifier::delete::<O>(conn, name)
+            ) -> Result<Deleted<$EntityType>, DBError> {
+                internals::$entity::Modifier::delete::<$EntityType>(conn, name)
             }
 
             fn delete_many(
                 conn: &Conn,
                 names: &[&str],
-            ) -> Result<DeletedSet<O>, DBError> {
-                internals::$entity::Modifier::delete_many::<O>(conn, names)
+            ) -> Result<DeletedSet<$EntityType>, DBError> {
+                internals::$entity::Modifier::delete_many::<$EntityType>(conn, names)
             }
         }
     );

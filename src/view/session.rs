@@ -23,7 +23,7 @@ use model::actions;
 use model::actions::Action;
 use futures::Async;
 use view::action_wrapper::ActionWrapper;
-use model::actions::results::NamedActionResult;
+use view::serializers::Serializable;
 
 use view::error;
 
@@ -44,10 +44,11 @@ impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL
     pub fn dispatch<A: Action + 'static>(&mut self, action: A)
         where
             Result<A::Ret, actions::error::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
+            <A as Action>::Ret: Serializable,
     {
         self.websocket_context
             .state()
-            .connect(0)
+            .connect()
             .send(ActionWrapper::new(action))
             .wait()
             .or_else(|err| Err(error::Error::TooManyConnections))
@@ -55,7 +56,7 @@ impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL
 
                 let ok_result = res.or_else(|err| Err(error::Error::TooManyConnections))?;
                 let return_val = serde_json::to_string(&json!({
-                    "action": <A::Ret as NamedActionResult>::ACTION_NAME,
+                    "action": <A::Ret as Serializable>::ACTION_NAME,
                     "success": "callback from dispatch"
                 })).unwrap();
 

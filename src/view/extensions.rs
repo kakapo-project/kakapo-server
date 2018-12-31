@@ -22,8 +22,7 @@ use super::procedure::ProcedureHandler;
 use super::procedure::handler_function;
 
 use model::actions::Action;
-use serde::Serialize;
-
+use view::serializers::Serializable;
 
 /// extend actix cors routes to handle RPC
 pub trait CorsBuilderProcedureExt {
@@ -40,7 +39,7 @@ pub trait CorsBuilderProcedureExt {
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             Json<JP>: FromRequest<AppState>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Ret: Send + Serialize;
+            <A as Action>::Ret: Send + Serializable;
 
 }
 
@@ -51,7 +50,7 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             Json<JP>: FromRequest<AppState>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Ret: Send + Serialize,
+            <A as Action>::Ret: Send + Serializable,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with(
