@@ -21,7 +21,7 @@ use connection::py::PyRunner;
 use model::entity;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
-use model::entity::error::DBError;
+use model::entity::error::EntityError;
 
 use model::schema;
 
@@ -32,9 +32,6 @@ use data::utils::OnDuplicate;
 use data::utils::OnNotFound;
 use model::entity::conversion;
 use model::dbdata::RawEntityTypes;
-
-use model::entity::Retriever;
-use model::entity::Modifier;
 
 use model::entity::results::Upserted;
 use model::entity::results::Created;
@@ -135,7 +132,7 @@ pub struct WithDispatch<A: Action<S>, S = State> {
 
 ///get all tables
 #[derive(Debug)]
-pub struct GetAllEntities<T, S = State, ER = entity::Retriever>
+pub struct GetAllEntities<T, S = State, ER = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -172,14 +169,14 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     type Ret = GetAllEntitiesResult<T>;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         let entities: Vec<T> = ER::get_all(state)
-            .or_else(|err| Err(Error::DB(err)))?;
+            .or_else(|err| Err(Error::Entity(err)))?;
         Ok(GetAllEntitiesResult::<T>(entities))
     }
 }
 
 ///get one table
 #[derive(Debug)]
-pub struct GetEntity<T, S = State, ER = entity::Retriever>
+pub struct GetEntity<T, S = State, ER = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -220,7 +217,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     type Ret = GetEntityResult<T>;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         let maybe_entity: Option<T> = ER::get_one(state, &self.name)
-            .or_else(|err| Err(Error::DB(err)))?;
+            .or_else(|err| Err(Error::Entity(err)))?;
 
         match maybe_entity {
             Some(entity) => Ok(GetEntityResult::<T>(entity)),
@@ -231,7 +228,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 
 ///create one table
 #[derive(Debug)]
-pub struct CreateEntity<T, S = State, EM = entity::Modifier>
+pub struct CreateEntity<T, S = State, EM = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -272,7 +269,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
         match &self.on_duplicate {
             OnDuplicate::Update => {
                 EM::upsert(state, self.data.clone())
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Upserted::Update { old, new } => Ok(CreateEntityResult::Updated { old, new }),
@@ -282,7 +279,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
             },
             OnDuplicate::Ignore => {
                 EM::create(state, self.data.clone())
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Created::Success { new } => Ok(CreateEntityResult::Created(new)),
@@ -293,7 +290,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
             },
             OnDuplicate::Fail => {
                 EM::create(state, self.data.clone())
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Created::Success { new } => Ok(CreateEntityResult::Created(new)),
@@ -307,7 +304,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
 
 ///update table
 #[derive(Debug)]
-pub struct UpdateEntity<T, S = State, EM = entity::Modifier>
+pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -350,7 +347,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
         match &self.on_not_found {
             OnNotFound::Ignore => {
                 EM::update(state, (&self.name, self.data.clone()))
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Updated::Success { old, new } =>
@@ -363,7 +360,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
             },
             OnNotFound::Fail => {
                 EM::update(state, (&self.name, self.data.clone()))
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Updated::Success { old, new } =>
@@ -378,7 +375,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 
 ///delete table
 #[derive(Debug)]
-pub struct DeleteEntity<T, S = State, EM = entity::Modifier>
+pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -419,7 +416,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
         match &self.on_not_found {
             OnNotFound::Ignore => {
                 EM::delete(state, &self.name)
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Deleted::Success { old } =>
@@ -431,7 +428,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
             },
             OnNotFound::Fail => {
                 EM::delete(state, &self.name)
-                    .or_else(|err| Err(Error::DB(err)))
+                    .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
                             Deleted::Success { old } =>
@@ -446,7 +443,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
 
 // Table Actions
 #[derive(Debug)]
-pub struct QueryTableData<S = State, ER = entity::Retriever, TC = table::TableAction> {
+pub struct QueryTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
     pub format: TableDataFormat,
     pub phantom_data: PhantomData<(S, ER, TC)>,
@@ -476,7 +473,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         ER::get_one(state, &self.table_name)
-            .or_else(|err| Err(Error::DB(err)))
+            .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
                 match res {
                     Some(table) => Ok(table),
@@ -680,11 +677,11 @@ mod tests {
     }
 
     impl RetrieverFunctions<data::Table, TestState> for TestEntityRetriever {
-        fn get_all(conn: &TestState) -> Result<Vec<data::Table>, DBError> {
+        fn get_all(conn: &TestState) -> Result<Vec<data::Table>, EntityError> {
             unimplemented!()
         }
 
-        fn get_one(conn: &TestState, name: &str) -> Result<Option<data::Table>, DBError> {
+        fn get_one(conn: &TestState, name: &str) -> Result<Option<data::Table>, EntityError> {
             unimplemented!()
         }
     }

@@ -14,7 +14,7 @@ use connection::py::PyRunner;
 use model::entity;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
-use model::entity::error::DBError;
+use model::entity::error::EntityError;
 
 use model::schema;
 use std::marker::PhantomData;

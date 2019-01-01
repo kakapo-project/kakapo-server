@@ -13,15 +13,19 @@ mod internals;
 pub mod error;
 pub mod results;
 pub mod conversion;
-mod post_modification;
+mod update_state;
 
-use self::error::DBError;
+use self::error::EntityError;
 use self::results::*;
 use model::state::State;
 use model::state::GetConnection;
 
+use self::internals::Retriever;
+use self::internals::Modifier;
+use self::update_state::UpdateState;
 
-pub struct Controller;
+
+pub struct Controller; //TODO: controller should be state agnostic (dependency inject)
 
 pub trait RetrieverFunctions<O, S>
     where
@@ -32,14 +36,14 @@ pub trait RetrieverFunctions<O, S>
     /// get all values and returns a list of all database values
     fn get_all(
         conn: &S,
-    ) -> Result<Vec<O>, DBError>;
+    ) -> Result<Vec<O>, EntityError>;
 
     /// filters the values by the name, and returns the value if it exists
     /// if it doesn't exist it retuns none
     fn get_one(
         conn: &S,
         name: &str,
-    ) -> Result<Option<O>, DBError>;
+    ) -> Result<Option<O>, EntityError>;
 }
 
 pub trait ModifierFunctions<O, S>
@@ -54,136 +58,106 @@ pub trait ModifierFunctions<O, S>
     fn create(
         conn: &S,
         object: O,
-    ) -> Result<Created<O>, DBError>;
+    ) -> Result<Created<O>, EntityError>;
 
     fn create_many(
         conn: &S,
         objects: &[O],
-    ) -> Result<CreatedSet<O>, DBError>;
+    ) -> Result<CreatedSet<O>, EntityError>;
 
     /// if value is updated, return the old value
     /// if value is created, returns nothing
     fn upsert(
         conn: &S,
         object: O,
-    ) -> Result<Upserted<O>, DBError>;
+    ) -> Result<Upserted<O>, EntityError>;
     fn upsert_many(
         conn: &S,
         objects: &[O],
-    ) -> Result<UpsertedSet<O>, DBError>;
+    ) -> Result<UpsertedSet<O>, EntityError>;
 
     /// if value is updated, return the old value
     /// if name not found, returns nothing, updates nothing
     fn update(
         conn: &S,
         name_object: (&str, O),
-    ) -> Result<Updated<O>, DBError>;
+    ) -> Result<Updated<O>, EntityError>;
     fn update_many(
         conn: &S,
         names_objects: &[(&str, O)],
-    ) -> Result<UpdatedSet<O>, DBError>;
+    ) -> Result<UpdatedSet<O>, EntityError>;
 
     /// if value is deleted, return the old value
     /// if name not found, returns nothing
     fn delete(
         conn: &S,
         name: &str,
-    ) -> Result<Deleted<O>, DBError>;
+    ) -> Result<Deleted<O>, EntityError>;
     fn delete_many(
         conn: &S,
         names: &[&str],
-    ) -> Result<DeletedSet<O>, DBError>;
+    ) -> Result<DeletedSet<O>, EntityError>;
 }
 
-pub struct Retriever;
-macro_rules! make_retrievers {
-    ($entity:ident, $EntityType:ty) => (
 
-        impl RetrieverFunctions<$EntityType, State> for Retriever {
-            fn get_all(
-                conn: &State
-            ) -> Result<Vec<$EntityType>, DBError> {
-                internals::$entity::Retriever::get_all::<$EntityType>(conn.get_conn())
-            }
+impl<O> RetrieverFunctions<O, State> for Controller
+    where
+        O: RawEntityTypes,
+        O: ConvertRaw<<O as RawEntityTypes>::Data>,
+        Retriever: RetrieverFunctions<O, State>,
+{
+    fn get_all(conn: &State) -> Result<Vec<O>, EntityError> {
+        Retriever::get_all(conn)
+    }
 
-            fn get_one(
-                conn: &State,
-                name: &str,
-            ) -> Result<Option<$EntityType>, DBError> {
-                internals::$entity::Retriever::get_one::<$EntityType>(conn.get_conn(), name)
-            }
-        }
-    );
+    fn get_one(conn: &State, name: &str) -> Result<Option<O>, EntityError> {
+        Retriever::get_one(conn, name)
+    }
 }
 
-make_retrievers!(table, data::Table);
-make_retrievers!(query, data::Query);
-make_retrievers!(script, data::Script);
+impl<O> ModifierFunctions<O, State> for Controller
+    where
+        O: RawEntityTypes,
+        O: GenerateRaw<<O as RawEntityTypes>::NewData>,
+        Modifier: ModifierFunctions<O, State>,
+{
+    fn create(conn: &State, object: O) -> Result<Created<O>, EntityError> {
+        Modifier::create(conn, object)
+            .and_then(|res| res.update_state())
+    }
 
-pub struct Modifier;
-macro_rules! make_modifiers {
-    ($entity:ident, $EntityType:ty) => (
-        impl ModifierFunctions<$EntityType, State> for Modifier {
+    fn create_many(conn: &State, objects: &[O]) -> Result<Vec<Created<O>>, EntityError> {
+        Modifier::create_many(conn, objects)
+            .and_then(|res| res.update_state())
+    }
 
-            fn create(
-                conn: &State,
-                object: $EntityType,
-            ) -> Result<Created<$EntityType>, DBError> {
-                internals::$entity::Modifier::create::<$EntityType>(conn.get_conn(), object)
-            }
+    fn upsert(conn: &State, object: O) -> Result<Upserted<O>, EntityError> {
+        Modifier::upsert(conn, object)
+            .and_then(|res| res.update_state())
+    }
 
-            fn create_many(
-                conn: &State,
-                objects: &[$EntityType],
-            ) -> Result<CreatedSet<$EntityType>, DBError> {
-                internals::$entity::Modifier::create_many::<$EntityType>(conn.get_conn(), objects)
-            }
+    fn upsert_many(conn: &State, objects: &[O]) -> Result<Vec<Upserted<O>>, EntityError> {
+        Modifier::upsert_many(conn, objects)
+            .and_then(|res| res.update_state())
+    }
 
-            fn upsert(
-                conn: &State,
-                object: $EntityType,
-            ) -> Result<Upserted<$EntityType>, DBError> {
-                internals::$entity::Modifier::upsert::<$EntityType>(conn.get_conn(), object)
-            }
+    fn update(conn: &State, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
+        Modifier::update(conn, name_object)
+            .and_then(|res| res.update_state())
+    }
 
-            fn upsert_many(
-                conn: &State,
-                objects: &[$EntityType],
-            ) -> Result<UpsertedSet<$EntityType>, DBError> {
-                internals::$entity::Modifier::upsert_many::<$EntityType>(conn.get_conn(), objects)
-            }
+    fn update_many(conn: &State, names_objects: &[(&str, O)]) -> Result<Vec<Updated<O>>, EntityError> {
+        Modifier::update_many(conn, names_objects)
+            .and_then(|res| res.update_state())
+    }
 
-            fn update(
-                conn: &State,
-                name_object: (&str, $EntityType),
-            ) -> Result<Updated<$EntityType>, DBError> {
-                internals::$entity::Modifier::update::<$EntityType>(conn.get_conn(), name_object)
-            }
+    fn delete(conn: &State, name: &str) -> Result<Deleted<O>, EntityError> {
+        Modifier::delete(conn, name)
+            .and_then(|res| res.update_state())
+    }
 
-            fn update_many(
-                conn: &State,
-                names_objects: &[(&str, $EntityType)],
-            ) -> Result<UpdatedSet<$EntityType>, DBError> {
-                internals::$entity::Modifier::update_many::<$EntityType>(conn.get_conn(), names_objects)
-            }
-
-            fn delete(
-                conn: &State,
-                name: &str,
-            ) -> Result<Deleted<$EntityType>, DBError> {
-                internals::$entity::Modifier::delete::<$EntityType>(conn.get_conn(), name)
-            }
-
-            fn delete_many(
-                conn: &State,
-                names: &[&str],
-            ) -> Result<DeletedSet<$EntityType>, DBError> {
-                internals::$entity::Modifier::delete_many::<$EntityType>(conn.get_conn(), names)
-            }
-        }
-    );
+    fn delete_many(conn: &State, names: &[&str]) -> Result<Vec<Deleted<O>>, EntityError> {
+        Modifier::delete_many(conn, names)
+            .and_then(|res| res.update_state())
+    }
 }
-
-make_modifiers!(table, data::Table);
-make_modifiers!(query, data::Query);
-make_modifiers!(script, data::Script);
