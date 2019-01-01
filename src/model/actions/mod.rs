@@ -43,112 +43,135 @@ use model::entity::results::Deleted;
 use data::utils::TableDataFormat;
 use model::table;
 use model::table::TableActionFunctions;
+use connection::executor::Conn;
+use model::state::State;
+use model::state::GetConnection;
 
-type State = PooledConnection<ConnectionManager<PgConnection>>; //TODO: should include user data
 
-pub trait Action: Send
+pub trait Action<S = State>: Send
     where
         Self::Ret: Send
 {
     type Ret;
-    fn call(&self, state: &State/*, session: Session*/) -> Result<Self::Ret, Error>;
+    fn call(&self, state: &S) -> Result<Self::Ret, Error>;
 }
 
 ///decorator for permission
-pub struct WithPermissionRequired<A: Action> {
+pub struct WithPermissionRequired<A: Action<S>, S = State> {
     action: A,
+    phantom_data: PhantomData<S>,
     //permission: ...
 }
 
-impl<A: Action> WithPermissionRequired<A> {
+impl<A: Action<S>, S> WithPermissionRequired<A, S> {
     pub fn new(action: A/*, permission: Permission*/) -> Self {
         Self {
             action,
+            phantom_data: PhantomData,
             //permission,
         }
     }
 }
 
-impl<A: Action> Action for WithPermissionRequired<A> {
+impl<A: Action<S>, S> Action<S> for WithPermissionRequired<A, S>
+    where
+        S: GetConnection + Send,
+{
     type Ret = A::Ret; //TODO: 403 error
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         self.action.call(state)
     }
 }
 
 ///decorator for permission in listing items
-pub struct WithFilterListByPermission<A: Action> {
+pub struct WithFilterListByPermission<A: Action<S>, S = State>
+    where
+        S: GetConnection + Send,
+{
     action: A,
+    phantom_data: PhantomData<S>,
     //permission: ...
 }
 
 ///decorator for transactions
-pub struct WithTransaction<A: Action> {
+pub struct WithTransaction<A: Action<S>, S = State>
+    where
+        S: GetConnection + Send,
+{
     action: A,
+    phantom_data: PhantomData<S>,
     //permission: ...
 }
 
-impl<A: Action> WithTransaction<A> {
+impl<A: Action<S>, S> WithTransaction<A, S>
+    where
+        S: GetConnection + Send,
+{
     pub fn new(action: A) -> Self {
         Self {
             action,
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<A: Action> Action for WithTransaction<A> {
+impl<A: Action<S>, S> Action<S> for WithTransaction<A, S>
+    where
+        S: GetConnection + Send,
+{
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         //TODO: transactions
         self.action.call(state)
     }
 }
 
 ///decorator for dispatching to channel
-pub struct WithDispatch<A: Action> {
+pub struct WithDispatch<A: Action<S>, S = State> {
     action: A,
+    phantom_data: PhantomData<S>,
     //permission: ...
 }
 
 ///get all tables
 #[derive(Debug)]
-pub struct GetAllEntities<T, ER = entity::Retriever>
+pub struct GetAllEntities<T, S = State, ER = entity::Retriever>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
     pub show_deleted: bool,
-    pub phantom_data_t: PhantomData<T>,
-    pub phantom_data_er: PhantomData<ER>,
+    pub phantom_data: PhantomData<(T, S, ER)>,
 }
 
-impl<T, ER> GetAllEntities<T, ER>
+impl<T, S, ER> GetAllEntities<T, S, ER>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
-        Retriever: RetrieverFunctions<T>,
+        ER: RetrieverFunctions<T, S>,
+        S: GetConnection,
 {
     pub fn new(show_deleted: bool) -> Self {
         Self {
             show_deleted,
-            phantom_data_t: PhantomData,
-            phantom_data_er: PhantomData,
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<T, ER> Action for GetAllEntities<T, ER>
+impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
-        ER: RetrieverFunctions<T> + Send,
+        ER: RetrieverFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = GetAllEntitiesResult<T>;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
-        let entities: Vec<T> = ER::get_all(&state)
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        let entities: Vec<T> = ER::get_all(state)
             .or_else(|err| Err(Error::DB(err)))?;
         Ok(GetAllEntitiesResult::<T>(entities))
     }
@@ -156,29 +179,28 @@ impl<T, ER> Action for GetAllEntities<T, ER>
 
 ///get one table
 #[derive(Debug)]
-pub struct GetEntity<T, ER = entity::Retriever>
+pub struct GetEntity<T, S = State, ER = entity::Retriever>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
     pub name: String,
-    pub phantom_data_t: PhantomData<T>,
-    pub phantom_data_er: PhantomData<ER>,
+    pub phantom_data: PhantomData<(T, S, ER)>,
 }
 
-impl<T, ER> GetEntity<T, ER>
+impl<T, S, ER> GetEntity<T, S, ER>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
-        ER: RetrieverFunctions<T> + Send,
+        ER: RetrieverFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
-    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, ER>>> { //weird syntax but ok
+    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
         let action = Self {
             name,
-            phantom_data_t: PhantomData,
-            phantom_data_er: PhantomData,
+            phantom_data: PhantomData,
         };
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission = WithPermissionRequired::new(action_with_transaction /*, ... */);
@@ -187,16 +209,17 @@ impl<T, ER> GetEntity<T, ER>
     }
 }
 
-impl<T, ER> Action for GetEntity<T, ER>
+impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
-        ER: RetrieverFunctions<T> + Send,
+        ER: RetrieverFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = GetEntityResult<T>;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
-        let maybe_entity: Option<T> = ER::get_one(&state, &self.name)
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        let maybe_entity: Option<T> = ER::get_one(state, &self.name)
             .or_else(|err| Err(Error::DB(err)))?;
 
         match maybe_entity {
@@ -208,22 +231,24 @@ impl<T, ER> Action for GetEntity<T, ER>
 
 ///create one table
 #[derive(Debug)]
-pub struct CreateEntity<T, EM = entity::Modifier>
+pub struct CreateEntity<T, S = State, EM = entity::Modifier>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        S: GetConnection + Send,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<EM>,
+    pub phantom_data: PhantomData<(S, EM)>,
 }
 
-impl<T> CreateEntity<T>
+impl<T, S> CreateEntity<T, S>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        S: GetConnection + Send,
 {
     pub fn new(data: T) -> Self {
         Self {
@@ -234,18 +259,19 @@ impl<T> CreateEntity<T>
     }
 }
 
-impl<T, EM> Action for CreateEntity<T, EM>
+impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T> + Send,
+        EM: ModifierFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = CreateEntityResult<T>;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         match &self.on_duplicate {
             OnDuplicate::Update => {
-                EM::upsert(&state, self.data.clone())
+                EM::upsert(state, self.data.clone())
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -255,7 +281,7 @@ impl<T, EM> Action for CreateEntity<T, EM>
                     })
             },
             OnDuplicate::Ignore => {
-                EM::create(&state, self.data.clone())
+                EM::create(state, self.data.clone())
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -266,7 +292,7 @@ impl<T, EM> Action for CreateEntity<T, EM>
 
             },
             OnDuplicate::Fail => {
-                EM::create(&state, self.data.clone())
+                EM::create(state, self.data.clone())
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -281,23 +307,25 @@ impl<T, EM> Action for CreateEntity<T, EM>
 
 ///update table
 #[derive(Debug)]
-pub struct UpdateEntity<T, EM = entity::Modifier>
+pub struct UpdateEntity<T, S = State, EM = entity::Modifier>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        S: GetConnection + Send,
 {
     pub name: String,
     pub data: T,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<EM>,
+    pub phantom_data: PhantomData<(S, EM)>,
 }
 
-impl<T, EM> UpdateEntity<T, EM>
+impl<T, S, EM> UpdateEntity<T, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        S: GetConnection + Send,
 {
     pub fn new(name: String, data: T) -> Self {
         Self {
@@ -309,18 +337,19 @@ impl<T, EM> UpdateEntity<T, EM>
     }
 }
 
-impl<T, EM> Action for UpdateEntity<T, EM>
+impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T> + Send,
+        EM: ModifierFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = UpdateEntityResult<T>;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         match &self.on_not_found {
             OnNotFound::Ignore => {
-                EM::update(&state, (&self.name, self.data.clone()))
+                EM::update(state, (&self.name, self.data.clone()))
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -333,7 +362,7 @@ impl<T, EM> Action for UpdateEntity<T, EM>
 
             },
             OnNotFound::Fail => {
-                EM::update(&state, (&self.name, self.data.clone()))
+                EM::update(state, (&self.name, self.data.clone()))
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -349,46 +378,47 @@ impl<T, EM> Action for UpdateEntity<T, EM>
 
 ///delete table
 #[derive(Debug)]
-pub struct DeleteEntity<T, EM = entity::Modifier>
+pub struct DeleteEntity<T, S = State, EM = entity::Modifier>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        S: GetConnection + Send,
 {
     pub name: String,
     pub on_not_found: OnNotFound,
-    pub phantom_data_t: PhantomData<T>,
-    pub phantom_data_em: PhantomData<EM>,
+    pub phantom_data: PhantomData<(T, S, EM)>,
 }
 
-impl<T, EM> DeleteEntity<T, EM>
+impl<T, S, EM> DeleteEntity<T, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        S: GetConnection + Send,
 {
     pub fn new(name: String) -> Self {
         Self {
             name,
             on_not_found: OnNotFound::Ignore,
-            phantom_data_t: PhantomData,
-            phantom_data_em: PhantomData,
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<T, EM> Action for DeleteEntity<T, EM>
+impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T> + Send,
+        EM: ModifierFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = DeleteEntityResult<T>;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         match &self.on_not_found {
             OnNotFound::Ignore => {
-                EM::delete(&state, &self.name)
+                EM::delete(state, &self.name)
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -400,7 +430,7 @@ impl<T, EM> Action for DeleteEntity<T, EM>
 
             },
             OnNotFound::Fail => {
-                EM::delete(&state, &self.name)
+                EM::delete(state, &self.name)
                     .or_else(|err| Err(Error::DB(err)))
                     .and_then(|res| {
                         match res {
@@ -416,36 +446,36 @@ impl<T, EM> Action for DeleteEntity<T, EM>
 
 // Table Actions
 #[derive(Debug)]
-pub struct QueryTableData<ER = entity::Retriever, TC = table::TableAction> {
+pub struct QueryTableData<S = State, ER = entity::Retriever, TC = table::TableAction> {
     pub table_name: String,
     pub format: TableDataFormat,
-    pub phantom_data_em: PhantomData<ER>,
-    pub phantom_data_tc: PhantomData<TC>,
+    pub phantom_data: PhantomData<(S, ER, TC)>,
 }
 
-impl<ER, TC> QueryTableData<ER, TC>
+impl<S, ER, TC> QueryTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table> + Send,
-        TC: table::TableActionFunctions + Send,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
 {
-    pub fn new(table_name: String) -> impl Action<Ret = GetTableDataResult> {
+    pub fn new(table_name: String) -> Self {
         Self {
             table_name,
             format: TableDataFormat::Rows,
-            phantom_data_em: PhantomData,
-            phantom_data_tc: PhantomData,
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<ER, TC> Action for QueryTableData<ER, TC>
+impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table> + Send,
-        TC: table::TableActionFunctions + Send,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = GetTableDataResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
-        ER::get_one(&state, &self.table_name)
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::DB(err)))
             .and_then(|res: Option<data::Table>| {
                 match res {
@@ -454,7 +484,7 @@ impl<ER, TC> Action for QueryTableData<ER, TC>
                 }
             })
             .and_then(|table| {
-                let query_result = TC::query(&state, table)
+                let query_result = TC::query(state, table)
                     .or_else(|err| Err(Error::TableQuery(err)))?;
                 Ok(query_result)
             })
@@ -478,7 +508,7 @@ pub struct InsertTableData {
 }
 
 impl InsertTableData {
-    pub fn new(name: String) -> impl Action<Ret = InsertTableDataResult> {
+    pub fn new(name: String) -> Self {
         Self {
             name
         }
@@ -639,10 +669,32 @@ mod tests {
 
     struct TestEntityRetriever;
 
+    struct TestState(TestConn);
+    struct TestConn;
+
+    impl GetConnection for TestState {
+        type Connection = TestConn;
+        fn get_conn<'a>(&'a self) -> &'a TestConn {
+            &self.0
+        }
+    }
+
+    impl RetrieverFunctions<data::Table, TestState> for TestEntityRetriever {
+        fn get_all(conn: &TestState) -> Result<Vec<data::Table>, DBError> {
+            unimplemented!()
+        }
+
+        fn get_one(conn: &TestState, name: &str) -> Result<Option<data::Table>, DBError> {
+            unimplemented!()
+        }
+    }
+
     #[test]
     fn test_get_all_entities_for_table() {
-        let action = GetAllEntities::<data::Table, TestEntityRetriever>::new(true);
-        let action_result = action.call();
+        let state = TestState(TestConn);
+
+        let action = GetAllEntities::<data::Table, TestState, TestEntityRetriever>::new(true);
+        let action_result = action.call(&state);
     }
 
 

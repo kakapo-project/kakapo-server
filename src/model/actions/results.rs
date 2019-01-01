@@ -19,7 +19,6 @@ use model::entity::error::DBError;
 use model::schema;
 use std::marker::PhantomData;
 
-
 #[derive(Debug)]
 pub struct GetAllEntitiesResult<T>(pub Vec<T>);
 
