@@ -78,7 +78,7 @@ pub trait SessionListener<P>: Clone {
 pub struct SessionActor<P: 'static, SL: SessionListener<P> + Clone + 'static> {
     session_id: usize,
     listener: SL,
-    phantom_p: std::marker::PhantomData<P>, //spooky
+    phantom_data: std::marker::PhantomData<P>, //spooky
 }
 
 impl<P: 'static, SL: SessionListener<P> + Clone + 'static> SessionActor<P, SL>
@@ -106,7 +106,7 @@ SessionActor<P, SL> {
         Self {
             session_id: 0,
             listener: listener.clone(),
-            phantom_p: std::marker::PhantomData,
+            phantom_data: std::marker::PhantomData,
         }
     }
 }

@@ -65,9 +65,7 @@ ProcedureHandler<JP, QP, A: Action + 'static, PB: ProcedureBuilder<JP, QP, A> + 
         Query<QP>: FromRequest<AppState>,
 {
     builder: PB,
-    phantom_jp: std::marker::PhantomData<JP>,
-    phantom_qp: std::marker::PhantomData<QP>,
-    phantom_a: std::marker::PhantomData<A>,
+    phantom_data: std::marker::PhantomData<(JP, QP, A)>,
 }
 
 
@@ -82,9 +80,7 @@ ProcedureHandler<JP, QP, A, PB>
     pub fn setup(builder: &PB) -> Self {
         ProcedureHandler {
             builder: builder.to_owned(),
-            phantom_jp: std::marker::PhantomData,
-            phantom_qp: std::marker::PhantomData,
-            phantom_a: std::marker::PhantomData,
+            phantom_data: std::marker::PhantomData,
         }
     }
 }
