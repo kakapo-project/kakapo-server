@@ -6,7 +6,7 @@ authors = ["Atta Zadeh <atta.h.zadeh@gmail.com>"]
 [dependencies]
 actix = "0.7.7"
 actix-broker = "0.1.4"
-actix-web = "0.7.14"
+actix-web = { version = "0.7.14", features = ["alpn"] }
 
 base64 = "0.10.0"
 bcrypt = "0.2.1"
@@ -25,6 +25,7 @@ jsonwebtoken = "5.0"
 log = "0.4"
 num_cpus = "1.8.0"
 objekt = "0.1.1"
+openssl = "0.10.16"
 pq-sys = { version = ">=0.3.0, <0.5.0" }
 
 serde = "1.0"

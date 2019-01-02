@@ -10,6 +10,7 @@ use actix_web::{
 };
 
 use serde_json;
+use std::error::Error;
 
 use connection::executor::DatabaseExecutor;
 use actix::dev::MessageResponse;
@@ -26,12 +27,21 @@ use view::action_wrapper::ActionWrapper;
 use view::serializers::Serializable;
 
 use view::error;
+use std::time::Instant;
 
-pub struct Session<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> {
+pub struct Session<'a, P, SL>
+    where
+        P: 'static,
+        SL: SessionListener<P> + Clone + 'static,
+{
     websocket_context: &'a mut ws::WebsocketContext<SessionActor<P, SL>, AppState>,
 }
 
-impl<'a, P: 'static, SL: SessionListener<P> + Clone + 'static> Session<'a, P, SL> {
+impl<'a, P, SL> Session<'a, P, SL>
+    where
+        P: 'static,
+        SL: SessionListener<P> + Clone + 'static,
+{
     pub fn subscribeTo() {
 
     }
@@ -75,13 +85,21 @@ pub trait SessionListener<P>: Clone {
 }
 
 
-pub struct SessionActor<P: 'static, SL: SessionListener<P> + Clone + 'static> {
+pub struct SessionActor<P, SL>
+    where
+        P: 'static,
+        SL: SessionListener<P> + Clone + 'static,
+{
     session_id: usize,
+    heartbeat: Instant,
     listener: SL,
     phantom_data: std::marker::PhantomData<P>, //spooky
 }
 
-impl<P: 'static, SL: SessionListener<P> + Clone + 'static> SessionActor<P, SL>
+impl<P, SL> SessionActor<P, SL>
+    where
+        P: 'static,
+        SL: SessionListener<P> + Clone + 'static,
 {
     fn build_session<'a>(
         &self,
@@ -93,41 +111,49 @@ impl<P: 'static, SL: SessionListener<P> + Clone + 'static> SessionActor<P, SL>
     }
 }
 
-impl<
-    P: 'static,
-    SL: SessionListener<P> + Clone + 'static>
-Actor for SessionActor<P, SL> {
+impl<P, SL> Actor for SessionActor<P, SL>
+    where
+        P: 'static,
+        SL: SessionListener<P> + Clone + 'static,
+{
     type Context = ws::WebsocketContext<Self, AppState>;
 }
 
-impl<P, SL: SessionListener<P> + Clone>
-SessionActor<P, SL> {
+impl<P, SL> SessionActor<P, SL>
+    where
+        SL: SessionListener<P> + Clone,
+{
     pub fn setup(listener: &SL) -> Self {
         Self {
             session_id: 0,
+            heartbeat: Instant::now(),
             listener: listener.clone(),
             phantom_data: std::marker::PhantomData,
         }
     }
 }
 
-impl<
-    P: serde::de::DeserializeOwned + 'static,
-    SL: SessionListener<P> + Clone + 'static>
-StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL>
+impl<P, SL> StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL>
     where
+        P: serde::de::DeserializeOwned + 'static,
+        SL: SessionListener<P> + Clone + 'static,
         for<'de> P: serde::Deserialize<'de>
 
 {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
             ws::Message::Text(text) => {
-                // parse json
+                self.heartbeat = Instant::now();
+
                 serde_json::from_str(&text)
                     .or_else::<serde_json::error::Error, _>(|err| {
-                        println!("Error occured while parsing websocket request: {:?}", err);
+                        debug!("could not parse websocket request: {:?}", &text);
+                        let error_msg = serde_json::to_string(&json!({
+                            "error": err.description()
+                        })).unwrap_or_default();
+
+                        ctx.text(error_msg); //send error message
                         ctx.stop();
-                        //TODO: send error message
                         Err(err)
                     })
                     .and_then(|parameter: P| {
@@ -137,10 +163,24 @@ StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL>
                     });
 
             },
+            ws::Message::Binary(_) => {
+                debug!("Received unexpected binary in websocket");
+                let error_msg = serde_json::to_string(&json!({
+                    "error": "binary requests not currently supported"
+                })).unwrap_or_default();
+                ctx.text(error_msg);
+            },
+            ws::Message::Ping(text) => {
+                self.heartbeat = Instant::now();
+                ctx.pong(&text);
+            },
+            ws::Message::Pong(text) => {
+                self.heartbeat = Instant::now();
+            },
             ws::Message::Close(_) => {
+                info!("Socket connection closed");
                 ctx.stop();
             },
-            _ => {}
         };
     }
 }

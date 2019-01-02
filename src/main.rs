@@ -22,6 +22,7 @@ extern crate futures;
 #[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
+#[macro_use]
 extern crate log;
 extern crate num_cpus;
 extern crate serde;
@@ -31,6 +32,7 @@ extern crate serde_json;
 extern crate serde_derive;
 #[macro_use]
 extern crate objekt;
+extern crate openssl;
 extern crate tokio_core;
 
 /// Mods
@@ -65,22 +67,16 @@ fn main() {
             .help("Do not authenticate user, [WARNING: don't use this in production]"))
         .get_matches();
 
-    std::env::set_var("RUST_LOG", "actix_web=info");
+    //std::env::set_var("RUST_LOG", "warn,actix_web=info,kakapo=all");
+    //std::env::set_var("RUST_BACKTRACE","1");
     Builder::new()
         .target(Target::Stdout)
-        .filter_level(LevelFilter::Info)
+        .filter_level(LevelFilter::Warn)
+        .filter_module("kakapo", LevelFilter::Debug)
+        .filter_module("actix_web", LevelFilter::Info)
         .init();
 
     let sys = actix::System::new("Kakapo");
-
-    /*
-    // https://actix.rs/docs/server/
-    let mut ssl_builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    ssl_builder
-        .set_private_key_file("key.pem", SslFiletype::PEM)
-        .unwrap();
-    ssl_builder.set_certificate_chain_file("cert.pem").unwrap();
-    */
 
     server::serve();
 

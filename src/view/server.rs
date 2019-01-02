@@ -9,9 +9,9 @@ use actix_web::{
 };
 
 use actix_web::middleware::cors::Cors;
+use actix_web::middleware::Logger;
 use actix_web::middleware::identity::{CookieIdentityPolicy, IdentityService};
-
-use dotenv::{dotenv};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use chrono::Duration;
 
@@ -20,7 +20,6 @@ use serde_json;
 use std::result::Result;
 use std::result::Result::Ok;
 use std::path::Path as fsPath;
-use std::env;
 
 use connection;
 use connection::executor::DatabaseExecutor;
@@ -40,65 +39,13 @@ use view::error;
 
 use std::error::Error;
 use data;
-
-//TODO: implement for own Response Type
-impl ResponseError for error::Error {
-    fn error_response(&self) -> HttpResponse {
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": self.description().to_string() })).unwrap())
-    }
-}
-
-fn get_www_path() -> String {
-    dotenv().expect("could not parse dotenv file");
-    let www_path = env::var("WWW_PATH").expect("WWW_PATH must be set");
-    www_path
-}
-
-fn get_script_path() -> String {
-    dotenv().expect("could not parse dotenv file");
-    let script_path = env::var("SCRIPTS_PATH").expect("SCRIPTS_PATH must be set");
-    script_path
-}
-
-fn get_is_secure() -> bool {
-    dotenv().expect("could not parse dotenv file");
-    let is_secure = env::var("SECURE").expect("SECURE must be set");
-    is_secure == "true"
-}
-
-fn get_domain() -> String {
-    dotenv().expect("could not parse dotenv file");
-    let domain = env::var("SERVER_DOMAIN").expect("SERVER_DOMAIN must be set");
-    domain
-}
-
-fn get_secret_key() -> String {
-    dotenv().expect("could not parse dotenv file");
-    let key = env::var("SECRET_KEY").expect("SECRET_KEY must be set");
-    key
-}
-
+use view::environment::Env;
 
 //static routes
 fn index(_state: State<AppState>) -> Result<NamedFile, ActixError> {
-    let www_path = get_www_path();
+    let www_path = Env::www_path();
     let path = fsPath::new(&www_path).join("index.html");
     Ok(NamedFile::open(path)?)
-}
-
-fn config(cfg: &mut JsonConfig<AppState>) -> () {
-    cfg.limit(4096)
-        .error_handler(|err, _req| {
-            println!("error: {:?}", err);
-            let response =  HttpResponse::InternalServerError()
-                .content_type("application/json")
-                .body(serde_json::to_string(&json!({ "error": err.to_string() }))
-                    .unwrap_or_default());
-            http_error::InternalError::from_response(
-                err, response).into()
-        });
 }
 
 
@@ -150,28 +97,33 @@ impl session::SessionListener<SocketRequest> for SessionHandler {
 
 pub fn serve() {
 
-    dotenv().ok();
+    let connection = connection::executor::Connector::new()
+        .host(Env::database_host())
+        .port(Env::database_port())
+        .user(Env::database_user())
+        .pass(Env::database_pass())
+        .db(Env::database_db())
+        .done();
 
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
+    let server_addr = Env::server_addr();
+    let is_secure = Env::is_secure();
 
-    let connection = connection::executor::create(&database_url);
+    let mut server_cfg = actix_web::server::new(move || {
 
-    actix_web::server::new(move || {
-
-        let www_path = get_www_path();
-        let script_path = get_script_path();
+        let www_path = Env::www_path();
+        let script_path = Env::script_path();
         let state = AppState::new(connection.clone(), &script_path, "Kakapo");
 
         App::with_state(state)
-            .middleware(middleware::Logger::default())
+            .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
+            .middleware(Logger::new("Requested [%r] FROM %a \"%{User-Agent}i\""))
             .middleware(IdentityService::new(
-                CookieIdentityPolicy::new(get_secret_key().as_bytes())
+                CookieIdentityPolicy::new(Env::secret_key().as_bytes())
                     .name("kakapo-auth")
                     .path("/")
-                    .domain(get_domain())
+                    .domain(Env::domain())
                     .max_age(Duration::days(1))
-                    .secure(get_is_secure()), // this can only be true if you have https
+                    .secure(is_secure), // this can only be true if you have https
             ))
             .configure(|app| Cors::for_app(app)
                 //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
@@ -182,31 +134,31 @@ pub fn serve() {
                 .max_age(3600)
                 .procedure(
                     "/manage/getAllTables",
-                    |get_all_entities: GetAllEntities, _: NoQuery|
+                    |_: NoQuery, get_all_entities: GetAllEntities|
                         actions::GetAllEntities::<data::Table>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllQueries",
-                    |get_all_entities: GetAllEntities, _: NoQuery|
+                    |_: NoQuery, get_all_entities: GetAllEntities|
                         actions::GetAllEntities::<data::Query>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllScripts",
-                    |get_all_entities: GetAllEntities, _: NoQuery|
+                    |_: NoQuery, get_all_entities: GetAllEntities|
                         actions::GetAllEntities::<data::Script>::new(get_all_entities.show_deleted)
                 )
 
                 .procedure(
                     "/manage/getTable",
-                    |get_entity: GetEntity, _: NoQuery| actions::GetEntity::<data::Table>::new(get_entity.name)
+                    |_: NoQuery, get_entity: GetEntity| actions::GetEntity::<data::Table>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getQuery",
-                    |get_entity: GetEntity, _: NoQuery| actions::GetEntity::<data::Query>::new(get_entity.name)
+                    |_: NoQuery, get_entity: GetEntity| actions::GetEntity::<data::Query>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getScript",
-                    |get_entity: GetEntity, _: NoQuery| actions::GetEntity::<data::Script>::new(get_entity.name)
+                    |_: NoQuery, get_entity: GetEntity| actions::GetEntity::<data::Script>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/createTable",
@@ -282,13 +234,37 @@ pub fn serve() {
                 fs::StaticFiles::new(fsPath::new(&www_path))
                     .unwrap()
                     .show_files_listing())
-        })
+    });
+
+    server_cfg = server_cfg
         .workers(num_cpus::get())
-        .keep_alive(None)
-        .bind("127.0.0.1:8080")
-        .unwrap()
-        .shutdown_timeout(1)
+        .keep_alive(30);
+
+    let http_server = if is_secure {
+        let ssl_cert_privkey_path = Env::ssl_cert_privkey_path();
+        let ssl_cert_fullchain_path = Env::ssl_cert_fullchain_path();
+
+        let mut ssl_builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        ssl_builder
+            .set_private_key_file(ssl_cert_privkey_path, SslFiletype::PEM)
+            .unwrap();
+        ssl_builder.set_certificate_chain_file(ssl_cert_fullchain_path).unwrap();
+
+
+        server_cfg
+            .bind_ssl(&server_addr, ssl_builder)
+            .unwrap()
+
+    } else {
+        server_cfg
+            .bind(&server_addr)
+            .unwrap()
+    };
+
+    http_server
+        .shutdown_timeout(30)
         .start();
 
-    println!("Started http server: 127.0.0.1:8080");
+    info!("Kakapo server started on \"{}\"", &server_addr);
+
 }

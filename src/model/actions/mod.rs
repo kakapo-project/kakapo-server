@@ -118,6 +118,7 @@ impl<A: Action<S>, S> Action<S> for WithTransaction<A, S>
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        debug!("started transaction");
         //TODO: transactions
         self.action.call(state)
     }

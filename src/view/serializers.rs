@@ -15,7 +15,7 @@ impl Serializable for actions::GetAllEntitiesResult<data::Table> {
     const ACTION_NAME: &'static str = "GetAllTables";
 
     fn into_serialize(self) -> Value {
-        unimplemented!()
+        serde_json::to_value(json!({})).unwrap()
     }
 }
 
