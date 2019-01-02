@@ -143,7 +143,7 @@ pub fn handler_function<JP, QP, A, PB>(
                     Err(server_error)
                 }).and_then(|ok_res| {
                     let serialized = ok_res.into_serialize();
-                    debug!("Responding with error message: {:?}", &serialized);
+                    debug!("Responding with message: {:?}", &serialized);
                     Ok(HttpResponse::Ok()
                         .content_type("application/json")
                         .body(serde_json::to_string(&serialized)

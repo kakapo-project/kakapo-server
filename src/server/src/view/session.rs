@@ -10,7 +10,6 @@ use actix_web::{
 };
 
 use serde_json;
-use std::error::Error;
 
 use connection::executor::DatabaseExecutor;
 use actix::dev::MessageResponse;
@@ -28,6 +27,12 @@ use view::serializers::Serializable;
 
 use view::error;
 use std::time::Instant;
+use view::error::Error;
+use actix_broker::BrokerSubscribe;
+
+//TODO: ignore
+use model::actions::GetAllEntities;
+use data;
 
 pub struct Session<'a, P, SL>
     where
@@ -51,8 +56,9 @@ impl<'a, P, SL> Session<'a, P, SL>
     }
 
     /// dispatch a response from action inside the listener
-    pub fn dispatch<A: Action + 'static>(&mut self, action: A)
+    pub fn dispatch<A>(&mut self, action: A)
         where
+            A: Action + 'static,
             Result<A::Ret, actions::error::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
             <A as Action>::Ret: Serializable,
     {
@@ -61,22 +67,38 @@ impl<'a, P, SL> Session<'a, P, SL>
             .connect()
             .send(ActionWrapper::new(action))
             .wait()
-            .or_else(|err| Err(error::Error::TooManyConnections))
-            .and_then(|res| {
-
-                let ok_result = res.or_else(|err| Err(error::Error::TooManyConnections))?;
-                let return_val = serde_json::to_string(&json!({
-                    "action": <A::Ret as Serializable>::ACTION_NAME,
-                    "success": "callback from dispatch"
-                })).unwrap();
-
-                self.websocket_context.text(return_val);
-                Ok(())
-            })
             .or_else(|err| {
-                println!("encountered error: {:?}", &err);
+                error!("encountered unexpected error: {:?}", &err);
                 Err(err)
+            })
+            .and_then(|res| {
+                res.or_else(|err| {
+                        debug!("Responding with error message: {:?}", &err);
+                        let server_error: Error = err.into();
+                        let return_val = serde_json::to_string(&json!({
+                                "error": server_error
+                            })).unwrap_or_default();
+
+                        self.websocket_context.text(return_val);
+
+                        Err(server_error)
+                    }).and_then(|ok_res| {
+                        let serialized = ok_res.into_serialize();
+                        debug!("Responding with message: {:?}", &serialized);
+
+                        let return_val = serde_json::to_string(&json!({
+                                "action": <A::Ret as Serializable>::ACTION_NAME,
+                                "data": serialized
+                            })).unwrap_or_default();
+
+                        self.websocket_context.text(return_val);
+
+                        Ok(())
+                    });
+
+                Ok(())
             });
+
     }
 }
 
@@ -101,7 +123,7 @@ impl<P, SL> SessionActor<P, SL>
         P: 'static,
         SL: SessionListener<P> + Clone + 'static,
 {
-    fn build_session<'a>(
+    fn get_session<'a>(
         &self,
         websocket_context: &'a mut ws::WebsocketContext<SessionActor<P, SL>, AppState>
     ) -> Session<'a, P, SL> {
@@ -141,6 +163,7 @@ impl<P, SL> StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL
 
 {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+
         match msg {
             ws::Message::Text(text) => {
                 self.heartbeat = Instant::now();
@@ -149,7 +172,7 @@ impl<P, SL> StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL
                     .or_else::<serde_json::error::Error, _>(|err| {
                         debug!("could not parse websocket request: {:?}", &text);
                         let error_msg = serde_json::to_string(&json!({
-                            "error": err.description()
+                            "error": format!("{:?}", err) //TODO: the format of the error messages are inconsistent from server errors
                         })).unwrap_or_default();
 
                         ctx.text(error_msg); //send error message
@@ -157,7 +180,7 @@ impl<P, SL> StreamHandler<ws::Message, ws::ProtocolError> for SessionActor<P, SL
                         Err(err)
                     })
                     .and_then(|parameter: P| {
-                        let mut session = self.build_session(ctx);
+                        let mut session = self.get_session(ctx);
                         self.listener.listen(&mut session, parameter);
                         Ok(())
                     });

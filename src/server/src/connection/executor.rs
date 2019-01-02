@@ -82,5 +82,3 @@ impl Connector {
         SyncArbiter::start(num_cpus::get(), move || DatabaseExecutor(pool.clone()))
     }
 }
-
-//TODO: do I need to impl Drop?

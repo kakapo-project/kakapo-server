@@ -2,6 +2,7 @@
 name = "kakapo"
 version = "0.1.0"
 authors = ["Atta Zadeh <atta.h.zadeh@gmail.com>"]
+path = "src/server/main.rs"
 
 [dependencies]
 actix = "0.7.7"
