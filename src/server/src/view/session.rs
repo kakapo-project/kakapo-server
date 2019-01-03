@@ -29,6 +29,8 @@ use actix_web::error;
 use actix_web::ResponseError;
 use view::error::Error;
 use std::fmt::Debug;
+use model::state::ChannelBroadcaster;
+use view::action_wrapper::Broadcaster;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -54,9 +56,9 @@ impl SessionContext {
 
     pub fn dispatch<A>(&mut self, action: A)
         where
-            A: Action + 'static,
+            A: Action<Broadcaster> + 'static,
             Result<A::Ret, actions::error::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
-            <A as Action>::Ret: Serializable,
+            <A as Action<Broadcaster>>::Ret: Serializable,
     {
         self.req
             .state()

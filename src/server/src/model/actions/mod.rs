@@ -1,7 +1,6 @@
 
 pub mod results;
 pub mod error;
-pub mod channels;
 
 use actix::prelude::*;
 
@@ -43,10 +42,12 @@ use model::table::TableActionFunctions;
 use connection::executor::Conn;
 use model::state::State;
 use model::state::GetConnection;
+use model::state::ChannelBroadcaster;
 
 
-pub trait Action<S = State>: Send
+pub trait Action<B, S = State<B>>: Send
     where
+        B: ChannelBroadcaster + Send + 'static,
         Self::Ret: Send
 {
     type Ret;
@@ -54,13 +55,21 @@ pub trait Action<S = State>: Send
 }
 
 ///decorator for permission
-pub struct WithPermissionRequired<A: Action<S>, S = State> {
+pub struct WithPermissionRequired<A, B, S = State<B>>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+{
     action: A,
-    phantom_data: PhantomData<S>,
+    phantom_data: PhantomData<(S, B)>,
     //permission: ...
 }
 
-impl<A: Action<S>, S> WithPermissionRequired<A, S> {
+impl<A, B, S> WithPermissionRequired<A, B, S>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+{
     pub fn new(action: A/*, permission: Permission*/) -> Self {
         Self {
             action,
@@ -70,8 +79,10 @@ impl<A: Action<S>, S> WithPermissionRequired<A, S> {
     }
 }
 
-impl<A: Action<S>, S> Action<S> for WithPermissionRequired<A, S>
+impl<A, B, S> Action<B, S> for WithPermissionRequired<A, B, S>
     where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
         S: GetConnection + Send,
 {
     type Ret = A::Ret; //TODO: 403 error
@@ -81,27 +92,33 @@ impl<A: Action<S>, S> Action<S> for WithPermissionRequired<A, S>
 }
 
 ///decorator for permission in listing items
-pub struct WithFilterListByPermission<A: Action<S>, S = State>
+pub struct WithFilterListByPermission<A, B, S = State<B>>
     where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
         S: GetConnection + Send,
 {
     action: A,
-    phantom_data: PhantomData<S>,
+    phantom_data: PhantomData<(S, B)>,
     //permission: ...
 }
 
 ///decorator for transactions
-pub struct WithTransaction<A: Action<S>, S = State>
+pub struct WithTransaction<A, B, S = State<B>>
     where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
         S: GetConnection + Send,
 {
     action: A,
-    phantom_data: PhantomData<S>,
+    phantom_data: PhantomData<(S, B)>,
     //permission: ...
 }
 
-impl<A: Action<S>, S> WithTransaction<A, S>
+impl<A, B, S> WithTransaction<A, B, S>
     where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
         S: GetConnection + Send,
 {
     pub fn new(action: A) -> Self {
@@ -112,8 +129,10 @@ impl<A: Action<S>, S> WithTransaction<A, S>
     }
 }
 
-impl<A: Action<S>, S> Action<S> for WithTransaction<A, S>
+impl<A, B, S> Action<B, S> for WithTransaction<A, B, S>
     where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
         S: GetConnection + Send,
 {
     type Ret = A::Ret;
@@ -125,25 +144,29 @@ impl<A: Action<S>, S> Action<S> for WithTransaction<A, S>
 }
 
 ///decorator for dispatching to channel
-pub struct WithDispatch<A: Action<S>, S = State> {
+pub struct WithDispatch<A, B, S = State<B>>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+{
     action: A,
-    phantom_data: PhantomData<S>,
+    phantom_data: PhantomData<(S, B)>,
     //permission: ...
 }
 
 ///get all tables
 #[derive(Debug)]
-pub struct GetAllEntities<T, S = State, ER = entity::Controller>
+pub struct GetAllEntities<T, B, S = State<B>, ER = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
     pub show_deleted: bool,
-    pub phantom_data: PhantomData<(T, S, ER)>,
+    pub phantom_data: PhantomData<(T, B, S, ER)>,
 }
 
-impl<T, S, ER> GetAllEntities<T, S, ER>
+impl<T, B, S, ER> GetAllEntities<T, B, S, ER>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -159,8 +182,9 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
     }
 }
 
-impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
+impl<T, B, S, ER> Action<B, S> for GetAllEntities<T, B, S, ER>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
@@ -177,25 +201,26 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
 
 ///get one table
 #[derive(Debug)]
-pub struct GetEntity<T, S = State, ER = entity::Controller>
+pub struct GetEntity<T, B, S = State<B>, ER = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
     pub name: String,
-    pub phantom_data: PhantomData<(T, S, ER)>,
+    pub phantom_data: PhantomData<(T, B, S, ER)>,
 }
 
-impl<T, S, ER> GetEntity<T, S, ER>
+impl<T, B, S, ER> GetEntity<T, B, S, ER>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
-    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
+    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, B, S, ER>, B, S>, B, S> { //weird syntax but ok
         let action = Self {
             name,
             phantom_data: PhantomData,
@@ -207,8 +232,9 @@ impl<T, S, ER> GetEntity<T, S, ER>
     }
 }
 
-impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
+impl<T, B, S, ER> Action<B, S> for GetEntity<T, B, S, ER>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
@@ -229,7 +255,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 
 ///create one table
 #[derive(Debug)]
-pub struct CreateEntity<T, S = State, EM = entity::Controller>
+pub struct CreateEntity<T, B, S = State<B>, EM = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -238,10 +264,10 @@ pub struct CreateEntity<T, S = State, EM = entity::Controller>
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<(S, EM)>,
+    pub phantom_data: PhantomData<(B, S, EM)>,
 }
 
-impl<T, S> CreateEntity<T, S>
+impl<T, B, S> CreateEntity<T, B, S>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -257,8 +283,9 @@ impl<T, S> CreateEntity<T, S>
     }
 }
 
-impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
+impl<T, B, S, EM> Action<B, S> for CreateEntity<T, B, S, EM>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
@@ -305,7 +332,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
 
 ///update table
 #[derive(Debug)]
-pub struct UpdateEntity<T, S = State, EM = entity::Controller>
+pub struct UpdateEntity<T, B, S = State<B>, EM = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -315,10 +342,10 @@ pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     pub name: String,
     pub data: T,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(S, EM)>,
+    pub phantom_data: PhantomData<(B, S, EM)>,
 }
 
-impl<T, S, EM> UpdateEntity<T, S, EM>
+impl<T, B, S, EM> UpdateEntity<T, B, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -335,8 +362,9 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
     }
 }
 
-impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
+impl<T, B, S, EM> Action<B, S> for UpdateEntity<T, B, S, EM>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
@@ -376,7 +404,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 
 ///delete table
 #[derive(Debug)]
-pub struct DeleteEntity<T, S = State, EM = entity::Controller>
+pub struct DeleteEntity<T, B, S = State<B>, EM = entity::Controller>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -385,10 +413,10 @@ pub struct DeleteEntity<T, S = State, EM = entity::Controller>
 {
     pub name: String,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(T, S, EM)>,
+    pub phantom_data: PhantomData<(T, B, S, EM)>,
 }
 
-impl<T, S, EM> DeleteEntity<T, S, EM>
+impl<T, B, S, EM> DeleteEntity<T, B, S, EM>
     where
         T: Send + Clone,
         T: RawEntityTypes,
@@ -404,8 +432,9 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
     }
 }
 
-impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
+impl<T, B, S, EM> Action<B, S> for DeleteEntity<T, B, S, EM>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
@@ -444,13 +473,13 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
 
 // Table Actions
 #[derive(Debug)]
-pub struct QueryTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
+pub struct QueryTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
     pub format: TableDataFormat,
-    pub phantom_data: PhantomData<(S, ER, TC)>,
+    pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
-impl<S, ER, TC> QueryTableData<S, ER, TC>
+impl<B, S, ER, TC> QueryTableData<B, S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
@@ -465,8 +494,9 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
+impl<B, S, ER, TC> Action<B, S> for QueryTableData<B, S, ER, TC>
     where
+        B: ChannelBroadcaster + Send + 'static,
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
         S: GetConnection + Send,
@@ -513,9 +543,12 @@ impl InsertTableData {
     }
 }
 
-impl Action for InsertTableData {
+impl<B> Action<B> for InsertTableData
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Ret = InsertTableDataResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         //let result = table::insert_table_data(
         //    &state,
         //    self.name.to_owned(), self.data.to_owned(), self.format.to_owned(), api::CreationMethod::default())
@@ -534,16 +567,19 @@ pub struct UpdateTableData {
 }
 
 impl UpdateTableData {
-    pub fn new(name: String) -> impl Action<Ret = UpdateTableDataResult> {
+    pub fn new(name: String) -> Self {
         Self {
             name
         }
     }
 }
 
-impl Action for UpdateTableData {
+impl<B> Action<B> for UpdateTableData
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Ret = UpdateTableDataResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         //let result = table::update_table_data(
         //    &state,
         //    self.name.to_owned(), self.key.to_owned(), self.data.to_owned(), self.format.to_owned())
@@ -560,16 +596,19 @@ pub struct DeleteTableData {
 }
 
 impl DeleteTableData {
-    pub fn new(name: String) -> impl Action<Ret = DeleteTableDataResult> {
+    pub fn new(name: String) -> Self {
         Self {
             name
         }
     }
 }
 
-impl Action for DeleteTableData {
+impl<B> Action<B> for DeleteTableData
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Ret = DeleteTableDataResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         //let result = table::delete_table_data(&state, self.name.to_owned(), self.key.to_owned())
         //    .or_else(|err| Err(()))?;
         //Ok(result)
@@ -588,16 +627,19 @@ pub struct RunQuery {
 }
 
 impl RunQuery {
-    pub fn new(name: String) -> impl Action<Ret = RunQueryResult> {
+    pub fn new(name: String) -> Self {
         Self {
             name
         }
     }
 }
 
-impl Action for RunQuery {
+impl<B> Action<B> for RunQuery
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Ret = RunQueryResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         //let result = query::run_query(
         //    &state,
         //    self.name.to_owned(), self.format.to_owned(), self.params.to_owned())
@@ -615,16 +657,19 @@ pub struct RunScript {
 }
 
 impl RunScript {
-    pub fn new(name: String) -> impl Action<Ret = RunScriptResult> {
+    pub fn new(name: String) -> Self {
         Self {
             name
         }
     }
 }
 
-impl Action for RunScript {
+impl<B> Action<B> for RunScript
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Ret = RunScriptResult;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         //let result = script::run_script(
         //    &state,
         //    self.py_runner.to_owned(), self.name.to_owned(), self.params.to_owned())
@@ -649,14 +694,17 @@ pub struct DetachPermissionForRole;
 pub struct Nothing;
 
 impl Nothing {
-    pub fn new() -> impl Action<Ret = ()> {
+    pub fn new() -> Self {
         Nothing
     }
 }
 
-impl Action for Nothing {
+impl<B> Action<B> for Nothing
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Ret = ();
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         Ok(())
     }
 }

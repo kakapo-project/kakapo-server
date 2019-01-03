@@ -23,6 +23,7 @@ use model::state::GetConnection;
 use self::internals::Retriever;
 use self::internals::Modifier;
 use self::update_state::UpdateState;
+use model::state::ChannelBroadcaster;
 
 
 pub struct Controller; //TODO: controller should be state agnostic (dependency inject)
@@ -100,63 +101,65 @@ pub trait ModifierFunctions<O, S>
 }
 
 
-impl<O> RetrieverFunctions<O, State> for Controller
+impl<O, B> RetrieverFunctions<O, State<B>> for Controller
     where
+        B: ChannelBroadcaster + Send + 'static,
         O: RawEntityTypes,
         O: ConvertRaw<<O as RawEntityTypes>::Data>,
-        Retriever: RetrieverFunctions<O, State>,
+        Retriever: RetrieverFunctions<O, State<B>>,
 {
-    fn get_all(conn: &State) -> Result<Vec<O>, EntityError> {
+    fn get_all(conn: &State<B>) -> Result<Vec<O>, EntityError> {
         Retriever::get_all(conn)
     }
 
-    fn get_one(conn: &State, name: &str) -> Result<Option<O>, EntityError> {
+    fn get_one(conn: &State<B>, name: &str) -> Result<Option<O>, EntityError> {
         Retriever::get_one(conn, name)
     }
 }
 
-impl<O> ModifierFunctions<O, State> for Controller
+impl<O, B> ModifierFunctions<O, State<B>> for Controller
     where
+        B: ChannelBroadcaster + Send + 'static,
         O: RawEntityTypes,
         O: GenerateRaw<<O as RawEntityTypes>::NewData>,
-        Modifier: ModifierFunctions<O, State>,
+        Modifier: ModifierFunctions<O, State<B>>,
 {
-    fn create(conn: &State, object: O) -> Result<Created<O>, EntityError> {
+    fn create(conn: &State<B>, object: O) -> Result<Created<O>, EntityError> {
         Modifier::create(conn, object)
             .and_then(|res| res.update_state())
     }
 
-    fn create_many(conn: &State, objects: &[O]) -> Result<Vec<Created<O>>, EntityError> {
+    fn create_many(conn: &State<B>, objects: &[O]) -> Result<Vec<Created<O>>, EntityError> {
         Modifier::create_many(conn, objects)
             .and_then(|res| res.update_state())
     }
 
-    fn upsert(conn: &State, object: O) -> Result<Upserted<O>, EntityError> {
+    fn upsert(conn: &State<B>, object: O) -> Result<Upserted<O>, EntityError> {
         Modifier::upsert(conn, object)
             .and_then(|res| res.update_state())
     }
 
-    fn upsert_many(conn: &State, objects: &[O]) -> Result<Vec<Upserted<O>>, EntityError> {
+    fn upsert_many(conn: &State<B>, objects: &[O]) -> Result<Vec<Upserted<O>>, EntityError> {
         Modifier::upsert_many(conn, objects)
             .and_then(|res| res.update_state())
     }
 
-    fn update(conn: &State, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
+    fn update(conn: &State<B>, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
         Modifier::update(conn, name_object)
             .and_then(|res| res.update_state())
     }
 
-    fn update_many(conn: &State, names_objects: &[(&str, O)]) -> Result<Vec<Updated<O>>, EntityError> {
+    fn update_many(conn: &State<B>, names_objects: &[(&str, O)]) -> Result<Vec<Updated<O>>, EntityError> {
         Modifier::update_many(conn, names_objects)
             .and_then(|res| res.update_state())
     }
 
-    fn delete(conn: &State, name: &str) -> Result<Deleted<O>, EntityError> {
+    fn delete(conn: &State<B>, name: &str) -> Result<Deleted<O>, EntityError> {
         Modifier::delete(conn, name)
             .and_then(|res| res.update_state())
     }
 
-    fn delete_many(conn: &State, names: &[&str]) -> Result<Vec<Deleted<O>>, EntityError> {
+    fn delete_many(conn: &State<B>, names: &[&str]) -> Result<Vec<Deleted<O>>, EntityError> {
         Modifier::delete_many(conn, names)
             .and_then(|res| res.update_state())
     }

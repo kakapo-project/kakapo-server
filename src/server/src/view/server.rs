@@ -39,6 +39,7 @@ use view::error;
 use std::error::Error;
 use data;
 use view::environment::Env;
+use view::action_wrapper::Broadcaster;
 
 //static routes
 fn index(_state: State<AppState>) -> Result<NamedFile, ActixError> {
@@ -136,90 +137,108 @@ pub fn serve() {
                 .procedure(
                     "/manage/getAllTables",
                     |_: NoQuery, get_all_entities: GetAllEntities|
-                        actions::GetAllEntities::<data::Table>::new(get_all_entities.show_deleted)
+                        actions::GetAllEntities::<data::Table, Broadcaster>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllQueries",
                     |_: NoQuery, get_all_entities: GetAllEntities|
-                        actions::GetAllEntities::<data::Query>::new(get_all_entities.show_deleted)
+                        actions::GetAllEntities::<data::Query, Broadcaster>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllScripts",
                     |_: NoQuery, get_all_entities: GetAllEntities|
-                        actions::GetAllEntities::<data::Script>::new(get_all_entities.show_deleted)
+                        actions::GetAllEntities::<data::Script, Broadcaster>::new(get_all_entities.show_deleted)
                 )
 
                 .procedure(
                     "/manage/getTable",
-                    |_: NoQuery, get_entity: GetEntity| actions::GetEntity::<data::Table>::new(get_entity.name)
+                    |_: NoQuery, get_entity: GetEntity|
+                        actions::GetEntity::<data::Table, Broadcaster>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getQuery",
-                    |_: NoQuery, get_entity: GetEntity| actions::GetEntity::<data::Query>::new(get_entity.name)
+                    |_: NoQuery, get_entity: GetEntity|
+                        actions::GetEntity::<data::Query, Broadcaster>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getScript",
-                    |_: NoQuery, get_entity: GetEntity| actions::GetEntity::<data::Script>::new(get_entity.name)
+                    |_: NoQuery, get_entity: GetEntity|
+                        actions::GetEntity::<data::Script, Broadcaster>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/createTable",
-                    |entity: data::Table, _: NoQuery| actions::CreateEntity::<data::Table>::new(entity)
+                    |entity: data::Table, _: NoQuery|
+                        actions::CreateEntity::<data::Table, Broadcaster>::new(entity)
                 )
                 .procedure(
                     "/manage/createQuery",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/createScript",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/updateTable",
-                    |entity: data::Table, _: NoQuery| actions::UpdateEntity::<data::Table>::new("tmp".to_string(), entity)
+                    |entity: data::Table, _: NoQuery|
+                        actions::UpdateEntity::<data::Table, Broadcaster>::new("tmp".to_string(), entity)
                 )
                 .procedure(
                     "/manage/updateQuery",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/updateScript",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/deleteTable",
-                    |_: NoQuery, _: NoQuery| actions::DeleteEntity::<data::Table>::new("tmp".to_string())
+                    |_: NoQuery, _: NoQuery|
+                        actions::DeleteEntity::<data::Table, Broadcaster>::new("tmp".to_string())
                 )
                 .procedure(
                     "/manage/deleteQuery",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/deleteScript",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/queryTableData",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/insertTableData",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/updateTableData",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/deleteTableData",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/runQuery",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 .procedure(
                     "/manage/runScript",
-                    |_: NoQuery, _: NoQuery| actions::Nothing
+                    |_: NoQuery, _: NoQuery|
+                        actions::Nothing
                 )
                 //.session(
                 //    "/listen",

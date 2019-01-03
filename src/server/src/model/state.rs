@@ -12,16 +12,59 @@ use connection::py::PyRunner;
 
 use connection::executor::Conn;
 
-pub type State = PooledConnection<ConnectionManager<PgConnection>>; //TODO: should include user data
+use model::actions::Action;
+
+type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
+
+pub enum Channels {
+    AllTables,
+    AllQueries,
+    AllScripts,
+    Table(String),
+    Query(String),
+    Script(String),
+    TableData(String),
+}
+
+pub trait ChannelBroadcaster {
+    fn on_broadcast<T>(&self, channel: Channels, msg: T);
+}
+
+pub struct State<B>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
+    database: DBConnector, //TODO: this should be templated
+    broadcaster: B
+    //user
+}
+
+impl<B> State<B>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
+    pub fn new(
+        database: DBConnector,
+        broadcaster: B,
+    ) -> Self {
+        Self {
+            database,
+            broadcaster,
+        }
+    }
+}
 
 pub trait GetConnection {
     type Connection;
     fn get_conn<'a>(&'a self) -> &'a Self::Connection;
 }
 
-impl GetConnection for State {
+impl<B> GetConnection for State<B>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
     type Connection = Conn;
     fn get_conn<'a>(&'a self) -> &'a Conn {
-        self
+        &self.database
     }
 }

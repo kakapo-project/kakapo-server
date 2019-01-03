@@ -18,20 +18,24 @@ use model::entity::ModifierFunctions;
 use model::state::State;
 
 use model::state::GetConnection;
+use model::state::ChannelBroadcaster;
 
 pub struct Retriever;
 macro_rules! make_retrievers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl RetrieverFunctions<$EntityType, State> for Retriever {
+        impl<B> RetrieverFunctions<$EntityType, State<B>> for Retriever
+            where
+                B: ChannelBroadcaster + Send + 'static,
+        {
             fn get_all(
-                conn: &State
+                conn: &State<B>
             ) -> Result<Vec<$EntityType>, EntityError> {
                 $entity::Retriever::get_all::<$EntityType>(conn.get_conn())
             }
 
             fn get_one(
-                conn: &State,
+                conn: &State<B>,
                 name: &str,
             ) -> Result<Option<$EntityType>, EntityError> {
                 $entity::Retriever::get_one::<$EntityType>(conn.get_conn(), name)
@@ -47,59 +51,62 @@ make_retrievers!(script, data::Script);
 pub struct Modifier;
 macro_rules! make_modifiers {
     ($entity:ident, $EntityType:ty) => (
-        impl ModifierFunctions<$EntityType, State> for Modifier {
+        impl<B> ModifierFunctions<$EntityType, State<B>> for Modifier
+            where
+                B: ChannelBroadcaster + Send + 'static,
+        {
 
             fn create(
-                conn: &State,
+                conn: &State<B>,
                 object: $EntityType,
             ) -> Result<Created<$EntityType>, EntityError> {
                 $entity::Modifier::create::<$EntityType>(conn.get_conn(), object)
             }
 
             fn create_many(
-                conn: &State,
+                conn: &State<B>,
                 objects: &[$EntityType],
             ) -> Result<CreatedSet<$EntityType>, EntityError> {
                 $entity::Modifier::create_many::<$EntityType>(conn.get_conn(), objects)
             }
 
             fn upsert(
-                conn: &State,
+                conn: &State<B>,
                 object: $EntityType,
             ) -> Result<Upserted<$EntityType>, EntityError> {
                 $entity::Modifier::upsert::<$EntityType>(conn.get_conn(), object)
             }
 
             fn upsert_many(
-                conn: &State,
+                conn: &State<B>,
                 objects: &[$EntityType],
             ) -> Result<UpsertedSet<$EntityType>, EntityError> {
                 $entity::Modifier::upsert_many::<$EntityType>(conn.get_conn(), objects)
             }
 
             fn update(
-                conn: &State,
+                conn: &State<B>,
                 name_object: (&str, $EntityType),
             ) -> Result<Updated<$EntityType>, EntityError> {
                 $entity::Modifier::update::<$EntityType>(conn.get_conn(), name_object)
             }
 
             fn update_many(
-                conn: &State,
+                conn: &State<B>,
                 names_objects: &[(&str, $EntityType)],
             ) -> Result<UpdatedSet<$EntityType>, EntityError> {
                 $entity::Modifier::update_many::<$EntityType>(conn.get_conn(), names_objects)
             }
 
             fn delete(
-                conn: &State,
+                conn: &State<B>,
                 name: &str,
             ) -> Result<Deleted<$EntityType>, EntityError> {
                 $entity::Modifier::delete::<$EntityType>(conn.get_conn(), name)
             }
 
             fn delete_many(
-                conn: &State,
+                conn: &State<B>,
                 names: &[&str],
             ) -> Result<DeletedSet<$EntityType>, EntityError> {
                 $entity::Modifier::delete_many::<$EntityType>(conn.get_conn(), names)

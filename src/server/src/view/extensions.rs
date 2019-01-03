@@ -27,6 +27,8 @@ use model::actions::Action;
 use view::serializers::Serializable;
 use actix_web::dev::JsonConfig;
 use std::fmt::Debug;
+use model::state::ChannelBroadcaster;
+use view::action_wrapper::Broadcaster;
 // use actix_web::dev::QueryConfig; //TODO: for some reason this can't be imported, probably actix_web issue
 
 
@@ -44,11 +46,11 @@ pub trait CorsBuilderProcedureExt {
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             JP: Debug + 'static,
             QP: Debug + 'static,
-            A: Action + Send + 'static,
+            A: Action<Broadcaster> + Send + 'static,
             PB: ProcedureBuilder<JP, QP, A> + Clone + 'static,
             Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Ret: Send + Serializable;
+            <A as Action<Broadcaster>>::Ret: Send + Serializable;
 
 }
 
@@ -57,13 +59,13 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
     fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
             DatabaseExecutor: Handler<ActionWrapper<A>>,
-            A: Action + Send + 'static,
+            A: Action<Broadcaster> + Send + 'static,
             PB: ProcedureBuilder<JP, QP, A> + Clone + 'static,
             JP: Debug + 'static,
             QP: Debug + 'static,
             Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Ret: Send + Serializable,
+            <A as Action<Broadcaster>>::Ret: Send + Serializable,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with_config(
