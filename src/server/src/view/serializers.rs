@@ -6,6 +6,7 @@ use serde_json::Value;
 use serde::Serialize;
 use data;
 
+/// Used for converting values received from the action into json format
 pub trait Serializable {
     const ACTION_NAME: &'static str = "NoAction";
     fn into_serialize(self) -> serde_json::Value;

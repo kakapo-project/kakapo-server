@@ -99,19 +99,7 @@ impl<JP, QP, A, PB> ProcedureHandler<JP, QP, A, PB>
     }
 }
 
-impl ResponseError for Error {
-    fn error_response(&self) -> HttpResponse {
-        unimplemented!();
-        /*
-        HttpResponse::InternalServerError()
-            .content_type("application/json")
-            .body(serde_json::to_string(&json!({ "error": self.to_string() })).unwrap())
-           */
-    }
-}
-
-
-pub fn handler_function<JP, QP, A, PB>(
+pub fn procedure_handler_function<JP, QP, A, PB>(
     procedure_handler: ProcedureHandler<JP, QP, A, PB>,
     req: HttpRequest<AppState>,
     json_params: Json<JP>,

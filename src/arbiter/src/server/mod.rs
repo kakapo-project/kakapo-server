@@ -1,6 +1,10 @@
 
 mod environment;
 mod state;
+mod extensions;
+mod session;
+mod actions;
+mod action_wrapper;
 
 use actix::prelude::*;
 
@@ -30,6 +34,7 @@ use server::environment::Env;
 use server::state::AppState;
 use actix_web::Path;
 use actix_web::Responder;
+use server::action_wrapper::Connector;
 
 //static routes
 fn index(_state: State<AppState>) -> Result<NamedFile, ActixError> {
@@ -45,6 +50,14 @@ fn test_route(req: &HttpRequest<AppState>) -> String {
 
 pub fn serve() {
 
+    let connection = Connector::new()
+        .host(Env::database_host())
+        .port(Env::database_port())
+        .user(Env::database_user())
+        .pass(Env::database_pass())
+        .db(Env::database_db())
+        .done();
+
     let server_addr = Env::server_addr();
     let is_secure = Env::is_secure();
 
@@ -52,14 +65,14 @@ pub fn serve() {
 
         let www_path = Env::www_path();
         let script_path = Env::script_path();
-        let state = AppState::new("Kakapo");
+        let state = AppState::new(connection.clone(), &script_path, "KakapoArbiter");
 
         App::with_state(state)
             .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
             .middleware(Logger::new("Requested [%r] FROM %a \"%{User-Agent}i\""))
             .middleware(IdentityService::new(
                 CookieIdentityPolicy::new(Env::secret_key().as_bytes())
-                    .name("kakapo-auth")
+                    .name("kakapo-arbiter")
                     .path("/")
                     .domain(Env::domain())
                     .max_age(Duration::days(1))

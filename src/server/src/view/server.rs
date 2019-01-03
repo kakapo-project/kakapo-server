@@ -33,7 +33,6 @@ use super::procedure::{ ProcedureBuilder, NoQuery };
 use super::extensions::CorsBuilderProcedureExt;
 use super::extensions::CorsBuilderSessionExt;
 
-use view::session::Session;
 use view::session;
 use view::error;
 
@@ -80,6 +79,7 @@ impl SessionHandler {
     }
 }
 
+/*
 impl session::SessionListener<SocketRequest> for SessionHandler {
     fn listen(&self, session: &mut Session<SocketRequest, Self>, param: SocketRequest) {
         match param {
@@ -94,6 +94,7 @@ impl session::SessionListener<SocketRequest> for SessionHandler {
         }
     }
 }
+*/
 
 pub fn serve() {
 
@@ -119,7 +120,7 @@ pub fn serve() {
             .middleware(Logger::new("Requested [%r] FROM %a \"%{User-Agent}i\""))
             .middleware(IdentityService::new(
                 CookieIdentityPolicy::new(Env::secret_key().as_bytes())
-                    .name("kakapo-auth")
+                    .name("kakapo-server")
                     .path("/")
                     .domain(Env::domain())
                     .max_age(Duration::days(1))
@@ -220,10 +221,10 @@ pub fn serve() {
                     "/manage/runScript",
                     |_: NoQuery, _: NoQuery| actions::Nothing
                 )
-                .session(
-                    "/listen",
-                    SessionHandler::new(),
-                )
+                //.session(
+                //    "/listen",
+                //    SessionHandler::new(),
+                //)
                 .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)
