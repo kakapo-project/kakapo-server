@@ -27,7 +27,7 @@ pub enum Channels {
 }
 
 pub trait ChannelBroadcaster {
-    fn on_broadcast<T>(&self, channel: Channels, msg: T);
+    fn on_broadcast<T>(channel: &Channels, msg: &T);
 }
 
 pub struct State<B>

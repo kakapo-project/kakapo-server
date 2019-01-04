@@ -29,7 +29,7 @@ use std::marker::PhantomData;
 pub struct Broadcaster;
 
 impl ChannelBroadcaster for Broadcaster {
-    fn on_broadcast<T>(&self, channel: Channels, msg: T) {
+    fn on_broadcast<T>(channel: &Channels, msg: &T) {
         unimplemented!()
     }
 }

@@ -12,6 +12,7 @@ use std::marker::PhantomData;
 
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::pg::PgConnection;
+use diesel::Connection;
 
 use data;
 
@@ -43,6 +44,9 @@ use connection::executor::Conn;
 use model::state::State;
 use model::state::GetConnection;
 use model::state::ChannelBroadcaster;
+use model::state::Channels;
+use model::auth::permissions::*;
+use std::iter::FromIterator;
 
 
 pub trait Action<B, S = State<B>>: Send
@@ -61,8 +65,8 @@ pub struct WithPermissionRequired<A, B, S = State<B>>
         B: ChannelBroadcaster + Send + 'static,
 {
     action: A,
+    permission: Permission,
     phantom_data: PhantomData<(S, B)>,
-    //permission: ...
 }
 
 impl<A, B, S> WithPermissionRequired<A, B, S>
@@ -70,37 +74,84 @@ impl<A, B, S> WithPermissionRequired<A, B, S>
         A: Action<B, S>,
         B: ChannelBroadcaster + Send + 'static,
 {
-    pub fn new(action: A/*, permission: Permission*/) -> Self {
+    pub fn new(action: A, permission: Permission) -> Self {
         Self {
             action,
+            permission,
             phantom_data: PhantomData,
-            //permission,
         }
     }
 }
 
-impl<A, B, S> Action<B, S> for WithPermissionRequired<A, B, S>
+impl<A, B> Action<B, State<B>> for WithPermissionRequired<A, B>
     where
-        A: Action<B, S>,
+        A: Action<B, State<B>>,
         B: ChannelBroadcaster + Send + 'static,
-        S: GetConnection + Send,
 {
-    type Ret = A::Ret; //TODO: 403 error
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        self.action.call(state)
+    type Ret = A::Ret;
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+        let user_permissions = AuthPermissions::get_permissions(state);
+        if user_permissions.contains(&self.permission) {
+            self.action.call(state)
+        } else {
+            Err(Error::Unauthorized)
+        }
+
     }
 }
 
 ///decorator for permission in listing items
-pub struct WithFilterListByPermission<A, B, S = State<B>>
+/// Only defined for GetAllEntities
+pub struct WithFilterListByPermission<T, B, S = State<B>, ER = entity::Controller>
     where
-        A: Action<B, S>,
         B: ChannelBroadcaster + Send + 'static,
+        T: Send + Clone + RawEntityTypes,
+        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
+        ER: RetrieverFunctions<T, S>,
+        S: GetConnection,
+{
+    action: GetAllEntities<T, B, S, ER>,
+    phantom_data: PhantomData<(T, S, B)>,
+    //permission: ...
+}
+
+impl<T, B, S, ER> WithFilterListByPermission<T, B, S, ER>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        T: Send + Clone + RawEntityTypes,
+        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
+        ER: RetrieverFunctions<T, S>,
         S: GetConnection + Send,
 {
-    action: A,
-    phantom_data: PhantomData<(S, B)>,
-    //permission: ...
+    pub fn new(action: GetAllEntities<T, B, S, ER>) -> Self {
+        Self {
+            action,
+            phantom_data: PhantomData,
+        }
+    }
+}
+
+impl<T, B, ER> Action<B, State<B>> for WithFilterListByPermission<T, B, State<B>, ER>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        T: Send + Clone + RawEntityTypes,
+        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
+        ER: RetrieverFunctions<T, State<B>> + Send,
+        for<'a> Vec<T>: FromIterator<&'a T>,
+{
+    type Ret = <GetAllEntities<T, B, State<B>, ER> as Action<B, State<B>>>::Ret;
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+        let user_permissions = AuthPermissions::get_permissions(state);
+        let raw_results = self.action.call(state)?;
+
+        let GetAllEntitiesResult(inner_results) = raw_results;
+
+        let filtered_results = inner_results.iter()
+            .filter(|x| false)
+            .collect();
+
+        Ok(GetAllEntitiesResult(filtered_results))
+    }
 }
 
 ///decorator for transactions
@@ -112,7 +163,6 @@ pub struct WithTransaction<A, B, S = State<B>>
 {
     action: A,
     phantom_data: PhantomData<(S, B)>,
-    //permission: ...
 }
 
 impl<A, B, S> WithTransaction<A, B, S>
@@ -129,17 +179,19 @@ impl<A, B, S> WithTransaction<A, B, S>
     }
 }
 
-impl<A, B, S> Action<B, S> for WithTransaction<A, B, S>
+impl<A, B> Action<B, State<B>> for WithTransaction<A, B, State<B>>
     where
-        A: Action<B, S>,
+        A: Action<B, State<B>>,
         B: ChannelBroadcaster + Send + 'static,
-        S: GetConnection + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         debug!("started transaction");
-        //TODO: transactions
-        self.action.call(state)
+        let conn = state.get_conn();
+        conn.transaction::<Self::Ret, Error, _>(||
+            self.action.call(state)
+        )
+
     }
 }
 
@@ -150,8 +202,40 @@ pub struct WithDispatch<A, B, S = State<B>>
         B: ChannelBroadcaster + Send + 'static,
 {
     action: A,
+    channel: Channels,
     phantom_data: PhantomData<(S, B)>,
-    //permission: ...
+}
+
+impl<A, B, S> WithDispatch<A, B, S>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    pub fn new(action: A, channel: Channels) -> Self {
+        Self {
+            action,
+            channel,
+            phantom_data: PhantomData,
+        }
+    }
+}
+
+impl<A, B, S> Action<B, S> for WithDispatch<A, B, S>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = A::Ret;
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        debug!("dispatching action");
+
+        let result = self.action.call(state)?;
+        B::on_broadcast(&self.channel, &result);
+
+        Ok(result)
+    }
 }
 
 ///get all tables
@@ -219,14 +303,16 @@ impl<T, B, S, ER> GetEntity<T, B, S, ER>
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection + Send,
+        WithTransaction<GetEntity<T, B, S, ER>, B, S>: Action<B, S>, //because WithTransaction isn't fully generic
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, B, S, ER>, B, S>, B, S> { //weird syntax but ok
         let action = Self {
-            name,
+            name: name.to_owned(),
             phantom_data: PhantomData,
         };
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission = WithPermissionRequired::new(action_with_transaction /*, ... */);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::ReadTableInfo(name));
 
         action_with_permission
     }
@@ -725,6 +811,13 @@ mod tests {
         }
     }
 
+    struct TestBroadcaster;
+    impl ChannelBroadcaster for TestBroadcaster {
+        fn on_broadcast<T>(channel: &Channels, msg: &T) {
+            unimplemented!()
+        }
+    }
+
     impl RetrieverFunctions<data::Table, TestState> for TestEntityRetriever {
         fn get_all(conn: &TestState) -> Result<Vec<data::Table>, EntityError> {
             unimplemented!()
@@ -739,7 +832,7 @@ mod tests {
     fn test_get_all_entities_for_table() {
         let state = TestState(TestConn);
 
-        let action = GetAllEntities::<data::Table, TestState, TestEntityRetriever>::new(true);
+        let action = GetAllEntities::<data::Table, TestBroadcaster, TestState, TestEntityRetriever>::new(true);
         let action_result = action.call(&state);
     }
 

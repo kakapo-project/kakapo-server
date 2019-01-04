@@ -1,4 +1,5 @@
 
+pub mod permissions;
 
 use jsonwebtoken::{decode, encode, Header, Validation};
 use bcrypt::verify;
