@@ -13,6 +13,8 @@ use data;
 pub trait RawEntityTypes {
     type Data;
     type NewData;
+
+    fn get_name(&self) -> String;
 }
 
 #[derive(Identifiable, Debug, Queryable, Clone)]
@@ -54,6 +56,10 @@ pub struct NewRawTable {
 impl RawEntityTypes for data::Table {
     type Data = RawTable;
     type NewData = NewRawTable;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
 }
 
 
@@ -87,6 +93,10 @@ pub struct NewRawQuery {
 impl RawEntityTypes for data::Query {
     type Data = RawQuery;
     type NewData = NewRawQuery;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
 }
 
 #[derive(Identifiable, Associations, Debug, Queryable, Clone)]
@@ -121,6 +131,10 @@ pub struct NewRawScript {
 impl RawEntityTypes for data::Script {
     type Data = RawScript;
     type NewData = NewRawScript;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
 }
 
 

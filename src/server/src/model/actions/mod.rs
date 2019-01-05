@@ -2,6 +2,8 @@
 pub mod results;
 pub mod error;
 
+mod decorator;
+
 use actix::prelude::*;
 
 use serde_json;
@@ -48,6 +50,7 @@ use model::state::Channels;
 use model::auth::permissions::*;
 use std::iter::FromIterator;
 
+use model::actions::decorator::*;
 
 pub trait Action<B, S = State<B>>: Send
     where
@@ -56,48 +59,6 @@ pub trait Action<B, S = State<B>>: Send
 {
     type Ret;
     fn call(&self, state: &S) -> Result<Self::Ret, Error>;
-}
-
-///decorator for permission
-pub struct WithPermissionRequired<A, B, S = State<B>>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-{
-    action: A,
-    permission: Permission,
-    phantom_data: PhantomData<(S, B)>,
-}
-
-impl<A, B, S> WithPermissionRequired<A, B, S>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-{
-    pub fn new(action: A, permission: Permission) -> Self {
-        Self {
-            action,
-            permission,
-            phantom_data: PhantomData,
-        }
-    }
-}
-
-impl<A, B> Action<B, State<B>> for WithPermissionRequired<A, B>
-    where
-        A: Action<B, State<B>>,
-        B: ChannelBroadcaster + Send + 'static,
-{
-    type Ret = A::Ret;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
-        let user_permissions = AuthPermissions::get_permissions(state);
-        if user_permissions.contains(&self.permission) {
-            self.action.call(state)
-        } else {
-            Err(Error::Unauthorized)
-        }
-
-    }
 }
 
 ///decorator for permission in listing items
@@ -112,7 +73,6 @@ pub struct WithFilterListByPermission<T, B, S = State<B>, ER = entity::Controlle
 {
     action: GetAllEntities<T, B, S, ER>,
     phantom_data: PhantomData<(T, S, B)>,
-    //permission: ...
 }
 
 impl<T, B, S, ER> WithFilterListByPermission<T, B, S, ER>
@@ -146,95 +106,15 @@ impl<T, B, ER> Action<B, State<B>> for WithFilterListByPermission<T, B, State<B>
 
         let GetAllEntitiesResult(inner_results) = raw_results;
 
+        debug!("filtering list based on permissions");
         let filtered_results = inner_results.iter()
-            .filter(|x| false)
+            .filter(|x| {
+                let required = Permission::read_entity::<T>(x.get_name());
+                user_permissions.contains(&required)
+            })
             .collect();
 
         Ok(GetAllEntitiesResult(filtered_results))
-    }
-}
-
-///decorator for transactions
-pub struct WithTransaction<A, B, S = State<B>>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        S: GetConnection + Send,
-{
-    action: A,
-    phantom_data: PhantomData<(S, B)>,
-}
-
-impl<A, B, S> WithTransaction<A, B, S>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        S: GetConnection + Send,
-{
-    pub fn new(action: A) -> Self {
-        Self {
-            action,
-            phantom_data: PhantomData,
-        }
-    }
-}
-
-impl<A, B> Action<B, State<B>> for WithTransaction<A, B, State<B>>
-    where
-        A: Action<B, State<B>>,
-        B: ChannelBroadcaster + Send + 'static,
-{
-    type Ret = A::Ret;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
-        debug!("started transaction");
-        let conn = state.get_conn();
-        conn.transaction::<Self::Ret, Error, _>(||
-            self.action.call(state)
-        )
-
-    }
-}
-
-///decorator for dispatching to channel
-pub struct WithDispatch<A, B, S = State<B>>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-{
-    action: A,
-    channel: Channels,
-    phantom_data: PhantomData<(S, B)>,
-}
-
-impl<A, B, S> WithDispatch<A, B, S>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        S: GetConnection + Send,
-{
-    pub fn new(action: A, channel: Channels) -> Self {
-        Self {
-            action,
-            channel,
-            phantom_data: PhantomData,
-        }
-    }
-}
-
-impl<A, B, S> Action<B, S> for WithDispatch<A, B, S>
-    where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        S: GetConnection + Send,
-{
-    type Ret = A::Ret;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        debug!("dispatching action");
-
-        let result = self.action.call(state)?;
-        B::on_broadcast(&self.channel, &result);
-
-        Ok(result)
     }
 }
 
@@ -303,7 +183,7 @@ impl<T, B, S, ER> GetEntity<T, B, S, ER>
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection + Send,
-        WithTransaction<GetEntity<T, B, S, ER>, B, S>: Action<B, S>, //because WithTransaction isn't fully generic
+        WithTransaction<Self, B, S>: Action<B, S>, //because WithTransaction isn't fully generic
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, B, S, ER>, B, S>, B, S> { //weird syntax but ok
         let action = Self {
@@ -312,7 +192,7 @@ impl<T, B, S, ER> GetEntity<T, B, S, ER>
         };
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::ReadTableInfo(name));
+            WithPermissionRequired::new(action_with_transaction, Permission::read_entity::<T>(name));
 
         action_with_permission
     }
@@ -341,45 +221,64 @@ impl<T, B, S, ER> Action<B, S> for GetEntity<T, B, S, ER>
 
 ///create one table
 #[derive(Debug)]
-pub struct CreateEntity<T, B, S = State<B>, EM = entity::Controller>
-    where
-        T: Send + Clone,
-        T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        S: GetConnection + Send,
-{
-    pub data: T,
-    pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<(B, S, EM)>,
-}
-
-impl<T, B, S> CreateEntity<T, B, S>
-    where
-        T: Send + Clone,
-        T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        S: GetConnection + Send,
-{
-    pub fn new(data: T) -> Self {
-        Self {
-            data,
-            on_duplicate: OnDuplicate::Ignore,
-            phantom_data: PhantomData,
-        }
-    }
-}
-
-impl<T, B, S, EM> Action<B, S> for CreateEntity<T, B, S, EM>
+pub struct CreateEntity<T, B, EM = entity::Controller>
     where
         B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        EM: ModifierFunctions<T, State<B>> + Send,
+        State<B>: GetConnection + Send,
+{
+    pub data: T,
+    pub on_duplicate: OnDuplicate,
+    pub phantom_data: PhantomData<(B, EM)>,
+}
+
+impl<T, B, EM> CreateEntity<T, B, EM>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        T: Send + Clone,
+        T: RawEntityTypes,
+        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        EM: ModifierFunctions<T, State<B>> + Send,
+        State<B>: GetConnection + Send,
+{
+    pub fn new(data: T) -> WithTransaction<WithPermissionRequiredOnReturn<Self, B, State<B>>, B, State<B>> {
+        let action = Self {
+            data,
+            on_duplicate: OnDuplicate::Ignore,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_permission =
+            WithPermissionRequiredOnReturn::new(
+                action,
+                Permission::create_entity::<T>(),
+                |result| {
+                    match result {
+                        CreateEntityResult::Updated { old, .. } => Some(Permission::modify_entity::<T>(old.get_name())),
+                        _ => None,
+                    }
+                });
+
+        let action_with_transaction = WithTransaction::new(action_with_permission);
+
+        action_with_transaction
+    }
+}
+
+impl<T, B, EM> Action<B, State<B>> for CreateEntity<T, B, EM>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        T: Send + Clone,
+        T: RawEntityTypes,
+        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        EM: ModifierFunctions<T, State<B>> + Send,
+        State<B>: GetConnection + Send,
 {
     type Ret = CreateEntityResult<T>;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         match &self.on_duplicate {
             OnDuplicate::Update => {
                 EM::upsert(state, self.data.clone())
@@ -420,9 +319,11 @@ impl<T, B, S, EM> Action<B, S> for CreateEntity<T, B, S, EM>
 #[derive(Debug)]
 pub struct UpdateEntity<T, B, S = State<B>, EM = entity::Controller>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
     pub name: String,
@@ -433,18 +334,27 @@ pub struct UpdateEntity<T, B, S = State<B>, EM = entity::Controller>
 
 impl<T, B, S, EM> UpdateEntity<T, B, S, EM>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>, //because WithTransaction isn't fully generic
 {
-    pub fn new(name: String, data: T) -> Self {
-        Self {
-            name,
+    pub fn new(name: String, data: T) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            name: name.to_owned(),
             data,
             on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
-        }
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::modify_entity::<T>(name));
+
+        action_with_permission
     }
 }
 
@@ -492,9 +402,11 @@ impl<T, B, S, EM> Action<B, S> for UpdateEntity<T, B, S, EM>
 #[derive(Debug)]
 pub struct DeleteEntity<T, B, S = State<B>, EM = entity::Controller>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
     pub name: String,
@@ -504,17 +416,26 @@ pub struct DeleteEntity<T, B, S = State<B>, EM = entity::Controller>
 
 impl<T, B, S, EM> DeleteEntity<T, B, S, EM>
     where
+        B: ChannelBroadcaster + Send + 'static,
         T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
+        EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>, //because WithTransaction isn't fully generic
 {
-    pub fn new(name: String) -> Self {
-        Self {
-            name,
+    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            name: name.to_owned(),
             on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
-        }
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::modify_entity::<T>(name));
+
+        action_with_permission
     }
 }
 
@@ -567,16 +488,24 @@ pub struct QueryTableData<B, S = State<B>, ER = entity::Controller, TC = table::
 
 impl<B, S, ER, TC> QueryTableData<B, S, ER, TC>
     where
+        B: ChannelBroadcaster + Send + 'static,
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
         S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(table_name: String) -> Self {
-        Self {
-            table_name,
+    pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            table_name: table_name.to_owned(),
             format: TableDataFormat::Rows,
             phantom_data: PhantomData,
-        }
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::get_table_data(table_name));
+
+        action_with_permission
     }
 }
 
@@ -614,27 +543,49 @@ impl<B, S, ER, TC> Action<B, S> for QueryTableData<B, S, ER, TC>
 
 
 #[derive(Debug)]
-pub struct InsertTableData {
-    pub name: String,
-    //pub data: api::TableData, //payload
-    //pub format: api::TableDataFormat,
-    //pub on_duplicate: api::OnDuplicate,
+pub struct InsertTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction> {
+    pub table_name: String,
+    pub data: data::TableData, //payload
+    pub format: TableDataFormat,
+    pub on_duplicate: OnDuplicate,
+    pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
-impl InsertTableData {
-    pub fn new(name: String) -> Self {
-        Self {
-            name
-        }
+impl<B, S, ER, TC> InsertTableData<B, S, ER, TC>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            table_name: table_name.to_owned(),
+            data,
+            format: TableDataFormat::Rows,
+            on_duplicate: OnDuplicate::Ignore,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::modify_table_data(table_name));
+
+        action_with_permission
     }
 }
 
-impl<B> Action<B> for InsertTableData
+impl<B, S, ER, TC> Action<B, S> for InsertTableData<B, S, ER, TC>
     where
         B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
+
 {
     type Ret = InsertTableDataResult;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         //let result = table::insert_table_data(
         //    &state,
         //    self.name.to_owned(), self.data.to_owned(), self.format.to_owned(), api::CreationMethod::default())
@@ -645,27 +596,50 @@ impl<B> Action<B> for InsertTableData
 }
 
 #[derive(Debug)]
-pub struct UpdateTableData {
-    pub name: String,
-    //pub key: String,
-    //pub data: api::RowData, //payload
-    //pub format: api::TableDataFormat,
+pub struct UpdateTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction> {
+    pub table_name: String,
+    pub key: String, //TODO: not a string
+    pub data: data::TableData, //payload
+    pub format: TableDataFormat,
+    pub on_duplicate: OnDuplicate,
+    pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
-impl UpdateTableData {
-    pub fn new(name: String) -> Self {
-        Self {
-            name
-        }
+impl<B, S, ER, TC> UpdateTableData<B, S, ER, TC>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(table_name: String, key: String, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            table_name: table_name.to_owned(),
+            key,
+            data,
+            format: TableDataFormat::Rows,
+            on_duplicate: OnDuplicate::Ignore,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::modify_table_data(table_name));
+
+        action_with_permission
     }
 }
 
-impl<B> Action<B> for UpdateTableData
+impl<B, S, ER, TC> Action<B, S> for UpdateTableData<B, S, ER, TC>
     where
         B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = UpdateTableDataResult;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         //let result = table::update_table_data(
         //    &state,
         //    self.name.to_owned(), self.key.to_owned(), self.data.to_owned(), self.format.to_owned())
@@ -676,25 +650,48 @@ impl<B> Action<B> for UpdateTableData
 }
 
 #[derive(Debug)]
-pub struct DeleteTableData {
-    pub name: String,
-    //pub key: String,
+pub struct DeleteTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
+    pub table_name: String,
+    pub key: String, //TODO: not a string
+    pub format: TableDataFormat,
+    pub on_duplicate: OnDuplicate,
+    pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
-impl DeleteTableData {
-    pub fn new(name: String) -> Self {
-        Self {
-            name
-        }
+impl<B, S, ER, TC> DeleteTableData<B, S, ER, TC>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(table_name: String, key: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            table_name: table_name.to_owned(),
+            key,
+            format: TableDataFormat::Rows,
+            on_duplicate: OnDuplicate::Ignore,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::modify_table_data(table_name));
+
+        action_with_permission
     }
 }
 
-impl<B> Action<B> for DeleteTableData
+impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
     where
         B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = DeleteTableDataResult;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         //let result = table::delete_table_data(&state, self.name.to_owned(), self.key.to_owned())
         //    .or_else(|err| Err(()))?;
         //Ok(result)
@@ -704,28 +701,46 @@ impl<B> Action<B> for DeleteTableData
 
 // Query Action
 #[derive(Debug)]
-pub struct RunQuery {
-    pub name: String,
-    //pub params: api::QueryParams,
-    //pub start: Option<usize>,
-    //pub end: Option<usize>,
-    //pub format: api::TableDataFormat,
+pub struct RunQuery<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
+    pub query_name: String,
+    pub params: String, //TODO: not a string
+    pub format: TableDataFormat,
+    pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
-impl RunQuery {
-    pub fn new(name: String) -> Self {
-        Self {
-            name
-        }
+impl<B, S, ER, TC> RunQuery<B, S, ER, TC>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(query_name: String, params: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            query_name: query_name.to_owned(),
+            params,
+            format: TableDataFormat::Rows,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::run_query(query_name));
+
+        action_with_permission
     }
 }
 
-impl<B> Action<B> for RunQuery
+impl<B, S, ER, TC> Action<B, S> for RunQuery<B, S, ER, TC>
     where
         B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = RunQueryResult;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
         //let result = query::run_query(
         //    &state,
         //    self.name.to_owned(), self.format.to_owned(), self.params.to_owned())
@@ -737,28 +752,47 @@ impl<B> Action<B> for RunQuery
 
 // Query Action
 #[derive(Debug)]
-pub struct RunScript {
-    pub name: String,
-    //pub params: api::ScriptParam,
+pub struct RunScript<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
+    pub script_name: String,
+    pub params: String, //TODO: not a string
+    pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
-impl RunScript {
-    pub fn new(name: String) -> Self {
-        Self {
-            name
-        }
+impl<B, S, ER, TC> RunScript<B, S, ER, TC>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(script_name: String, params: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            script_name: script_name.to_owned(),
+            params,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::run_script(script_name));
+
+        action_with_permission
     }
 }
 
-impl<B> Action<B> for RunScript
+impl<B, S, ER, TC> Action<B, S> for RunScript<B, S, ER, TC>
     where
         B: ChannelBroadcaster + Send + 'static,
+        ER: entity::RetrieverFunctions<data::Table, S> + Send,
+        TC: table::TableActionFunctions<S> + Send,
+        S: GetConnection + Send,
 {
     type Ret = RunScriptResult;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
-        //let result = script::run_script(
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        //let result = query::run_query(
         //    &state,
-        //    self.py_runner.to_owned(), self.name.to_owned(), self.params.to_owned())
+        //    self.name.to_owned(), self.format.to_owned(), self.params.to_owned())
         //    .or_else(|err| Err(()))?;
         //Ok(result)
         Err(Error::Unknown)
