@@ -51,6 +51,7 @@ use model::auth::permissions::*;
 use std::iter::FromIterator;
 
 use model::actions::decorator::*;
+use data::KeyData;
 
 pub trait Action<B, S = State<B>>: Send
     where
@@ -527,9 +528,8 @@ impl<B, S, ER, TC> Action<B, S> for QueryTableData<B, S, ER, TC>
                 }
             })
             .and_then(|table| {
-                let query_result = TC::query(state, table)
-                    .or_else(|err| Err(Error::TableQuery(err)))?;
-                Ok(query_result)
+                TC::query(state, &table)
+                    .or_else(|err| Err(Error::TableQuery(err)))
             })
             .and_then(|table_data| {
                 match &self.format {
@@ -586,22 +586,38 @@ impl<B, S, ER, TC> Action<B, S> for InsertTableData<B, S, ER, TC>
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        //let result = table::insert_table_data(
-        //    &state,
-        //    self.name.to_owned(), self.data.to_owned(), self.format.to_owned(), api::CreationMethod::default())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
+        ER::get_one(state, &self.table_name)
+            .or_else(|err| Err(Error::Entity(err)))
+            .and_then(|res: Option<data::Table>| {
+                match res {
+                    Some(table) => Ok(table),
+                    None => Err(Error::NotFound),
+                }
+            })
+            .and_then(|table| {
+                match &self.on_duplicate {
+                    OnDuplicate::Update => TC::upsert_row(state, &table, &self.data),
+                    OnDuplicate::Ignore => TC::insert_row(state, &table, &self.data, false),
+                    OnDuplicate::Fail => TC::insert_row(state, &table, &self.data, true)
+                }.or_else(|err| Err(Error::TableQuery(err)))
+            })
+            .and_then(|table_data| {
+                match &self.format {
+                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
+                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
+                }
+            })
+            .and_then(|res| Ok(InsertTableDataResult(res)))
     }
 }
 
 #[derive(Debug)]
 pub struct UpdateTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
-    pub key: String, //TODO: not a string
+    pub keys: KeyData,
     pub data: data::TableData, //payload
     pub format: TableDataFormat,
-    pub on_duplicate: OnDuplicate,
+    pub on_not_found: OnNotFound,
     pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
@@ -613,13 +629,13 @@ impl<B, S, ER, TC> UpdateTableData<B, S, ER, TC>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(table_name: String, key: String, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(table_name: String, keys: KeyData, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             table_name: table_name.to_owned(),
-            key,
+            keys,
             data,
             format: TableDataFormat::Rows,
-            on_duplicate: OnDuplicate::Ignore,
+            on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
         };
 
@@ -640,21 +656,36 @@ impl<B, S, ER, TC> Action<B, S> for UpdateTableData<B, S, ER, TC>
 {
     type Ret = UpdateTableDataResult;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        //let result = table::update_table_data(
-        //    &state,
-        //    self.name.to_owned(), self.key.to_owned(), self.data.to_owned(), self.format.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
+        ER::get_one(state, &self.table_name)
+            .or_else(|err| Err(Error::Entity(err)))
+            .and_then(|res: Option<data::Table>| {
+                match res {
+                    Some(table) => Ok(table),
+                    None => Err(Error::NotFound),
+                }
+            })
+            .and_then(|table| {
+                match &self.on_not_found {
+                    OnNotFound::Ignore => TC::update_row(state, &table, &self.keys, &self.data,false),
+                    OnNotFound::Fail => TC::update_row(state, &table, &self.keys, &self.data,true)
+                }.or_else(|err| Err(Error::TableQuery(err)))
+            })
+            .and_then(|table_data| {
+                match &self.format {
+                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
+                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
+                }
+            })
+            .and_then(|res| Ok(UpdateTableDataResult(res)))
     }
 }
 
 #[derive(Debug)]
 pub struct DeleteTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
     pub table_name: String,
-    pub key: String, //TODO: not a string
+    pub keys: KeyData,
     pub format: TableDataFormat,
-    pub on_duplicate: OnDuplicate,
+    pub on_not_found: OnNotFound,
     pub phantom_data: PhantomData<(B, S, ER, TC)>,
 }
 
@@ -666,12 +697,12 @@ impl<B, S, ER, TC> DeleteTableData<B, S, ER, TC>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(table_name: String, key: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(table_name: String, keys: KeyData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             table_name: table_name.to_owned(),
-            key,
+            keys,
             format: TableDataFormat::Rows,
-            on_duplicate: OnDuplicate::Ignore,
+            on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
         };
 
@@ -692,10 +723,27 @@ impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
 {
     type Ret = DeleteTableDataResult;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        //let result = table::delete_table_data(&state, self.name.to_owned(), self.key.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
+        ER::get_one(state, &self.table_name)
+            .or_else(|err| Err(Error::Entity(err)))
+            .and_then(|res: Option<data::Table>| {
+                match res {
+                    Some(table) => Ok(table),
+                    None => Err(Error::NotFound),
+                }
+            })
+            .and_then(|table| {
+                match &self.on_not_found {
+                    OnNotFound::Ignore => TC::delete_row(state, &table, &self.keys, false),
+                    OnNotFound::Fail => TC::delete_row(state, &table, &self.keys, true)
+                }.or_else(|err| Err(Error::TableQuery(err)))
+            })
+            .and_then(|table_data| {
+                match &self.format {
+                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
+                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
+                }
+            })
+            .and_then(|res| Ok(DeleteTableDataResult(res)))
     }
 }
 
@@ -827,48 +875,4 @@ impl<B> Action<B> for Nothing
     fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
         Ok(())
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct TestEntityRetriever;
-
-    struct TestState(TestConn);
-    struct TestConn;
-
-    impl GetConnection for TestState {
-        type Connection = TestConn;
-        fn get_conn<'a>(&'a self) -> &'a TestConn {
-            &self.0
-        }
-    }
-
-    struct TestBroadcaster;
-    impl ChannelBroadcaster for TestBroadcaster {
-        fn on_broadcast<T>(channel: &Channels, msg: &T) {
-            unimplemented!()
-        }
-    }
-
-    impl RetrieverFunctions<data::Table, TestState> for TestEntityRetriever {
-        fn get_all(conn: &TestState) -> Result<Vec<data::Table>, EntityError> {
-            unimplemented!()
-        }
-
-        fn get_one(conn: &TestState, name: &str) -> Result<Option<data::Table>, EntityError> {
-            unimplemented!()
-        }
-    }
-
-    #[test]
-    fn test_get_all_entities_for_table() {
-        let state = TestState(TestConn);
-
-        let action = GetAllEntities::<data::Table, TestBroadcaster, TestState, TestEntityRetriever>::new(true);
-        let action_result = action.call(&state);
-    }
-
-
 }

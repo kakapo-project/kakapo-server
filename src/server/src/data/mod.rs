@@ -89,6 +89,177 @@ pub enum TableData {
     },
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyData(pub Vec<IndexableValue>);
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Column {
+    pub name: String,
+    pub data_type: DataType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default: Option<Value>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "op")]
+pub enum Expression {
+    Equals {
+        column: String,
+        value: Value
+    },
+    NotEqual {
+        column: String,
+        value: Value
+    },
+    GreaterThan {
+        column: String,
+        value: Value,
+    },
+    LessThan {
+        column: String,
+        value: Value,
+    },
+    In {
+        column: String,
+        values: Vec<Value>,
+    },
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Constraint {
+    Key(String),
+    //KeyTogether(Vec<String>),
+    Unique(String),
+    UniqueTogether(Vec<String>),
+
+    Check(Expression),
+
+    Reference {
+        column: String,
+        #[serde(rename = "foreignTable")]
+        foreign_table: String,
+        #[serde(rename = "foreignColumn")]
+        foreign_column: String,
+    },
+    ReferenceTogether {
+        columns: Vec<String>,
+        #[serde(rename = "foreignTable")]
+        foreign_table: String,
+        #[serde(rename = "foreignColumns")]
+        foreign_columns: Vec<String>,
+    },
+
+}
+
+
+// This is the same as SchemaModification::Create
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SchemaState {
+    pub columns: Vec<Column>,
+    pub constraint: Vec<Constraint>,
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "type")]
+pub enum SchemaModification {
+    Create {
+        columns: Vec<Column>,
+        #[serde(default)]
+        constraint: Vec<Constraint>,
+    },
+    Remove {
+        #[serde(default)]
+        column: Vec<String>,
+        #[serde(default)]
+        constraint: Vec<Constraint>,
+    },
+    Rename {
+        mapping: HashMap<String, String>,
+    },
+    Raw {
+        up: String,
+        down: String,
+    },
+    Nop,
+    Revert,
+    Delete,
+}
+impl Default for SchemaModification {
+    fn default() -> Self {
+        SchemaModification::Nop
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SchemaModificationCommit {
+    pub date: NaiveDateTime,
+    pub action: SchemaModification,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Table {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub schema: SchemaState,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TableWithData {
+    pub table: Table,
+    pub data: TableData,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QueryWithData {
+    pub query: Query,
+    pub data: TableData,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Query {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub statement: String,
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum QueryParams {
+    //TODO: implement named parameters, unfortunately postgres doesn't have named parameters so...
+    //Named(BTreeMap<String, Value>),
+    Unnamed(Vec<Value>),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Script {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub text: String,
+}
+
+pub type ScriptParam = Option<serde_json::Value>;
+
+impl Default for QueryParams {
+    fn default() -> Self {
+        QueryParams::Unnamed(vec![])
+    }
+}
 
 impl RowData {
 
@@ -224,126 +395,6 @@ impl TableData {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Column {
-    pub name: String,
-    pub data_type: DataType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub default: Option<Value>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "op")]
-pub enum Expression {
-    Equals {
-        column: String,
-        value: Value
-    },
-    NotEqual {
-        column: String,
-        value: Value
-    },
-    GreaterThan {
-        column: String,
-        value: Value,
-    },
-    LessThan {
-        column: String,
-        value: Value,
-    },
-    In {
-        column: String,
-        values: Vec<Value>,
-    },
-}
-
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Constraint {
-    Key(String),
-    //KeyTogether(Vec<String>),
-    Unique(String),
-    UniqueTogether(Vec<String>),
-
-    Check(Expression),
-
-    Reference {
-        column: String,
-        #[serde(rename = "foreignTable")]
-        foreign_table: String,
-        #[serde(rename = "foreignColumn")]
-        foreign_column: String,
-    },
-    ReferenceTogether {
-        columns: Vec<String>,
-        #[serde(rename = "foreignTable")]
-        foreign_table: String,
-        #[serde(rename = "foreignColumns")]
-        foreign_columns: Vec<String>,
-    },
-
-}
-
-
-// This is the same as SchemaModification::Create
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaState {
-    pub columns: Vec<Column>,
-    pub constraint: Vec<Constraint>,
-}
-
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "type")]
-pub enum SchemaModification {
-    Create {
-        columns: Vec<Column>,
-        #[serde(default)]
-        constraint: Vec<Constraint>,
-    },
-    Remove {
-        #[serde(default)]
-        column: Vec<String>,
-        #[serde(default)]
-        constraint: Vec<Constraint>,
-    },
-    Rename {
-        mapping: HashMap<String, String>,
-    },
-    Raw {
-        up: String,
-        down: String,
-    },
-    Nop,
-    Revert,
-    Delete,
-}
-impl Default for SchemaModification {
-    fn default() -> Self {
-        SchemaModification::Nop
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaModificationCommit {
-    pub date: NaiveDateTime,
-    pub action: SchemaModification,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Table {
-    pub name: String, //TODO: make sure this is an alphanumeric
-    pub description: String,
-    pub schema: SchemaState,
-}
-
 impl Table {
     pub fn get_key(&self) -> Option<String> {
         let constraints = &self.schema.constraint;
@@ -360,51 +411,3 @@ impl Table {
         keys.iter().nth(0).map(|x| x.to_owned())
     }
 }
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableWithData {
-    pub table: Table,
-    pub data: TableData,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct QueryWithData {
-    pub query: Query,
-    pub data: TableData,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Query {
-    pub name: String, //TODO: make sure this is an alphanumeric
-    pub description: String,
-    pub statement: String,
-}
-
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(untagged)]
-pub enum QueryParams {
-    //TODO: implement named parameters, unfortunately postgres doesn't have named parameters so...
-    //Named(BTreeMap<String, Value>),
-    Unnamed(Vec<Value>),
-}
-
-impl Default for QueryParams {
-    fn default() -> Self {
-        QueryParams::Unnamed(vec![])
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Script {
-    pub name: String, //TODO: make sure this is an alphanumeric
-    pub description: String,
-    pub text: String,
-}
-
-pub type ScriptParam = Option<serde_json::Value>;

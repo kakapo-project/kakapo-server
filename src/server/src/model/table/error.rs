@@ -2,6 +2,8 @@
 
 #[derive(Debug, Fail)]
 pub enum TableQueryError {
+    #[fail(display = "Already exists")]
+    AlreadyExists,
     #[fail(display = "Internal error")]
     InternalError, //returns back the DatabaseError variant of diesel::result::Error
     #[fail(display = "Failed to deserialize")]
