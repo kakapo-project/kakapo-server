@@ -108,7 +108,7 @@ impl<T, B, ER> Action<B, State<B>> for WithFilterListByPermission<T, B, State<B>
 {
     type Ret = <GetAllEntities<T, B, State<B>, ER> as Action<B, State<B>>>::Ret;
     fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
-        let user_permissions = AuthPermissions::get_permissions(state);
+        let user_permissions = AuthPermissions::get_permissions(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
 
         let GetAllEntitiesResult(inner_results) = raw_results;
@@ -895,7 +895,7 @@ impl<B, S> AddUser<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
 
         action_with_permission
     }
@@ -932,7 +932,7 @@ impl<B, S> RemoveUser<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
 
         action_with_permission
     }
@@ -961,14 +961,15 @@ impl<B, S> GetAllUsers<B, S>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new() -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new() -> WithLoginRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             phantom_data: PhantomData,
         };
 
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        /* everyone who is logged in can access to the users */
+        let action_with_permission = WithLoginRequired::new(action_with_transaction);
 
         action_with_permission
     }
@@ -1007,7 +1008,7 @@ impl<B, S> SetUserPassword<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
 
         action_with_permission
     }
@@ -1045,7 +1046,7 @@ impl<B, S> InviteUser<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
 
         action_with_permission
     }
@@ -1082,7 +1083,7 @@ impl<B, S> AddRole<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin()); //TODO: also needs the role
 
         action_with_permission
     }
@@ -1119,7 +1120,7 @@ impl<B, S> RemoveRole<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin()); //TODO: also needs to have the role
 
         action_with_permission
     }
@@ -1154,7 +1155,7 @@ impl<B, S> GetAllRoles<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
 
         action_with_permission
     }
@@ -1193,7 +1194,7 @@ impl<B, S> AttachPermissionForRole<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin()); //TODO: also needs permission for permission, and role
 
         action_with_permission
     }
@@ -1232,13 +1233,91 @@ impl<B, S> DetachPermissionForRole<B, S>
 
         let action_with_transaction = WithTransaction::new(action);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin()); //TODO: also needs permission for permission, and role
 
         action_with_permission
     }
 }
 
 impl<B, S> Action<B, S> for DetachPermissionForRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: add role for user
+pub struct AttachRoleForUser<B, S = State<B>> {
+    rolename: String,
+    permission: Permission,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> AttachRoleForUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            rolename,
+            permission,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin()); //TODO: also needs role
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for AttachRoleForUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: remove role for user
+pub struct DetachRoleForUser<B, S = State<B>> {
+    rolename: String,
+    permission: Permission,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> DetachRoleForUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            rolename,
+            permission,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin()); //TODO: also needs role
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for DetachRoleForUser<B, S>
     where
         B: ChannelBroadcaster + Send + 'static,
         S: GetConnection + Send,

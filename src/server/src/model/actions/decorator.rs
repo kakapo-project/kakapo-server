@@ -79,7 +79,7 @@ impl<A, B> Action<B, State<B>> for WithPermissionRequired<A, B>
 {
     type Ret = A::Ret;
     fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
-        let user_permissions = AuthPermissions::get_permissions(state);
+        let user_permissions = AuthPermissions::get_permissions(state).unwrap_or_default();
         if user_permissions.contains(&self.permission) {
             self.action.call(state)
         } else {
@@ -87,6 +87,47 @@ impl<A, B> Action<B, State<B>> for WithPermissionRequired<A, B>
             Err(Error::Unauthorized)
         }
 
+    }
+}
+
+///decorator for login
+pub struct WithLoginRequired<A, B, S = State<B>>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+{
+    action: A,
+    phantom_data: PhantomData<(S, B)>,
+}
+
+impl<A, B, S> WithLoginRequired<A, B, S>
+    where
+        A: Action<B, S>,
+        B: ChannelBroadcaster + Send + 'static,
+{
+    pub fn new(action: A) -> Self {
+        Self {
+            action,
+            phantom_data: PhantomData,
+        }
+    }
+}
+
+impl<A, B> Action<B, State<B>> for WithLoginRequired<A, B>
+    where
+        A: Action<B, State<B>>,
+        B: ChannelBroadcaster + Send + 'static,
+{
+    type Ret = A::Ret;
+    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+        let user_permissions = AuthPermissions::get_permissions(state);
+        match user_permissions {
+            None => {
+                debug!("Permission denied, required login");
+                Err(Error::Unauthorized)
+            },
+            Some(_) => self.action.call(state)
+        }
     }
 }
 
@@ -130,7 +171,7 @@ impl<A, B> Action<B, State<B>> for WithPermissionRequiredOnReturn<A, B>
 {
     type Ret = A::Ret;
     fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
-        let user_permissions = AuthPermissions::get_permissions(state);
+        let user_permissions = AuthPermissions::get_permissions(state).unwrap_or_default();
         if user_permissions.contains(&self.initial_permission) {
             let result = self.action.call(state)?;
             match (self.required_permission)(&result) {

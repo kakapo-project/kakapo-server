@@ -15,6 +15,7 @@ pub enum Permission {
         type_name: &'static str,
         entity_name: String,
     },
+
     GetTableData {
         table_name: String,
     },
@@ -27,7 +28,14 @@ pub enum Permission {
     RunScript {
         script_name: String,
     },
-    AddUser,
+
+    User { // manage user can detach roles
+        username: String,
+    },
+    UserAdmin, //can add or remove users,
+    // and add roles if the user has that role
+    // and add permission to role if the user has that role and permission
+
 }
 
 impl Permission {
@@ -75,8 +83,14 @@ impl Permission {
         }
     }
 
-    pub fn add_user() -> Self {
-        Permission::AddUser
+    pub fn user_admin() -> Self {
+        Permission::UserAdmin
+    }
+
+    pub fn user(username: String) -> Self {
+        Permission::User {
+            username,
+        }
     }
 }
 
@@ -86,14 +100,16 @@ pub trait AuthPermissionFunctions<B> //TODO: the ChannelBroadcast shouldn't be h
     where
         B: ChannelBroadcaster + Send + 'static,
 {
-    fn get_permissions(state: &State<B>) -> HashSet<Permission>;
+    /// returns a hashset of permissions if the user is logged in
+    /// otherwise returns none
+    fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>>;
 }
 
 impl<B> AuthPermissionFunctions<B> for AuthPermissions
     where
         B: ChannelBroadcaster + Send + 'static,
 {
-    fn get_permissions(state: &State<B>) -> HashSet<Permission> {
+    fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>> {
         unimplemented!()
     }
 }
