@@ -1,12 +1,21 @@
 
+pub mod error;
 
-pub struct QueryActions;
-trait QueryActionFunctions {
-    fn run_query() -> ();
+use model::state::ChannelBroadcaster;
+use model::state::State;
+use data;
+use model::query::error::QueryError;
+
+pub struct QueryAction;
+pub trait QueryActionFunctions<S> {
+    fn run_query() -> Result<data::TableData, QueryError> ;
 }
 
-impl QueryActionFunctions for QueryActions {
-    fn run_query() -> () {
+impl<B> QueryActionFunctions<State<B>> for QueryAction
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
+    fn run_query() -> Result<data::TableData, QueryError>  {
         unimplemented!()
     }
 }

@@ -40,8 +40,14 @@ use model::entity::results::Created;
 use model::entity::results::Updated;
 use model::entity::results::Deleted;
 use data::utils::TableDataFormat;
+
 use model::table;
 use model::table::TableActionFunctions;
+use model::query;
+use model::query::QueryActionFunctions;
+use model::script;
+use model::script::ScriptActionFunctions;
+
 use connection::executor::Conn;
 use model::state::State;
 use model::state::GetConnection;
@@ -529,7 +535,7 @@ impl<B, S, ER, TC> Action<B, S> for QueryTableData<B, S, ER, TC>
             })
             .and_then(|table| {
                 TC::query(state, &table)
-                    .or_else(|err| Err(Error::TableQuery(err)))
+                    .or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
                 match &self.format {
@@ -599,7 +605,7 @@ impl<B, S, ER, TC> Action<B, S> for InsertTableData<B, S, ER, TC>
                     OnDuplicate::Update => TC::upsert_row(state, &table, &self.data),
                     OnDuplicate::Ignore => TC::insert_row(state, &table, &self.data, false),
                     OnDuplicate::Fail => TC::insert_row(state, &table, &self.data, true)
-                }.or_else(|err| Err(Error::TableQuery(err)))
+                }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
                 match &self.format {
@@ -668,7 +674,7 @@ impl<B, S, ER, TC> Action<B, S> for UpdateTableData<B, S, ER, TC>
                 match &self.on_not_found {
                     OnNotFound::Ignore => TC::update_row(state, &table, &self.keys, &self.data,false),
                     OnNotFound::Fail => TC::update_row(state, &table, &self.keys, &self.data,true)
-                }.or_else(|err| Err(Error::TableQuery(err)))
+                }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
                 match &self.format {
@@ -735,7 +741,7 @@ impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
                 match &self.on_not_found {
                     OnNotFound::Ignore => TC::delete_row(state, &table, &self.keys, false),
                     OnNotFound::Fail => TC::delete_row(state, &table, &self.keys, true)
-                }.or_else(|err| Err(Error::TableQuery(err)))
+                }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
                 match &self.format {
@@ -749,18 +755,18 @@ impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
 
 // Query Action
 #[derive(Debug)]
-pub struct RunQuery<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
+pub struct RunQuery<B, S = State<B>, ER = entity::Controller, QC = query::QueryAction>  {
     pub query_name: String,
     pub params: String, //TODO: not a string
     pub format: TableDataFormat,
-    pub phantom_data: PhantomData<(B, S, ER, TC)>,
+    pub phantom_data: PhantomData<(B, S, ER, QC)>,
 }
 
-impl<B, S, ER, TC> RunQuery<B, S, ER, TC>
+impl<B, S, ER, QC> RunQuery<B, S, ER, QC>
     where
         B: ChannelBroadcaster + Send + 'static,
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Query, S> + Send,
+        QC: query::QueryActionFunctions<S> + Send,
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
@@ -780,37 +786,50 @@ impl<B, S, ER, TC> RunQuery<B, S, ER, TC>
     }
 }
 
-impl<B, S, ER, TC> Action<B, S> for RunQuery<B, S, ER, TC>
+impl<B, S, ER, QC> Action<B, S> for RunQuery<B, S, ER, QC>
     where
         B: ChannelBroadcaster + Send + 'static,
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Query, S> + Send,
+        QC: query::QueryActionFunctions<S> + Send,
         S: GetConnection + Send,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        //let result = query::run_query(
-        //    &state,
-        //    self.name.to_owned(), self.format.to_owned(), self.params.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
+        ER::get_one(state, &self.query_name)
+            .or_else(|err| Err(Error::Entity(err)))
+            .and_then(|res: Option<data::Query>| {
+                match res {
+                    Some(query) => Ok(query),
+                    None => Err(Error::NotFound),
+                }
+            })
+            .and_then(|table| {
+                QC::run_query()
+                    .or_else(|err| Err(Error::Query(err)))
+            })
+            .and_then(|table_data| {
+                match &self.format {
+                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
+                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
+                }
+            })
+            .and_then(|res| Ok(RunQueryResult(res)))
     }
 }
 
 // Query Action
 #[derive(Debug)]
-pub struct RunScript<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
+pub struct RunScript<B, S = State<B>, ER = entity::Controller, SC = script::ScriptAction>  {
     pub script_name: String,
     pub params: String, //TODO: not a string
-    pub phantom_data: PhantomData<(B, S, ER, TC)>,
+    pub phantom_data: PhantomData<(B, S, ER, SC)>,
 }
 
-impl<B, S, ER, TC> RunScript<B, S, ER, TC>
+impl<B, S, ER, SC> RunScript<B, S, ER, SC>
     where
         B: ChannelBroadcaster + Send + 'static,
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Script, S> + Send,
+        SC: script::ScriptActionFunctions<S> + Send,
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
@@ -829,21 +848,28 @@ impl<B, S, ER, TC> RunScript<B, S, ER, TC>
     }
 }
 
-impl<B, S, ER, TC> Action<B, S> for RunScript<B, S, ER, TC>
+impl<B, S, ER, SC> Action<B, S> for RunScript<B, S, ER, SC>
     where
         B: ChannelBroadcaster + Send + 'static,
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Script, S> + Send,
+        SC: script::ScriptActionFunctions<S> + Send,
         S: GetConnection + Send,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        //let result = query::run_query(
-        //    &state,
-        //    self.name.to_owned(), self.format.to_owned(), self.params.to_owned())
-        //    .or_else(|err| Err(()))?;
-        //Ok(result)
-        Err(Error::Unknown)
+        ER::get_one(state, &self.script_name)
+            .or_else(|err| Err(Error::Entity(err)))
+            .and_then(|res: Option<data::Script>| {
+                match res {
+                    Some(query) => Ok(query),
+                    None => Err(Error::NotFound),
+                }
+            })
+            .and_then(|table| {
+                SC::run_script()
+                    .or_else(|err| Err(Error::Script(err)))
+            })
+            .and_then(|res| Ok(RunScriptResult(res)))
     }
 }
 

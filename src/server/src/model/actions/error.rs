@@ -1,14 +1,20 @@
 use model::entity::error::EntityError;
-use model::table::error::TableQueryError;
+use model::table::error::TableError;
+use model::query::error::QueryError;
 
 use diesel::result::Error as DieselError;
+use model::script::error::ScriptError;
 
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "{:?}", 0)]
     Entity(EntityError),
     #[fail(display = "{:?}", 0)]
-    TableQuery(TableQueryError),
+    Table(TableError),
+    #[fail(display = "{:?}", 0)]
+    Script(ScriptError),
+    #[fail(display = "{:?}", 0)]
+    Query(QueryError),
     #[fail(display = "Not authorized")]
     Unauthorized,
     #[fail(display = "Not found")]

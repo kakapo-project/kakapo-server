@@ -1,7 +1,6 @@
 
-
 #[derive(Debug, Fail)]
-pub enum TableError {
+pub enum QueryError {
     #[fail(display = "Already exists")]
     AlreadyExists,
     #[fail(display = "Internal error")]
