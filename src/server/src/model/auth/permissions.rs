@@ -27,6 +27,7 @@ pub enum Permission {
     RunScript {
         script_name: String,
     },
+    AddUser,
 }
 
 impl Permission {
@@ -72,6 +73,10 @@ impl Permission {
         Permission::RunScript {
             script_name: name
         }
+    }
+
+    pub fn add_user() -> Self {
+        Permission::AddUser
     }
 }
 

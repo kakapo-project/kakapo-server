@@ -873,15 +873,381 @@ impl<B, S, ER, SC> Action<B, S> for RunScript<B, S, ER, SC>
     }
 }
 
-//Auth
-pub struct AddUser;
-pub struct RemoveUser;
+/// User Auth: Add user
+pub struct AddUser<B, S = State<B>> {
+    username: String,
+    email: String,
+    phantom_data: PhantomData<(B, S)>,
+}
 
-pub struct AddRole;
-pub struct RemoveRole;
+impl<B, S> AddUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(username: String, email: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            username,
+            email,
+            phantom_data: PhantomData,
+        };
 
-pub struct AttachPermissionForRole;
-pub struct DetachPermissionForRole;
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for AddUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// User Auth: Remove User
+pub struct RemoveUser<B, S = State<B>> {
+    userid: String,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> RemoveUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(userid: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            userid,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for RemoveUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+
+/// User Auth: Get All users
+pub struct GetAllUsers<B, S = State<B>> {
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> GetAllUsers<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new() -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for GetAllUsers<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// User Auth: Set user password
+pub struct SetUserPassword<B, S = State<B>> {
+    userid: String,
+    password: String,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> SetUserPassword<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(userid: String, password: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            userid,
+            password,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for SetUserPassword<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+
+/// User Auth: Email user for invitation
+pub struct InviteUser<B, S = State<B>> {
+    email: String,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> InviteUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            email,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for InviteUser<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: Add Role
+pub struct AddRole<B, S = State<B>> {
+    rolename: String,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> AddRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            rolename,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for AddRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: Remove role
+pub struct RemoveRole<B, S = State<B>> {
+    rolename: String,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> RemoveRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            rolename,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for RemoveRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: get all role
+pub struct GetAllRoles<B, S = State<B>> {
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> GetAllRoles<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new() -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for GetAllRoles<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: add permission
+pub struct AttachPermissionForRole<B, S = State<B>> {
+    rolename: String,
+    permission: Permission,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> AttachPermissionForRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            rolename,
+            permission,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for AttachPermissionForRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
+
+/// Role Auth: remove permission
+pub struct DetachPermissionForRole<B, S = State<B>> {
+    rolename: String,
+    permission: Permission,
+    phantom_data: PhantomData<(B, S)>,
+}
+
+impl<B, S> DetachPermissionForRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+        WithTransaction<Self, B, S>: Action<B, S>,
+{
+    pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+        let action = Self {
+            rolename,
+            permission,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::add_user());
+
+        action_with_permission
+    }
+}
+
+impl<B, S> Action<B, S> for DetachPermissionForRole<B, S>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+        S: GetConnection + Send,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+        Ok(())
+    }
+}
 
 //Other utitlies
 #[derive(Debug)]
