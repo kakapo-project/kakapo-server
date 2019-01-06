@@ -914,7 +914,7 @@ impl<B, S> Action<B, S> for AddUser<B, S>
 
 /// User Auth: Remove User
 pub struct RemoveUser<B, S = State<B>> {
-    userid: String,
+    user_identifier: String,
     phantom_data: PhantomData<(B, S)>,
 }
 
@@ -924,9 +924,9 @@ impl<B, S> RemoveUser<B, S>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(userid: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
-            userid,
+            user_identifier,
             phantom_data: PhantomData,
         };
 
@@ -988,7 +988,7 @@ impl<B, S> Action<B, S> for GetAllUsers<B, S>
 
 /// User Auth: Set user password
 pub struct SetUserPassword<B, S = State<B>> {
-    userid: String,
+    user_identifier: String,
     password: String,
     phantom_data: PhantomData<(B, S)>,
 }
@@ -999,9 +999,9 @@ impl<B, S> SetUserPassword<B, S>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(userid: String, password: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(user_identifier: String, password: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
-            userid,
+            user_identifier,
             password,
             phantom_data: PhantomData,
         };

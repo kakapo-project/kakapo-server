@@ -4,6 +4,10 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Permission {
+    HasRole {
+        rolename: String
+    },
+
     GetEntity {
         type_name: &'static str,
         entity_name: String,
@@ -39,6 +43,12 @@ pub enum Permission {
 }
 
 impl Permission {
+    pub fn has_role(name: String) -> Self {
+        Permission::HasRole {
+            rolename: name
+        }
+    }
+
     pub fn read_entity<T>(name: String) -> Self {
         Permission::GetEntity {
             type_name: "temporary...", //TODO: this should be a const

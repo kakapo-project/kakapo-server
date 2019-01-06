@@ -61,21 +61,12 @@ pub trait ModifierFunctions<O, S>
         object: O,
     ) -> Result<Created<O>, EntityError>;
 
-    fn create_many(
-        conn: &S,
-        objects: &[O],
-    ) -> Result<CreatedSet<O>, EntityError>;
-
     /// if value is updated, return the old value
     /// if value is created, returns nothing
     fn upsert(
         conn: &S,
         object: O,
     ) -> Result<Upserted<O>, EntityError>;
-    fn upsert_many(
-        conn: &S,
-        objects: &[O],
-    ) -> Result<UpsertedSet<O>, EntityError>;
 
     /// if value is updated, return the old value
     /// if name not found, returns nothing, updates nothing
@@ -83,10 +74,6 @@ pub trait ModifierFunctions<O, S>
         conn: &S,
         name_object: (&str, O),
     ) -> Result<Updated<O>, EntityError>;
-    fn update_many(
-        conn: &S,
-        names_objects: &[(&str, O)],
-    ) -> Result<UpdatedSet<O>, EntityError>;
 
     /// if value is deleted, return the old value
     /// if name not found, returns nothing
@@ -94,10 +81,6 @@ pub trait ModifierFunctions<O, S>
         conn: &S,
         name: &str,
     ) -> Result<Deleted<O>, EntityError>;
-    fn delete_many(
-        conn: &S,
-        names: &[&str],
-    ) -> Result<DeletedSet<O>, EntityError>;
 }
 
 
@@ -129,18 +112,8 @@ impl<O, B> ModifierFunctions<O, State<B>> for Controller
             .and_then(|res| res.update_state())
     }
 
-    fn create_many(conn: &State<B>, objects: &[O]) -> Result<Vec<Created<O>>, EntityError> {
-        Modifier::create_many(conn, objects)
-            .and_then(|res| res.update_state())
-    }
-
     fn upsert(conn: &State<B>, object: O) -> Result<Upserted<O>, EntityError> {
         Modifier::upsert(conn, object)
-            .and_then(|res| res.update_state())
-    }
-
-    fn upsert_many(conn: &State<B>, objects: &[O]) -> Result<Vec<Upserted<O>>, EntityError> {
-        Modifier::upsert_many(conn, objects)
             .and_then(|res| res.update_state())
     }
 
@@ -149,18 +122,8 @@ impl<O, B> ModifierFunctions<O, State<B>> for Controller
             .and_then(|res| res.update_state())
     }
 
-    fn update_many(conn: &State<B>, names_objects: &[(&str, O)]) -> Result<Vec<Updated<O>>, EntityError> {
-        Modifier::update_many(conn, names_objects)
-            .and_then(|res| res.update_state())
-    }
-
     fn delete(conn: &State<B>, name: &str) -> Result<Deleted<O>, EntityError> {
         Modifier::delete(conn, name)
-            .and_then(|res| res.update_state())
-    }
-
-    fn delete_many(conn: &State<B>, names: &[&str]) -> Result<Vec<Deleted<O>>, EntityError> {
-        Modifier::delete_many(conn, names)
             .and_then(|res| res.update_state())
     }
 }

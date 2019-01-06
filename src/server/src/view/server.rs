@@ -31,9 +31,7 @@ use model::actions;
 use super::state::AppState;
 use super::procedure::{ ProcedureBuilder, NoQuery };
 use super::extensions::CorsBuilderProcedureExt;
-use super::extensions::CorsBuilderSessionExt;
 
-use view::session;
 use view::error;
 
 use std::error::Error;
@@ -80,22 +78,6 @@ impl SessionHandler {
     }
 }
 
-/*
-impl session::SessionListener<SocketRequest> for SessionHandler {
-    fn listen(&self, session: &mut Session<SocketRequest, Self>, param: SocketRequest) {
-        match param {
-            SocketRequest::GetTables { show_deleted } => {
-                //session.subscripeTo(action);
-                session.dispatch(actions::GetAllEntities::<data::Table>::new(show_deleted));
-            },
-            SocketRequest::StopGetTables => {
-                //session.unsubscribeFrom(actions::sub::GetTables);
-                session.dispatch(actions::Nothing);
-            },
-        }
-    }
-}
-*/
 
 pub fn serve() {
 
@@ -240,10 +222,6 @@ pub fn serve() {
                     |_: NoQuery, _: NoQuery|
                         actions::Nothing
                 )
-                //.session(
-                //    "/listen",
-                //    SessionHandler::new(),
-                //)
                 .register())
             .resource("/", |r| {
                 r.method(http::Method::GET).with(index)

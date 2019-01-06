@@ -27,7 +27,14 @@ pub struct RawEntity {
     pub created_by: i64,
 }
 
-#[derive(Identifiable, Associations, Debug, Queryable, Clone)]
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "entity"]
+pub struct NewRawEntity {
+    pub scope_id: i64,
+    pub created_by: i64,
+}
+
+#[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
 #[primary_key(table_schema_id)]
 #[table_name = "table_schema"]
 #[belongs_to(RawEntity, foreign_key = "entity_id")]
@@ -50,6 +57,7 @@ pub struct NewRawTable {
     pub name: String,
     pub description: String,
     pub table_data: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_by: i64,
 }
 
@@ -63,7 +71,7 @@ impl RawEntityTypes for data::Table {
 }
 
 
-#[derive(Identifiable, Associations, Debug, Queryable, Clone)]
+#[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
 #[primary_key(query_id)]
 #[table_name = "query"]
 #[belongs_to(RawEntity, foreign_key = "entity_id")]
@@ -87,6 +95,7 @@ pub struct NewRawQuery {
     pub description: String,
     pub statement: String,
     pub query_info: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_by: i64,
 }
 
@@ -99,7 +108,7 @@ impl RawEntityTypes for data::Query {
     }
 }
 
-#[derive(Identifiable, Associations, Debug, Queryable, Clone)]
+#[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
 #[primary_key(script_id)]
 #[table_name = "script"]
 #[belongs_to(RawEntity, foreign_key = "entity_id")]
@@ -125,6 +134,7 @@ pub struct NewRawScript {
     pub script_language: String,
     pub script_text: String,
     pub script_info: serde_json::Value,
+    pub is_deleted: bool,
     pub modified_by: i64,
 }
 

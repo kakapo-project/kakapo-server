@@ -9,6 +9,9 @@ use connection::executor::Conn;
 
 use model::entity::conversion::*;
 use model::dbdata::RawEntityTypes;
+use model::dbdata::RawEntity;
+use model::dbdata::NewRawEntity;
+
 
 use model::entity::error::EntityError;
 use model::entity::results::*;
@@ -18,7 +21,9 @@ use model::entity::ModifierFunctions;
 use model::state::State;
 
 use model::state::GetConnection;
+use model::state::GetUserInfo;
 use model::state::ChannelBroadcaster;
+
 
 pub struct Retriever;
 macro_rules! make_retrievers {
@@ -60,56 +65,28 @@ macro_rules! make_modifiers {
                 conn: &State<B>,
                 object: $EntityType,
             ) -> Result<Created<$EntityType>, EntityError> {
-                $entity::Modifier::create::<$EntityType>(conn.get_conn(), object)
-            }
-
-            fn create_many(
-                conn: &State<B>,
-                objects: &[$EntityType],
-            ) -> Result<CreatedSet<$EntityType>, EntityError> {
-                $entity::Modifier::create_many::<$EntityType>(conn.get_conn(), objects)
+                $entity::Modifier::create::<$EntityType>(conn.get_conn(), conn.get_user_id(), object)
             }
 
             fn upsert(
                 conn: &State<B>,
                 object: $EntityType,
             ) -> Result<Upserted<$EntityType>, EntityError> {
-                $entity::Modifier::upsert::<$EntityType>(conn.get_conn(), object)
-            }
-
-            fn upsert_many(
-                conn: &State<B>,
-                objects: &[$EntityType],
-            ) -> Result<UpsertedSet<$EntityType>, EntityError> {
-                $entity::Modifier::upsert_many::<$EntityType>(conn.get_conn(), objects)
+                $entity::Modifier::upsert::<$EntityType>(conn.get_conn(), conn.get_user_id(), object)
             }
 
             fn update(
                 conn: &State<B>,
                 name_object: (&str, $EntityType),
             ) -> Result<Updated<$EntityType>, EntityError> {
-                $entity::Modifier::update::<$EntityType>(conn.get_conn(), name_object)
-            }
-
-            fn update_many(
-                conn: &State<B>,
-                names_objects: &[(&str, $EntityType)],
-            ) -> Result<UpdatedSet<$EntityType>, EntityError> {
-                $entity::Modifier::update_many::<$EntityType>(conn.get_conn(), names_objects)
+                $entity::Modifier::update::<$EntityType>(conn.get_conn(), conn.get_user_id(), name_object)
             }
 
             fn delete(
                 conn: &State<B>,
                 name: &str,
             ) -> Result<Deleted<$EntityType>, EntityError> {
-                $entity::Modifier::delete::<$EntityType>(conn.get_conn(), name)
-            }
-
-            fn delete_many(
-                conn: &State<B>,
-                names: &[&str],
-            ) -> Result<DeletedSet<$EntityType>, EntityError> {
-                $entity::Modifier::delete_many::<$EntityType>(conn.get_conn(), names)
+                $entity::Modifier::delete::<$EntityType>(conn.get_conn(), conn.get_user_id(), name)
             }
         }
     );
@@ -129,6 +106,41 @@ macro_rules! implement_retriever_and_modifier {
         type RD = <$DataEntityType as dbdata::RawEntityTypes>::Data;
         type NRD = <$DataEntityType as dbdata::RawEntityTypes>::NewData;
 
+        fn query_entities_by_name(conn: &Conn, name: String) -> Result<Option<RD>, diesel::result::Error> {
+            let query = format!(r#"
+                WITH entity_list AS (
+                    SELECT m.*, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_at DESC) AS rn
+                    FROM {} AS m
+                )
+                SELECT * FROM entity_list
+                WHERE rn = 1 AND is_deleted = false AND name = $1
+                ORDER BY name ASC;
+                "#, stringify!($data_table));
+
+            let result = diesel::sql_query(query)
+                .bind::<diesel::sql_types::Text, _>(name)
+                .load(conn)?; //TODO: should be either one or zero, throw a state error otherwise
+
+            Ok(result.first().map(|x: &RD| x.to_owned()))
+        }
+
+        fn query_all_entities(conn: &Conn, show_deleted: bool) -> Result<Vec<RD>, diesel::result::Error> {
+            let query = format!(r#"
+                WITH entity_list AS (
+                    SELECT m.*, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_at DESC) AS rn
+                    FROM {} AS m
+                )
+                SELECT * FROM entity_list
+                WHERE rn = 1 {}
+                ORDER BY name ASC;
+                "#, stringify!($data_table), if show_deleted { "" } else { "AND is_deleted = false" });
+
+            let result = diesel::sql_query(query)
+                .load(conn)?;
+
+            Ok(result)
+        }
+
         pub struct Retriever;
         impl Retriever {
 
@@ -139,31 +151,16 @@ macro_rules! implement_retriever_and_modifier {
             where
                 O: ConvertRaw<RD>,
             {
-                let entities = schema::entity::table.load::<dbdata::RawEntity>(conn).unwrap();
-                let raw_data = RD::belonging_to(&entities)
-                    .order_by(schema::$data_table::modified_at.desc())
-                    .load::<RD>(conn)
-                    .unwrap() //TODO:!!!!
-                    .grouped_by(&entities);
+                let entities: Vec<RD> = query_all_entities(conn, false)
+                    .or_else(|err| Err(EntityError::InternalError))?;
 
-                let data = entities
-                    .into_iter()
-                    .zip(raw_data)
+                let ok_result = entities.into_iter()
+                    .map(|entity| O::convert(&entity))
+                    .collect();
 
-                    .map(|(entity, xs)| {
-                        let new_xs = xs.first().map(|x| x.to_owned());
-                        (entity, new_xs)
-                    })
-                    .filter(|(entity, x)| x.is_some())
-                    .map(|(entity, xs)|  (entity, xs.unwrap()) ) //NOTE: this unwrap should be panic less, since we are already filtering all empty ones out
-                    .filter(|(entity, x)| !x.is_deleted) //only if specified
-                    .collect::<Vec<_>>();
-                println!("queries: {:?}", data);
-
-                Ok(vec![])
+                Ok(ok_result)
             }
 
-            //TODO: put more of this into SQL, this is looping through all the values
             pub fn get_one<O>(
                 conn: &Conn,
                 name: &str,
@@ -171,117 +168,183 @@ macro_rules! implement_retriever_and_modifier {
             where
                 O: ConvertRaw<RD>,
             {
-                let entities = schema::entity::table.load::<dbdata::RawEntity>(conn).unwrap();
-                let raw_data = RD::belonging_to(&entities)
-                    .order_by(schema::$data_table::modified_at.desc())
-                    .load::<RD>(conn)
-                    .unwrap() //TODO:!!!!
-                    .grouped_by(&entities);
+                let entities: Option<RD> = query_entities_by_name(conn, name.to_string())
+                    .or_else(|err| Err(EntityError::InternalError))?;
 
-                let data = entities
-                    .into_iter()
-                    .zip(raw_data)
+                let ok_result = match entities {
+                    Some(entity) => Some(O::convert(&entity)),
+                    None => None
+                };
 
-                    .map(|(entity, xs)| {
-                        let new_xs = xs.first().map(|x| x.to_owned());
-                        (entity, new_xs)
-                    })
-                    .filter(|(entity, x)| x.is_some())
-                    .map(|(entity, xs)|  (entity, xs.unwrap()) ) //NOTE: this unwrap should be panic less, since we are already filtering all empty ones out
-                    .filter(|(entity, x)| !x.is_deleted) //only if specified
-                    .filter(|(entity, x)| x.name == name)
-                    .collect::<Vec<_>>();
-                println!("queries: {:?}", data);
-
-                Ok(None)
-
+                Ok(ok_result)
             }
         }
 
         pub struct Modifier;
         impl Modifier {
+
+            fn create_internal<O>(
+                conn: &Conn,
+                user_id: i64,
+                object: O,
+            ) -> Result<RD, EntityError>
+                where
+                    O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+            {
+                let entity: RawEntity = diesel::insert_into(schema::entity::table)
+                    .values(&NewRawEntity {
+                        scope_id: 1,
+                        created_by: user_id,
+                    })
+                    .get_result(conn)
+                    .or_else(|err| Err(EntityError::InternalError))?;
+
+
+                let new_val: RD = diesel::insert_into(schema::$data_table::table)
+                    .values(&object.new(entity.entity_id))
+                    .get_result(conn)
+                    .or_else(|err| Err(EntityError::InternalError))?;
+
+                Ok(new_val)
+            }
+
+            fn update_internal<O>(
+                conn: &Conn,
+                user_id: i64,
+                entity_id: i64,
+                object: O,
+            ) -> Result<RD, EntityError>
+                where
+                    O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+            {
+
+                let new_val: RD = diesel::insert_into(schema::$data_table::table)
+                    .values(&object.new(entity_id))
+                    .get_result(conn)
+                    .or_else(|err| Err(EntityError::InternalError))?;
+
+                Ok(new_val)
+            }
+
+            fn delete_internal<O>(
+                conn: &Conn,
+                user_id: i64,
+                entity_id: i64,
+                entity_name: String,
+            ) -> Result<(), EntityError>
+                where
+                    O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+            {
+
+                let new_val: RD = diesel::insert_into(schema::$data_table::table)
+                    .values(&O::tombstone(entity_name, entity_id))
+                    .get_result(conn)
+                    .or_else(|err| Err(EntityError::InternalError))?;
+
+                Ok(())
+            }
+
+
             pub fn create<O>(
                 conn: &Conn,
+                user_id: i64,
                 object: O,
             ) -> Result<Created<O>, EntityError>
             where
-                O: GenerateRaw<NRD>,
+                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
-                //let db_object = object.
-                Err(EntityError::Unknown)
-            }
+                let entities: Option<RD> = query_entities_by_name(conn, object.get_name())
+                    .or_else(|err| Err(EntityError::InternalError))?;
 
-            pub fn create_many<O>(
-                conn: &Conn,
-                objects: &[O],
-            ) -> Result<CreatedSet<O>, EntityError>
-            where
-                O: GenerateRaw<NRD>
-            {
-                for i in objects {
-
+                match entities {
+                    Some(entity) => Ok(Created::Fail {
+                        existing: O::convert(&entity)
+                    }),
+                    None => {
+                        let new_val = Modifier::create_internal(conn, user_id, object)?;
+                        Ok(Created::Success {
+                            new: O::convert(&new_val),
+                        })
+                    }
                 }
-                Err(EntityError::Unknown)
             }
 
             pub fn upsert<O>(
                 conn: &Conn,
+                user_id: i64,
                 object: O,
             ) -> Result<Upserted<O>, EntityError>
             where
-                O: GenerateRaw<NRD>
+                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
-                Err(EntityError::Unknown)
-            }
+                let entities: Option<RD> = query_entities_by_name(conn, object.get_name())
+                    .or_else(|err| Err(EntityError::InternalError))?;
 
-            pub fn upsert_many<O>(
-                conn: &Conn,
-                objects: &[O],
-            ) -> Result<UpsertedSet<O>, EntityError>
-            where
-                O: GenerateRaw<NRD>
-            {
-                Err(EntityError::Unknown)
+                match entities {
+                    Some(entity) => {
+                        let new_val = Modifier::update_internal(conn, user_id, entity.entity_id, object)?;
+                        Ok(Upserted::Update {
+                            old: O::convert(&entity),
+                            new: O::convert(&new_val),
+                        })
+                    },
+                    None => {
+                        let new_val = Modifier::create_internal(conn, user_id, object)?;
+                        Ok(Upserted::Create {
+                            new: O::convert(&new_val),
+                        })
+                    }
+                }
             }
 
             pub fn update<O>(
                 conn: &Conn,
+                user_id: i64,
                 name_object: (&str, O),
             ) -> Result<Updated<O>, EntityError>
             where
-                O: GenerateRaw<NRD>
+                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
-                Err(EntityError::Unknown)
-            }
+                let (object_name, object) = name_object;
+                let entities: Option<RD> = query_entities_by_name(conn, object_name.to_string())
+                    .or_else(|err| Err(EntityError::InternalError))?;
 
-            pub fn update_many<O>(
-                conn: &Conn,
-                names_objects: &[(&str, O)],
-            ) -> Result<UpdatedSet<O>, EntityError>
-            where
-                O: GenerateRaw<NRD>
-            {
-                Err(EntityError::Unknown)
+                match entities {
+                    Some(entity) => {
+                        let new_val = Modifier::update_internal(conn, user_id, entity.entity_id, object)?;
+                        Ok(Updated::Success {
+                            old: O::convert(&entity),
+                            new: O::convert(&new_val),
+                        })
+                    },
+                    None => {
+                        Ok(Updated::Fail)
+                    }
+                }
             }
 
             pub fn delete<O>(
                 conn: &Conn,
+                user_id: i64,
                 name: &str,
             ) -> Result<Deleted<O>, EntityError>
             where
-                O: GenerateRaw<NRD>
+                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
-                Err(EntityError::Unknown)
-            }
+                let entities: Option<RD> = query_entities_by_name(conn, name.to_string())
+                    .or_else(|err| Err(EntityError::InternalError))?;
 
-            pub fn delete_many<O>(
-                conn: &Conn,
-                names: &[&str],
-            ) -> Result<DeletedSet<O>, EntityError>
-            where
-                O: GenerateRaw<NRD>
-            {
-                Err(EntityError::Unknown)
+                match entities {
+                    Some(entity) => {
+                        Modifier::delete_internal::<O>(conn, user_id, entity.entity_id, name.to_string())?;
+                        Ok(Deleted::Success {
+                            old: O::convert(&entity),
+                        })
+                    },
+                    None => {
+                        Ok(Deleted::Fail)
+                    }
+                }
             }
         }
     }

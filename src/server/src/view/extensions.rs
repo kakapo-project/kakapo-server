@@ -15,9 +15,6 @@ use actix_web::middleware::cors::CorsBuilder;
 
 use super::state::AppState;
 use super::action_wrapper::ActionWrapper;
-use super::session::SessionListener;
-use super::session::SessionHandler;
-use super::session::session_handler_function;
 
 use super::procedure::ProcedureBuilder;
 use super::procedure::ProcedureHandler;
@@ -89,49 +86,3 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
     }
 }
 
-/// extend actix cors routes to handle Session
-pub trait CorsBuilderSessionExt {
-
-    /// Create an websocket call
-    ///
-    /// # Arguments
-    /// * `path` - A string representing the url path
-    /// * `procedure_builder` - An object extending `ProcedureBuilder` for building a message
-    ///
-    fn session<JP, SL>(&mut self, path: &str, session_listener: SL) -> &mut CorsBuilder<AppState>
-        where
-            JP: Debug + 'static,
-            SL: SessionListener<JP> + Clone + 'static,
-            Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>;
-}
-
-impl CorsBuilderSessionExt for CorsBuilder<AppState> {
-
-
-    fn session<JP, SL>(&mut self, path: &str, session_listener: SL) -> &mut CorsBuilder<AppState>
-        where
-            SL: SessionListener<JP> + Clone + 'static,
-            JP: Debug + 'static,
-            Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
-    {
-        self.resource(path, move |r| {
-            r.method(http::Method::POST).with_config(
-                move |(req, json_params): (HttpRequest<AppState>, Json<JP>)| {
-                    let proc = SessionHandler::<JP, SL>::setup(&session_listener);
-                    session_handler_function(proc, req, json_params)
-                },
-                |((_, json_cfg),)| {
-                    json_cfg
-                        .error_handler(|err, req| {
-                            let resp = HttpResponse::BadRequest()
-                                .content_type("application/json")
-                                .body(serde_json::to_string(&json!({ "error": err.to_string() }))
-                                    .unwrap_or_default());
-
-                            error::InternalError::from_response(err, resp).into()
-                        });
-                }
-            );
-        })
-    }
-}

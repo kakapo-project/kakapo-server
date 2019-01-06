@@ -57,6 +57,7 @@ impl<B> State<B>
 pub trait GetConnection {
     type Connection;
     fn get_conn<'a>(&'a self) -> &'a Self::Connection;
+
 }
 
 impl<B> GetConnection for State<B>
@@ -67,4 +68,16 @@ impl<B> GetConnection for State<B>
     fn get_conn<'a>(&'a self) -> &'a Conn {
         &self.database
     }
+
+}
+
+pub trait GetUserInfo {
+    fn get_user_id(&self) -> i64;
+}
+
+impl<B> GetUserInfo for State<B>
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
+    fn get_user_id(&self) -> i64 { 1 }
 }
