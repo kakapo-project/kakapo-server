@@ -24,6 +24,7 @@ use model::state::GetConnection;
 use model::state::GetUserInfo;
 use model::state::ChannelBroadcaster;
 
+use std::error::Error;
 
 pub struct Retriever;
 macro_rules! make_retrievers {
@@ -152,7 +153,7 @@ macro_rules! implement_retriever_and_modifier {
                 O: ConvertRaw<RD>,
             {
                 let entities: Vec<RD> = query_all_entities(conn, false)
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 let ok_result = entities.into_iter()
                     .map(|entity| O::convert(&entity))
@@ -169,7 +170,7 @@ macro_rules! implement_retriever_and_modifier {
                 O: ConvertRaw<RD>,
             {
                 let entities: Option<RD> = query_entities_by_name(conn, name.to_string())
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 let ok_result = match entities {
                     Some(entity) => Some(O::convert(&entity)),
@@ -191,19 +192,20 @@ macro_rules! implement_retriever_and_modifier {
                 where
                     O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
+                debug!("creating entity");
                 let entity: RawEntity = diesel::insert_into(schema::entity::table)
                     .values(&NewRawEntity {
                         scope_id: 1,
                         created_by: user_id,
                     })
                     .get_result(conn)
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
-
+                debug!("creating entity history");
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
                     .values(&object.new(entity.entity_id))
                     .get_result(conn)
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 Ok(new_val)
             }
@@ -221,7 +223,7 @@ macro_rules! implement_retriever_and_modifier {
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
                     .values(&object.new(entity_id))
                     .get_result(conn)
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 Ok(new_val)
             }
@@ -239,7 +241,7 @@ macro_rules! implement_retriever_and_modifier {
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
                     .values(&O::tombstone(entity_name, entity_id))
                     .get_result(conn)
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 Ok(())
             }
@@ -253,14 +255,16 @@ macro_rules! implement_retriever_and_modifier {
             where
                 O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
+                debug!("string to create entity: name => {}", object.get_name());
                 let entities: Option<RD> = query_entities_by_name(conn, object.get_name())
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 match entities {
                     Some(entity) => Ok(Created::Fail {
                         existing: O::convert(&entity)
                     }),
                     None => {
+                        debug!("no object found");
                         let new_val = Modifier::create_internal(conn, user_id, object)?;
                         Ok(Created::Success {
                             new: O::convert(&new_val),
@@ -278,7 +282,7 @@ macro_rules! implement_retriever_and_modifier {
                 O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
                 let entities: Option<RD> = query_entities_by_name(conn, object.get_name())
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 match entities {
                     Some(entity) => {
@@ -307,7 +311,7 @@ macro_rules! implement_retriever_and_modifier {
             {
                 let (object_name, object) = name_object;
                 let entities: Option<RD> = query_entities_by_name(conn, object_name.to_string())
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 match entities {
                     Some(entity) => {
@@ -332,7 +336,7 @@ macro_rules! implement_retriever_and_modifier {
                 O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
             {
                 let entities: Option<RD> = query_entities_by_name(conn, name.to_string())
-                    .or_else(|err| Err(EntityError::InternalError))?;
+                    .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
                 match entities {
                     Some(entity) => {
@@ -360,4 +364,59 @@ pub mod query {
 
 pub mod script {
     implement_retriever_and_modifier!(data::Script, script);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use dotenv::dotenv;
+    use std::env;
+    use diesel::result::Error;
+
+    use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
+    use diesel::r2d2::Pool;
+
+    pub fn establish_connection() -> Conn {
+        dotenv().ok(); //assuming the user has a postgres repo setup
+
+        let database_url = format!(
+            "postgres://{}:{}@{}:{}/{}",
+            env::var("DATABASE_USER").expect("var not set"),
+            env::var("DATABASE_PASS").expect("var not set"),
+            env::var("DATABASE_HOST").expect("var not set"),
+            env::var("DATABASE_PORT").expect("var not set"),
+            env::var("DATABASE_DB").expect("var not set"),
+        );
+
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        Pool::builder().build(manager)
+            .expect("Could not start connection")
+            .get()
+            .unwrap()
+    }
+
+    #[test]
+    fn add_query_to_empty_table() {
+        let conn = establish_connection();
+        conn.test_transaction::<_, Error, _>(|| {
+
+            let object = data::Query {
+                name: "get_all_eggs".to_string(),
+                description: "This query gets all the values from the eggs table".to_string(),
+                statement: "SELECT * FROM eggs".to_string(),
+            };
+
+            let result = query::Modifier::create(&conn, 1, object).expect("Could not create value");
+
+            let get_back_maybe = query::Retriever::get_one(&conn, "get_all_eggs").expect("could not retrieve back value");
+
+            let get_back: data::Query = get_back_maybe.unwrap();
+            assert_eq!(get_back.name, "get_all_eggs");
+            assert_eq!(get_back.description, "This query gets all the values from the eggs table");
+            assert_eq!(get_back.statement, "SELECT * FROM eggs");
+
+            Ok(())
+        });
+    }
 }

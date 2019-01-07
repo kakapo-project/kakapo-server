@@ -81,7 +81,7 @@ impl GenerateRaw<dbdata::NewRawQuery> for data::Query {
             entity_id,
             name: self.name.to_owned(),
             description: self.description.to_owned(),
-            statement: "".to_string(),
+            statement: self.statement.to_owned(),
             query_info: serde_json::to_value(json!({})).unwrap(),
             is_deleted: false,
             modified_by: 1,//figure out
