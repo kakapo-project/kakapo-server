@@ -32,8 +32,3 @@ pub enum Deleted<T> {
     Fail
 }
 
-pub type UpsertedSet<T> = Vec<Upserted<T>>;
-pub type UpdatedSet<T> = Vec<Updated<T>>;
-pub type CreatedSet<T> = Vec<Created<T>>;
-pub type DeletedSet<T> = Vec<Deleted<T>>;
-

@@ -24,6 +24,8 @@ use self::internals::Retriever;
 use self::internals::Modifier;
 use self::update_state::UpdateState;
 use model::state::ChannelBroadcaster;
+use model::entity::update_state::UpdateAction;
+use model::entity::update_state::UpdateActionFunctions;
 
 
 pub struct Controller; //TODO: controller should be state agnostic (dependency inject)
@@ -105,25 +107,30 @@ impl<O, B> ModifierFunctions<O, State<B>> for Controller
         B: ChannelBroadcaster + Send + 'static,
         O: RawEntityTypes,
         O: GenerateRaw<<O as RawEntityTypes>::NewData>,
+        Created<O>: UpdateState<O>,
+        Upserted<O>: UpdateState<O>,
+        Updated<O>: UpdateState<O>,
+        Deleted<O>: UpdateState<O>,
+        UpdateAction: UpdateActionFunctions<O, State<B>>,
         Modifier: ModifierFunctions<O, State<B>>,
 {
     fn create(conn: &State<B>, object: O) -> Result<Created<O>, EntityError> {
         Modifier::create(conn, object)
-            .and_then(|res| res.update_state())
+            .and_then(|res| res.update_state(conn))
     }
 
     fn upsert(conn: &State<B>, object: O) -> Result<Upserted<O>, EntityError> {
         Modifier::upsert(conn, object)
-            .and_then(|res| res.update_state())
+            .and_then(|res| res.update_state(conn))
     }
 
     fn update(conn: &State<B>, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
         Modifier::update(conn, name_object)
-            .and_then(|res| res.update_state())
+            .and_then(|res| res.update_state(conn))
     }
 
     fn delete(conn: &State<B>, name: &str) -> Result<Deleted<O>, EntityError> {
         Modifier::delete(conn, name)
-            .and_then(|res| res.update_state())
+            .and_then(|res| res.update_state(conn))
     }
 }

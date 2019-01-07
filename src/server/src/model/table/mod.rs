@@ -9,7 +9,7 @@ use model::state::State;
 use model::state::ChannelBroadcaster;
 use data::TableData;
 use data::KeyData;
-
+use model::entity::error::EntityError;
 
 pub struct TableAction;
 pub trait TableActionFunctions<S> {
