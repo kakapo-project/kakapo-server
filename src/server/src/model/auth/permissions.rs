@@ -113,6 +113,8 @@ pub trait AuthPermissionFunctions<B> //TODO: the ChannelBroadcast shouldn't be h
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
     fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>>;
+
+    fn is_admin(state: &State<B>) -> bool;
 }
 
 impl<B> AuthPermissionFunctions<B> for AuthPermissions
@@ -121,5 +123,23 @@ impl<B> AuthPermissionFunctions<B> for AuthPermissions
 {
     fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>> {
         unimplemented!()
+    }
+
+    fn is_admin(state: &State<B>) -> bool {
+        unimplemented!()
+    }
+}
+
+pub struct AllowAll;
+impl<B> AuthPermissionFunctions<B> for AllowAll
+    where
+        B: ChannelBroadcaster + Send + 'static,
+{
+    fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>> {
+        Some(HashSet::new())
+    }
+
+    fn is_admin(state: &State<B>) -> bool {
+        true
     }
 }

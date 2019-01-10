@@ -20,6 +20,7 @@ use futures::Future;
 
 use super::state::AppState;
 use model::actions::Action;
+use model::actions;
 use futures::Async;
 use view::action_wrapper::ActionWrapper;
 
@@ -126,22 +127,23 @@ pub fn procedure_handler_function<JP, QP, A, PB>(
         .send(ActionWrapper::new(action))
         .from_err()
         .and_then(|res| {
-            let response = res
-                .or_else(|err| {
-                    debug!("Responding with error message: {:?}", &err);
-                    let server_error: Error = err.into();
-                    Err(server_error)
-                }).and_then(|ok_res| {
+            match res {
+                Ok(ok_res) => {
                     let serialized = ok_res.into_serialize();
                     debug!("Responding with message: {:?}", &serialized);
                     Ok(HttpResponse::Ok()
                         .content_type("application/json")
                         .body(serde_json::to_string(&serialized)
                             .unwrap_or_default()))
-                })?;
-
-            Ok(response)
-
+                },
+                Err(err) => {
+                    debug!("Responding with error message: {:?}", &err);
+                    Ok(HttpResponse::InternalServerError()
+                        .content_type("application/json")
+                        .body(serde_json::to_string(&json!({ "error": err.to_string() }))
+                            .unwrap_or_default()))
+                }
+            }
         })
         .responder()
 }

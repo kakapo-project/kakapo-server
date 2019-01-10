@@ -11,6 +11,11 @@ use data::TableData;
 use data::KeyData;
 use model::entity::error::EntityError;
 
+use database::Database;
+use database::DatabaseFunctions;
+use model::state::GetConnection;
+
+
 pub struct TableAction;
 pub trait TableActionFunctions<S> {
     fn query(conn: &S, table: &data::Table) -> Result<data::TableData, TableError>;
@@ -29,6 +34,7 @@ impl<B> TableActionFunctions<State<B>> for TableAction
         B: ChannelBroadcaster + Send + 'static,
 {
     fn query(conn: &State<B>, table: &data::Table) -> Result<data::TableData, TableError> {
+        Database::exec(conn.get_conn(), "SELECT * FROM table"/*, params*/);
         unimplemented!()
     }
 

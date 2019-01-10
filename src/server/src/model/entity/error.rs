@@ -7,7 +7,7 @@ pub enum EntityError {
     DeserializationError,
     #[fail(display = "Failed to serialize")]
     SerializationError,
-    #[fail(display = "Invalid state")]
+    #[fail(display = "Invalid state, something is really weird with the database")]
     InvalidState,
     #[fail(display = "An unknown error occurred")]
     Unknown,

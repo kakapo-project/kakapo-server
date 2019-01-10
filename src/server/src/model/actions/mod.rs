@@ -803,8 +803,8 @@ impl<B, S, ER, QC> Action<B, S> for RunQuery<B, S, ER, QC>
                     None => Err(Error::NotFound),
                 }
             })
-            .and_then(|table| {
-                QC::run_query()
+            .and_then(|query| {
+                QC::run_query(state, &query)
                     .or_else(|err| Err(Error::Query(err)))
             })
             .and_then(|table_data| {
@@ -865,8 +865,8 @@ impl<B, S, ER, SC> Action<B, S> for RunScript<B, S, ER, SC>
                     None => Err(Error::NotFound),
                 }
             })
-            .and_then(|table| {
-                SC::run_script()
+            .and_then(|script| {
+                SC::run_script(state, &script)
                     .or_else(|err| Err(Error::Script(err)))
             })
             .and_then(|res| Ok(RunScriptResult(res)))

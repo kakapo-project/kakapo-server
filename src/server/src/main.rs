@@ -39,6 +39,7 @@ extern crate tokio_core;
 mod view;
 mod model;
 mod data;
+mod database;
 mod connection;
 
 /// Extenal dependencies

@@ -154,43 +154,43 @@ pub fn serve() {
                 )
                 .procedure(
                     "/manage/createQuery",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |entity: data::Query, _: NoQuery|
+                        actions::CreateEntity::<data::Query, Broadcaster>::new(entity)
                 )
                 .procedure(
                     "/manage/createScript",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |entity: data::Script, _: NoQuery|
+                        actions::CreateEntity::<data::Script, Broadcaster>::new(entity)
                 )
                 .procedure(
                     "/manage/updateTable",
-                    |entity: data::Table, _: NoQuery|
-                        actions::UpdateEntity::<data::Table, Broadcaster>::new("tmp".to_string(), entity)
+                    |entity: data::Table, get_entity: GetEntity|
+                        actions::UpdateEntity::<data::Table, Broadcaster>::new(get_entity.name, entity)
                 )
                 .procedure(
                     "/manage/updateQuery",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |entity: data::Query, get_entity: GetEntity|
+                        actions::UpdateEntity::<data::Query, Broadcaster>::new(get_entity.name, entity)
                 )
                 .procedure(
                     "/manage/updateScript",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |entity: data::Script, get_entity: GetEntity|
+                        actions::UpdateEntity::<data::Script, Broadcaster>::new(get_entity.name, entity)
                 )
                 .procedure(
                     "/manage/deleteTable",
-                    |_: NoQuery, _: NoQuery|
-                        actions::DeleteEntity::<data::Table, Broadcaster>::new("tmp".to_string())
+                    |_: NoQuery, get_entity: GetEntity|
+                        actions::DeleteEntity::<data::Table, Broadcaster>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/deleteQuery",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |_: NoQuery, get_entity: GetEntity|
+                        actions::DeleteEntity::<data::Query, Broadcaster>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/deleteScript",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |_: NoQuery, get_entity: GetEntity|
+                        actions::DeleteEntity::<data::Script, Broadcaster>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/queryTableData",
