@@ -9,6 +9,8 @@ use model::table::error::TableError;
 
 use diesel::RunQueryDsl;
 use model::state::GetConnection;
+use scripting::Scripting;
+use scripting::ScriptFunctions;
 
 /// This trait does something action specific after the database updates
 /// The name is a little bit confusing because the database store is also modification
@@ -158,14 +160,18 @@ impl<B> UpdateActionFunctions<data::Script, State<B>> for UpdateAction
         B: ChannelBroadcaster + Send + 'static,
 {
     fn create_entity(conn: &State<B>, new: &data::Script) -> Result<(), EntityError> {
+        Scripting::build();
         Ok(())
     }
 
     fn update_entity(conn: &State<B>, old: &data::Script, new: &data::Script) -> Result<(), EntityError> {
+        //TODO: this should be debounced so that docker doesn't get called all the time
+        Scripting::build();
         Ok(())
     }
 
     fn delete_entity(conn: &State<B>, old: &data::Script) -> Result<(), EntityError> {
+        Scripting::delete();
         Ok(())
     }
 }

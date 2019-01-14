@@ -19,6 +19,7 @@ extern crate env_logger;
 #[macro_use]
 extern crate failure;
 extern crate futures;
+extern crate http;
 #[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
@@ -33,11 +34,13 @@ extern crate serde_derive;
 #[macro_use]
 extern crate objekt;
 extern crate openssl;
+extern crate tokio;
 extern crate tokio_core;
 
 /// Mods
 mod view;
 mod model;
+mod scripting;
 mod data;
 mod database;
 mod connection;
@@ -49,6 +52,7 @@ use clap::{Arg, App};
 
 /// Internal dependencies
 use view::server;
+use scripting::ScriptFunctions;
 
 fn main() {
 

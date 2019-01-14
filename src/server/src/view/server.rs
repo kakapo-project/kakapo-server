@@ -214,12 +214,12 @@ pub fn serve() {
                 )
                 .procedure(
                     "/manage/runQuery",
-                    |_: NoQuery, _: NoQuery|
+                    |_: NoQuery, get_entity: GetEntity|
                         actions::Nothing
                 )
                 .procedure(
                     "/manage/runScript",
-                    |_: NoQuery, _: NoQuery|
+                    |_: NoQuery, get_entity: GetEntity|
                         actions::Nothing
                 )
                 .register())
