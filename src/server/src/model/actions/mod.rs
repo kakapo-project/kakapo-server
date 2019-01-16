@@ -57,7 +57,6 @@ use model::auth::permissions::*;
 use std::iter::FromIterator;
 
 use model::actions::decorator::*;
-use data::KeyData;
 
 pub trait Action<B, S = State<B>>: Send
     where
@@ -601,10 +600,11 @@ impl<B, S, ER, TC> Action<B, S> for InsertTableData<B, S, ER, TC>
                 }
             })
             .and_then(|table| {
+                let data = self.data.normalize();
                 match &self.on_duplicate {
-                    OnDuplicate::Update => TC::upsert_row(state, &table, &self.data),
-                    OnDuplicate::Ignore => TC::insert_row(state, &table, &self.data, false),
-                    OnDuplicate::Fail => TC::insert_row(state, &table, &self.data, true)
+                    OnDuplicate::Update => TC::upsert_row(state, &table, &data),
+                    OnDuplicate::Ignore => TC::insert_row(state, &table, &data, false),
+                    OnDuplicate::Fail => TC::insert_row(state, &table, &data, true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
@@ -620,8 +620,7 @@ impl<B, S, ER, TC> Action<B, S> for InsertTableData<B, S, ER, TC>
 #[derive(Debug)]
 pub struct UpdateTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
-    pub keys: KeyData,
-    pub data: data::TableData, //payload
+    pub keyed_data: data::KeyedTableData,
     pub format: TableDataFormat,
     pub on_not_found: OnNotFound,
     pub phantom_data: PhantomData<(B, S, ER, TC)>,
@@ -635,11 +634,10 @@ impl<B, S, ER, TC> UpdateTableData<B, S, ER, TC>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(table_name: String, keys: KeyData, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             table_name: table_name.to_owned(),
-            keys,
-            data,
+            keyed_data,
             format: TableDataFormat::Rows,
             on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
@@ -671,9 +669,10 @@ impl<B, S, ER, TC> Action<B, S> for UpdateTableData<B, S, ER, TC>
                 }
             })
             .and_then(|table| {
+                let (keys, data) = self.keyed_data.normalize();
                 match &self.on_not_found {
-                    OnNotFound::Ignore => TC::update_row(state, &table, &self.keys, &self.data,false),
-                    OnNotFound::Fail => TC::update_row(state, &table, &self.keys, &self.data,true)
+                    OnNotFound::Ignore => TC::update_row(state, &table, &keys, &data,false),
+                    OnNotFound::Fail => TC::update_row(state, &table, &keys, &data,true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
@@ -689,7 +688,7 @@ impl<B, S, ER, TC> Action<B, S> for UpdateTableData<B, S, ER, TC>
 #[derive(Debug)]
 pub struct DeleteTableData<B, S = State<B>, ER = entity::Controller, TC = table::TableAction>  {
     pub table_name: String,
-    pub keys: KeyData,
+    pub keys: data::KeyData,
     pub format: TableDataFormat,
     pub on_not_found: OnNotFound,
     pub phantom_data: PhantomData<(B, S, ER, TC)>,
@@ -703,7 +702,7 @@ impl<B, S, ER, TC> DeleteTableData<B, S, ER, TC>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(table_name: String, keys: KeyData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             table_name: table_name.to_owned(),
             keys,
@@ -738,9 +737,10 @@ impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
                 }
             })
             .and_then(|table| {
+                let keys = self.normalize();
                 match &self.on_not_found {
-                    OnNotFound::Ignore => TC::delete_row(state, &table, &self.keys, false),
-                    OnNotFound::Fail => TC::delete_row(state, &table, &self.keys, true)
+                    OnNotFound::Ignore => TC::delete_row(state, &table, &keys, false),
+                    OnNotFound::Fail => TC::delete_row(state, &table, &keys, true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
@@ -757,7 +757,7 @@ impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
 #[derive(Debug)]
 pub struct RunQuery<B, S = State<B>, ER = entity::Controller, QC = query::QueryAction>  {
     pub query_name: String,
-    pub params: String, //TODO: not a string
+    pub params: data::QueryParams,
     pub format: TableDataFormat,
     pub phantom_data: PhantomData<(B, S, ER, QC)>,
 }
@@ -770,7 +770,7 @@ impl<B, S, ER, QC> RunQuery<B, S, ER, QC>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(query_name: String, params: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             query_name: query_name.to_owned(),
             params,
@@ -821,7 +821,7 @@ impl<B, S, ER, QC> Action<B, S> for RunQuery<B, S, ER, QC>
 #[derive(Debug)]
 pub struct RunScript<B, S = State<B>, ER = entity::Controller, SC = script::ScriptAction>  {
     pub script_name: String,
-    pub params: String, //TODO: not a string
+    pub param: data::ScriptParam,
     pub phantom_data: PhantomData<(B, S, ER, SC)>,
 }
 
@@ -833,10 +833,10 @@ impl<B, S, ER, SC> RunScript<B, S, ER, SC>
         S: GetConnection + Send,
         WithTransaction<Self, B, S>: Action<B, S>,
 {
-    pub fn new(script_name: String, params: String) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
+    pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, B, S>, B, S> {
         let action = Self {
             script_name: script_name.to_owned(),
-            params,
+            param,
             phantom_data: PhantomData,
         };
 

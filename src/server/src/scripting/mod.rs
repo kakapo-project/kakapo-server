@@ -102,6 +102,7 @@ impl ScriptFunctions for Scripting {
 
         //docker build >> sudo docker build . --tag={{name}}
         build_image("the_room");
+        unimplemented!();
 
     }
 
@@ -111,6 +112,7 @@ impl ScriptFunctions for Scripting {
 
         //delete directory
         delete_directory("the_room");
+        unimplemented!();
     }
 
     fn run() {
@@ -118,6 +120,7 @@ impl ScriptFunctions for Scripting {
         //run container >> sudo docker run -v {{tmpfile}}:/var/commfile.txt {{name}}
 
         run_container("the_room");
+        unimplemented!();
 
     }
 }

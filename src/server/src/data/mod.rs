@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde::Deserializer;
 use serde::de;
 use std::fmt;
+use linked_hash_map::LinkedHashMap;
 
 pub mod utils;
 
@@ -39,7 +40,7 @@ pub enum DataType {
     Json,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum IndexableValue {
@@ -58,40 +59,171 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
-    DateTime { datetime: chrono::NaiveDateTime },
-    Date { date: chrono::NaiveDate },
-    Binary { b64: String },
-    Json { json: serde_json::Value },
+    DateTime(chrono::NaiveDateTime), //TODO: serialize
+    Date(chrono::NaiveDate),
+    Binary(Vec<u8>),
+    Json(serde_json::Value),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[serde(untagged)]
-pub enum RowData {
-    RowData(BTreeMap<String, Value>),
-    RowsFlatData {
-        columns: Vec<String>,
-        data: Vec<Value>,
-    }
+pub struct RawTableDataColumns {
+    keys: Vec<String>,
+    values: Vec<String>
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawTableDataData {
+    keys: Vec<IndexableValue>,
+    values: Vec<Value>
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawTableData  {
+    columns: RawTableDataColumns,
+    data: Vec<RawTableDataData>,
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyValuePairObject {
+    keys: LinkedHashMap<String, IndexableValue>,
+    values: LinkedHashMap<String, Value>,
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum KeyedTableData {
+    /// ```
+    /// {
+    ///   42: {
+    ///     "message": "hello world",
+    ///     "category": "greeting",
+    ///   },
+    ///   43: {
+    ///     "message": "goodbye world",
+    ///     "category": "farewell",
+    ///   }
+    /// }
+    /// ```
+    Simplified(LinkedHashMap<
+        IndexableValue,
+        LinkedHashMap<String, Value>>), //can only be used if only one key exists
+    /// ```
+    /// [
+    ///   {
+    ///     "keys": {
+    ///       "id": 42,
+    ///     },
+    ///     "values": {
+    ///       "message": "hello world",
+    ///       "category": "greeting",
+    ///     }
+    ///   },
+    ///   {
+    ///     "keys": {
+    ///       "id": 43,
+    ///     },
+    ///     "values": {
+    ///       "message": "goodbye world",
+    ///       "category": "farewell",
+    ///     }
+    ///   }
+    /// ]
+    /// ```
+    Data(Vec<KeyValuePairObject>),
+    /// ```
+    /// {
+    ///   "columns": {
+    ///     "keys": [ "id" ],
+    ///     "values": [ "message", "category" ]
+    ///   },
+    ///   "data": [
+    ///     {
+    ///       "keys": [ 42 ],
+    ///       "values": [ "hello world", "greeting" ]
+    ///     },
+    ///     {
+    ///       "keys": [ 43 ],
+    ///       "values": [ "goodbye world", "farewell" ]
+    ///     }
+    ///   ]
+    /// }
+    /// ```
+    FlatData(RawTableData), //default output format
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum KeyData {
+    Data(ObjectKeys),
+    FlatData(TabularKeys),
+    Keyed(KeyedTableData),
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum TableData {
-    //IndexedData(BTreeMap<IndexableValue, RowData>),
-    RowsData(Vec<BTreeMap<String, Value>>),
+    /// ```
+    /// [
+    ///   {
+    ///     "id": 42,
+    ///     "message": "hello world",
+    ///     "category": "greeting",
+    ///   },
+    ///   {
+    ///     "id": 43,
+    ///     "message": "goodbye world",
+    ///     "category": "farewell",
+    ///   }
+    /// ]
+    /// ```
+    Data(ObjectValues),
     //ColumnData(BTreeMap<String, Vec<Value>>),
-    RowsFlatData {
-        columns: Vec<String>,
-        data: Vec<Vec<Value>>,
-    },
+    /// ```
+    /// {
+    ///   "columns": [ "id", "message", "category" ],
+    ///   "data": [
+    ///     [ 42, "hello world", "greeting" ],
+    ///     [ 43, "goodbye world", "farewell" ],
+    ///  ]
+    /// }
+    /// ```
+    FlatData(TabularValues),
+    Keyed(KeyedTableData),
+}
+
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TabularValues {
+    columns: Vec<String>,
+    data: Vec<Vec<Value>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KeyData(pub Vec<IndexableValue>);
+pub struct TabularKeys {
+    columns: Vec<String>,
+    data: Vec<Vec<IndexableValue>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectValues(Vec<LinkedHashMap<String, Value>>);
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectKeys(Vec<LinkedHashMap<String, IndexableValue>>);
+
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -165,46 +297,6 @@ pub struct SchemaState {
     pub constraint: Vec<Constraint>,
 }
 
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "type")]
-pub enum SchemaModification {
-    Create {
-        columns: Vec<Column>,
-        #[serde(default)]
-        constraint: Vec<Constraint>,
-    },
-    Remove {
-        #[serde(default)]
-        column: Vec<String>,
-        #[serde(default)]
-        constraint: Vec<Constraint>,
-    },
-    Rename {
-        mapping: HashMap<String, String>,
-    },
-    Raw {
-        up: String,
-        down: String,
-    },
-    Nop,
-    Revert,
-    Delete,
-}
-impl Default for SchemaModification {
-    fn default() -> Self {
-        SchemaModification::Nop
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaModificationCommit {
-    pub date: NaiveDateTime,
-    pub action: SchemaModification,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Table {
@@ -212,29 +304,6 @@ pub struct Table {
     pub description: String,
     pub schema: SchemaState,
 }
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableWithData {
-    pub table: Table,
-    pub data: TableData,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct QueryWithData {
-    pub query: Query,
-    pub data: TableData,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Query {
-    pub name: String, //TODO: make sure this is an alphanumeric
-    pub description: String,
-    pub statement: String,
-}
-
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -247,13 +316,21 @@ pub enum QueryParams {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Query {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub statement: String,
+}
+
+pub type ScriptParam = Option<serde_json::Value>;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Script {
     pub name: String, //TODO: make sure this is an alphanumeric
     pub description: String,
     pub text: String,
 }
-
-pub type ScriptParam = Option<serde_json::Value>;
 
 impl Default for QueryParams {
     fn default() -> Self {
@@ -261,75 +338,7 @@ impl Default for QueryParams {
     }
 }
 
-impl RowData {
-
-    fn get_row_data_from_row_flat_data(columns: Vec<String>, data: Vec<Value>) -> BTreeMap<String, Value>{
-        let mut row_data = BTreeMap::new();
-        for (name, value) in columns.iter().zip(data) {
-            row_data.insert(name.to_owned(), value.to_owned());
-        }
-
-        row_data
-    }
-
-    pub fn into_table_data(self) -> TableData {
-        match self {
-            RowData::RowData(x) => TableData::RowsData(vec![x]),
-            RowData::RowsFlatData { columns, data } => TableData::RowsFlatData {
-                columns: columns,
-                data: vec![data],
-            },
-        }
-    }
-
-    pub fn into_row_data_vec(self) -> BTreeMap<String, Value> {
-        match self {
-            RowData::RowsFlatData { columns, data } => {
-                RowData::get_row_data_from_row_flat_data(columns, data)
-            },
-            RowData::RowData(x) => x,
-        }
-    }
-
-    pub fn into_row_data(self) -> Self {
-        match self {
-            RowData::RowsFlatData { columns, data } => {
-                let rows_data = RowData::get_row_data_from_row_flat_data(columns, data);
-                RowData::RowData(rows_data)
-            },
-            RowData::RowData(_) => self,
-        }
-    }
-
-    pub fn into_row_flat_data(self) -> Self {
-        match self {
-            RowData::RowsFlatData { .. } => self,
-            RowData::RowData(row) => { //This is actually slow
-                let mut columns = BTreeMap::new();
-                for row_column in row.keys() {
-                    columns.insert(row_column.to_owned(), ());
-                }
-
-                //TODO: handle case for missing values, right now it just puts null, but it should handle it as different
-                let mut new_row = vec![];
-                for key in columns.keys() {
-                    let new_value = match row.get(key) {
-                        Some(value) => value.to_owned(),
-                        None => Value::Null,
-                    };
-                    new_row.push(new_value);
-                }
-
-
-                RowData::RowsFlatData {
-                    columns: columns.keys().cloned().collect::<Vec<String>>(),
-                    data: new_row,
-                }
-            },
-        }
-    }
-}
-
+/*
 impl TableData {
     fn get_rows_data_from_rows_flat_data(columns: Vec<String>, data: Vec<Vec<Value>>) -> Vec<BTreeMap<String, Value>>{
         data.iter().map(|row| {
@@ -411,3 +420,4 @@ impl Table {
         keys.iter().nth(0).map(|x| x.to_owned())
     }
 }
+*/

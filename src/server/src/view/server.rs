@@ -194,33 +194,33 @@ pub fn serve() {
                 )
                 .procedure(
                     "/manage/queryTableData",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |_: NoQuery, get_table: GetEntity|
+                        actions::QueryTableData::<Broadcaster>::new(get_table.name)
                 )
                 .procedure(
                     "/manage/insertTableData",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |data: data::TableData, get_table: GetEntity|
+                        actions::InsertTableData::<Broadcaster>::new(get_table.name, data)
                 )
                 .procedure(
                     "/manage/updateTableData",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |keyed_data: data::KeyedTableData, get_table: GetEntity|
+                        actions::UpdateTableData::<Broadcaster>::new(get_table.name, keyed_data)
                 )
                 .procedure(
                     "/manage/deleteTableData",
-                    |_: NoQuery, _: NoQuery|
-                        actions::Nothing
+                    |keys: data::KeyData, get_table: GetEntity|
+                        actions::DeleteTableData::<Broadcaster>::new(get_table.name, keys)
                 )
                 .procedure(
                     "/manage/runQuery",
-                    |_: NoQuery, get_entity: GetEntity|
-                        actions::Nothing
+                    |params: data::QueryParams, get_query: GetEntity|
+                        actions::RunQuery::<Broadcaster>::new(get_query.name, params)
                 )
                 .procedure(
                     "/manage/runScript",
-                    |_: NoQuery, get_entity: GetEntity|
-                        actions::Nothing
+                    |param: data::ScriptParam, get_script: GetEntity|
+                        actions::RunScript::<Broadcaster>::new(get_script.name, param)
                 )
                 .register())
             .resource("/", |r| {

@@ -23,6 +23,7 @@ extern crate http;
 #[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
+extern crate linked_hash_map;
 #[macro_use]
 extern crate log;
 extern crate num_cpus;
