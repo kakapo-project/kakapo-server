@@ -22,30 +22,27 @@ CREATE TABLE entity (
     created_by              BIGINT REFERENCES user_account NOT NULL
 );
 
-CREATE TABLE table_schema (
-    table_schema_id         BIGSERIAL PRIMARY KEY,
-    entity_id               BIGINT REFERENCES entity REFERENCES entity NOT NULL UNIQUE,
-    name                    VARCHAR NOT NULL UNIQUE
+CREATE TABLE entity_usage (
+    entity_usage_id         BIGSERIAL PRIMARY KEY,
+    used_at                 TIMESTAMP NOT NULL DEFAULT NOW(),
+    used_by                 BIGINT REFERENCES user_account NOT NULL
 );
 
-CREATE TABLE table_schema_history (
-    table_schema_history_id BIGSERIAL PRIMARY KEY,
-    table_schema_id         BIGINT REFERENCES table_schema NOT NULL,
+CREATE TABLE table_schema(
+    table_schema_id         BIGSERIAL PRIMARY KEY,
+    entity_id               BIGINT REFERENCES entity NOT NULL,
+    name                    VARCHAR NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
-    modification            JSON NOT NULL DEFAULT '{}',
+    table_data              JSON NOT NULL DEFAULT '{}',
+    is_deleted              BOOLEAN NOT NULL DEFAULT FALSE,
     modified_at             TIMESTAMP NOT NULL DEFAULT NOW(),
     modified_by             BIGINT REFERENCES user_account NOT NULL
 );
 
 CREATE TABLE query (
     query_id                BIGSERIAL PRIMARY KEY,
-    entity_id               BIGINT REFERENCES entity REFERENCES entity NOT NULL UNIQUE,
-    name                    VARCHAR NOT NULL UNIQUE
-);
-
-CREATE TABLE query_history (
-    query_history_id        BIGSERIAL PRIMARY KEY,
-    query_id                BIGINT REFERENCES query NOT NULL,
+    entity_id               BIGINT REFERENCES entity NOT NULL,
+    name                    VARCHAR NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
     statement               VARCHAR NOT NULL,
     query_info              JSON NOT NULL DEFAULT '{}',
@@ -56,13 +53,8 @@ CREATE TABLE query_history (
 
 CREATE TABLE script (
     script_id               BIGSERIAL PRIMARY KEY,
-    entity_id               BIGINT REFERENCES entity REFERENCES entity NOT NULL UNIQUE,
-    name                    VARCHAR NOT NULL UNIQUE
-);
-
-CREATE TABLE script_history (
-    script_history_id       BIGSERIAL PRIMARY KEY,
-    script_id               BIGINT REFERENCES script NOT NULL,
+    entity_id               BIGINT REFERENCES entity NOT NULL,
+    name                    VARCHAR NOT NULL,
     description             VARCHAR NOT NULL DEFAULT '',
     script_language         VARCHAR NOT NULL,
     script_text             VARCHAR NOT NULL,
@@ -115,7 +107,7 @@ CREATE TABLE table_schema_transaction (
     transaction_id         BIGSERIAL PRIMARY KEY,
     version                VARCHAR NOT NULL DEFAULT '0.1.0',
     action_data            JSON NOT NULL,
-    table_schema_id        BIGINT REFERENCES table_schema NOT NULL,
+    table_schema_id        BIGINT REFERENCES table_schema NOT NULL,  --TODO: not sure if this is right, should be entity_id?
     made_at                TIMESTAMP NOT NULL DEFAULT NOW(),
     made_by                BIGINT REFERENCES user_account NOT NULL
 );
