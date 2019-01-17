@@ -12,6 +12,7 @@ use serde::Deserializer;
 use serde::de;
 use std::fmt;
 use linked_hash_map::LinkedHashMap;
+use linked_hash_map::serde::LinkedHashMapVisitor;
 
 pub mod utils;
 
@@ -158,6 +159,11 @@ pub enum KeyedTableData {
     FlatData(RawTableData), //default output format
 }
 
+impl KeyedTableData {
+    pub fn normalize(&self) -> (ObjectKeys, ObjectValues) {
+        unimplemented!()
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -166,6 +172,12 @@ pub enum KeyData {
     Data(ObjectKeys),
     FlatData(TabularKeys),
     Keyed(KeyedTableData),
+}
+
+impl KeyData {
+    pub fn normalize(&self) -> ObjectKeys {
+        unimplemented!()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -201,6 +213,11 @@ pub enum TableData {
     Keyed(KeyedTableData),
 }
 
+impl TableData {
+    pub fn normalize(&self) -> ObjectValues {
+        unimplemented!()
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

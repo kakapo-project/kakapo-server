@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ninchy.iml" filepath="$PROJECT_DIR$/ninchy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/kakapo-server.iml" filepath="$PROJECT_DIR$/kakapo-server.iml" />
     </modules>
   </component>
 </project>

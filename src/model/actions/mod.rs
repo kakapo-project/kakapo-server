@@ -537,10 +537,13 @@ impl<B, S, ER, TC> Action<B, S> for QueryTableData<B, S, ER, TC>
                     .or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
+                /*
                 match &self.format {
                     TableDataFormat::Rows => Ok(table_data.into_rows_data()),
                     TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
                 }
+                */
+                unimplemented!()
             })
             .and_then(|res| Ok(GetTableDataResult(res)))
     }
@@ -608,10 +611,13 @@ impl<B, S, ER, TC> Action<B, S> for InsertTableData<B, S, ER, TC>
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
+                /*
                 match &self.format {
                     TableDataFormat::Rows => Ok(table_data.into_rows_data()),
                     TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
                 }
+                */
+                unimplemented!()
             })
             .and_then(|res| Ok(InsertTableDataResult(res)))
     }
@@ -676,10 +682,13 @@ impl<B, S, ER, TC> Action<B, S> for UpdateTableData<B, S, ER, TC>
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
+                /*
                 match &self.format {
                     TableDataFormat::Rows => Ok(table_data.into_rows_data()),
                     TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
                 }
+                */
+                unimplemented!()
             })
             .and_then(|res| Ok(UpdateTableDataResult(res)))
     }
@@ -737,17 +746,20 @@ impl<B, S, ER, TC> Action<B, S> for DeleteTableData<B, S, ER, TC>
                 }
             })
             .and_then(|table| {
-                let keys = self.normalize();
+                let keys = self.keys.normalize();
                 match &self.on_not_found {
                     OnNotFound::Ignore => TC::delete_row(state, &table, &keys, false),
                     OnNotFound::Fail => TC::delete_row(state, &table, &keys, true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
+                /*
                 match &self.format {
                     TableDataFormat::Rows => Ok(table_data.into_rows_data()),
                     TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
                 }
+                */
+                unimplemented!()
             })
             .and_then(|res| Ok(DeleteTableDataResult(res)))
     }
@@ -808,10 +820,13 @@ impl<B, S, ER, QC> Action<B, S> for RunQuery<B, S, ER, QC>
                     .or_else(|err| Err(Error::Query(err)))
             })
             .and_then(|table_data| {
+                /*
                 match &self.format {
                     TableDataFormat::Rows => Ok(table_data.into_rows_data()),
                     TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
                 }
+                */
+                unimplemented!()
             })
             .and_then(|res| Ok(RunQueryResult(res)))
     }

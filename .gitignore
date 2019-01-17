@@ -33,3 +33,7 @@ sandbox/
 
 *.pyc
 __pycache__
+
+# intellij
+.idea
+kakapo-server.iml
