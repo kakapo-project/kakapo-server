@@ -24,32 +24,19 @@ pub enum Channels {
     Query(String),
     Script(String),
     TableData(String),
+    None,
 }
-
-pub trait ChannelBroadcaster {
-    fn on_broadcast<T>(channel: &Channels, msg: &T);
-}
-
-pub struct State<B>
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
+pub struct State {
     database: DBConnector, //TODO: this should be templated
-    broadcaster: B
     //user
 }
 
-impl<B> State<B>
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
+impl State {
     pub fn new(
         database: DBConnector,
-        broadcaster: B,
     ) -> Self {
         Self {
             database,
-            broadcaster,
         }
     }
 }
@@ -60,10 +47,7 @@ pub trait GetConnection {
 
 }
 
-impl<B> GetConnection for State<B>
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
+impl GetConnection for State {
     type Connection = Conn;
     fn get_conn<'a>(&'a self) -> &'a Conn {
         &self.database
@@ -75,9 +59,6 @@ pub trait GetUserInfo {
     fn get_user_id(&self) -> i64;
 }
 
-impl<B> GetUserInfo for State<B>
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
+impl GetUserInfo for State {
     fn get_user_id(&self) -> i64 { 1 }
 }

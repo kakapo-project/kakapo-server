@@ -24,8 +24,6 @@ use model::actions::Action;
 use view::serializers::Serializable;
 use actix_web::dev::JsonConfig;
 use std::fmt::Debug;
-use model::state::ChannelBroadcaster;
-use view::action_wrapper::Broadcaster;
 // use actix_web::dev::QueryConfig; //TODO: for some reason this can't be imported, probably actix_web issue
 
 
@@ -43,11 +41,11 @@ pub trait CorsBuilderProcedureExt {
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             JP: Debug + 'static,
             QP: Debug + 'static,
-            A: Action<Broadcaster> + Send + 'static,
+            A: Action + Send + 'static,
             PB: ProcedureBuilder<JP, QP, A> + Clone + 'static,
             Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action<Broadcaster>>::Ret: Send + Serializable;
+            <A as Action>::Ret: Send + Serializable;
 
 }
 
@@ -56,18 +54,18 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
     fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
         where
             DatabaseExecutor: Handler<ActionWrapper<A>>,
-            A: Action<Broadcaster> + Send + 'static,
+            A: Action + Send + 'static,
             PB: ProcedureBuilder<JP, QP, A> + Clone + 'static,
             JP: Debug + 'static,
             QP: Debug + 'static,
             Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action<Broadcaster>>::Ret: Send + Serializable,
+            <A as Action>::Ret: Send + Serializable,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with_config(
                 move |(req, json_params, query_params): (HttpRequest<AppState>, Json<JP>, Query<QP>)| {
-                    let proc = ProcedureHandler::<JP, QP, A, PB>::setup(&procedure_builder);
+                    let proc = ProcedureHandler::<JP, QP, PB, A>::setup(&procedure_builder);
                     procedure_handler_function(proc, req, json_params, query_params)
                 },
                 |((_, json_cfg, query_cfg),)| {

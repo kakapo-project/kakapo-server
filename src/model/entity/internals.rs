@@ -22,7 +22,6 @@ use model::state::State;
 
 use model::state::GetConnection;
 use model::state::GetUserInfo;
-use model::state::ChannelBroadcaster;
 
 use std::error::Error;
 
@@ -30,18 +29,15 @@ pub struct Retriever;
 macro_rules! make_retrievers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl<B> RetrieverFunctions<$EntityType, State<B>> for Retriever
-            where
-                B: ChannelBroadcaster + Send + 'static,
-        {
+        impl RetrieverFunctions<$EntityType, State> for Retriever {
             fn get_all(
-                conn: &State<B>
+                conn: &State
             ) -> Result<Vec<$EntityType>, EntityError> {
                 $entity::Retriever::get_all::<$EntityType>(conn.get_conn())
             }
 
             fn get_one(
-                conn: &State<B>,
+                conn: &State,
                 name: &str,
             ) -> Result<Option<$EntityType>, EntityError> {
                 $entity::Retriever::get_one::<$EntityType>(conn.get_conn(), name)
@@ -57,34 +53,31 @@ make_retrievers!(script, data::Script);
 pub struct Modifier;
 macro_rules! make_modifiers {
     ($entity:ident, $EntityType:ty) => (
-        impl<B> ModifierFunctions<$EntityType, State<B>> for Modifier
-            where
-                B: ChannelBroadcaster + Send + 'static,
-        {
+        impl ModifierFunctions<$EntityType, State> for Modifier {
 
             fn create(
-                conn: &State<B>,
+                conn: &State,
                 object: $EntityType,
             ) -> Result<Created<$EntityType>, EntityError> {
                 $entity::Modifier::create::<$EntityType>(conn.get_conn(), conn.get_user_id(), object)
             }
 
             fn upsert(
-                conn: &State<B>,
+                conn: &State,
                 object: $EntityType,
             ) -> Result<Upserted<$EntityType>, EntityError> {
                 $entity::Modifier::upsert::<$EntityType>(conn.get_conn(), conn.get_user_id(), object)
             }
 
             fn update(
-                conn: &State<B>,
+                conn: &State,
                 name_object: (&str, $EntityType),
             ) -> Result<Updated<$EntityType>, EntityError> {
                 $entity::Modifier::update::<$EntityType>(conn.get_conn(), conn.get_user_id(), name_object)
             }
 
             fn delete(
-                conn: &State<B>,
+                conn: &State,
                 name: &str,
             ) -> Result<Deleted<$EntityType>, EntityError> {
                 $entity::Modifier::delete::<$EntityType>(conn.get_conn(), conn.get_user_id(), name)

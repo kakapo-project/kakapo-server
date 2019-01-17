@@ -37,7 +37,6 @@ use view::error;
 use std::error::Error;
 use data;
 use view::environment::Env;
-use view::action_wrapper::Broadcaster;
 
 //static routes
 fn index(_state: State<AppState>) -> Result<NamedFile, ActixError> {
@@ -119,108 +118,108 @@ pub fn serve() {
                 .procedure(
                     "/manage/getAllTables",
                     |_: NoQuery, get_all_entities: GetAllEntities|
-                        actions::GetAllEntities::<data::Table, Broadcaster>::new(get_all_entities.show_deleted)
+                        actions::GetAllEntities::<data::Table>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllQueries",
                     |_: NoQuery, get_all_entities: GetAllEntities|
-                        actions::GetAllEntities::<data::Query, Broadcaster>::new(get_all_entities.show_deleted)
+                        actions::GetAllEntities::<data::Query>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
                     "/manage/getAllScripts",
                     |_: NoQuery, get_all_entities: GetAllEntities|
-                        actions::GetAllEntities::<data::Script, Broadcaster>::new(get_all_entities.show_deleted)
+                        actions::GetAllEntities::<data::Script>::new(get_all_entities.show_deleted)
                 )
 
                 .procedure(
                     "/manage/getTable",
                     |_: NoQuery, get_entity: GetEntity|
-                        actions::GetEntity::<data::Table, Broadcaster>::new(get_entity.name)
+                        actions::GetEntity::<data::Table>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getQuery",
                     |_: NoQuery, get_entity: GetEntity|
-                        actions::GetEntity::<data::Query, Broadcaster>::new(get_entity.name)
+                        actions::GetEntity::<data::Query>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/getScript",
                     |_: NoQuery, get_entity: GetEntity|
-                        actions::GetEntity::<data::Script, Broadcaster>::new(get_entity.name)
+                        actions::GetEntity::<data::Script>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/createTable",
                     |entity: data::Table, _: NoQuery|
-                        actions::CreateEntity::<data::Table, Broadcaster>::new(entity)
+                        actions::CreateEntity::<data::Table>::new(entity)
                 )
                 .procedure(
                     "/manage/createQuery",
                     |entity: data::Query, _: NoQuery|
-                        actions::CreateEntity::<data::Query, Broadcaster>::new(entity)
+                        actions::CreateEntity::<data::Query>::new(entity)
                 )
                 .procedure(
                     "/manage/createScript",
                     |entity: data::Script, _: NoQuery|
-                        actions::CreateEntity::<data::Script, Broadcaster>::new(entity)
+                        actions::CreateEntity::<data::Script>::new(entity)
                 )
                 .procedure(
                     "/manage/updateTable",
                     |entity: data::Table, get_entity: GetEntity|
-                        actions::UpdateEntity::<data::Table, Broadcaster>::new(get_entity.name, entity)
+                        actions::UpdateEntity::<data::Table>::new(get_entity.name, entity)
                 )
                 .procedure(
                     "/manage/updateQuery",
                     |entity: data::Query, get_entity: GetEntity|
-                        actions::UpdateEntity::<data::Query, Broadcaster>::new(get_entity.name, entity)
+                        actions::UpdateEntity::<data::Query>::new(get_entity.name, entity)
                 )
                 .procedure(
                     "/manage/updateScript",
                     |entity: data::Script, get_entity: GetEntity|
-                        actions::UpdateEntity::<data::Script, Broadcaster>::new(get_entity.name, entity)
+                        actions::UpdateEntity::<data::Script>::new(get_entity.name, entity)
                 )
                 .procedure(
                     "/manage/deleteTable",
                     |_: NoQuery, get_entity: GetEntity|
-                        actions::DeleteEntity::<data::Table, Broadcaster>::new(get_entity.name)
+                        actions::DeleteEntity::<data::Table>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/deleteQuery",
                     |_: NoQuery, get_entity: GetEntity|
-                        actions::DeleteEntity::<data::Query, Broadcaster>::new(get_entity.name)
+                        actions::DeleteEntity::<data::Query>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/deleteScript",
                     |_: NoQuery, get_entity: GetEntity|
-                        actions::DeleteEntity::<data::Script, Broadcaster>::new(get_entity.name)
+                        actions::DeleteEntity::<data::Script>::new(get_entity.name)
                 )
                 .procedure(
                     "/manage/queryTableData",
                     |_: NoQuery, get_table: GetEntity|
-                        actions::QueryTableData::<Broadcaster>::new(get_table.name)
+                        actions::QueryTableData::<_>::new(get_table.name)
                 )
                 .procedure(
                     "/manage/insertTableData",
                     |data: data::TableData, get_table: GetEntity|
-                        actions::InsertTableData::<Broadcaster>::new(get_table.name, data)
+                        actions::InsertTableData::<_>::new(get_table.name, data)
                 )
                 .procedure(
                     "/manage/updateTableData",
                     |keyed_data: data::KeyedTableData, get_table: GetEntity|
-                        actions::UpdateTableData::<Broadcaster>::new(get_table.name, keyed_data)
+                        actions::UpdateTableData::<_>::new(get_table.name, keyed_data)
                 )
                 .procedure(
                     "/manage/deleteTableData",
                     |keys: data::KeyData, get_table: GetEntity|
-                        actions::DeleteTableData::<Broadcaster>::new(get_table.name, keys)
+                        actions::DeleteTableData::<_>::new(get_table.name, keys)
                 )
                 .procedure(
                     "/manage/runQuery",
                     |params: data::QueryParams, get_query: GetEntity|
-                        actions::RunQuery::<Broadcaster>::new(get_query.name, params)
+                        actions::RunQuery::<_>::new(get_query.name, params)
                 )
                 .procedure(
                     "/manage/runScript",
                     |param: data::ScriptParam, get_script: GetEntity|
-                        actions::RunScript::<Broadcaster>::new(get_script.name, param)
+                        actions::RunScript::<_>::new(get_script.name, param)
                 )
                 .register())
             .resource("/", |r| {

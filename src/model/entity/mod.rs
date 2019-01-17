@@ -23,7 +23,6 @@ use model::state::GetConnection;
 use self::internals::Retriever;
 use self::internals::Modifier;
 use self::update_state::UpdateState;
-use model::state::ChannelBroadcaster;
 use model::entity::update_state::UpdateAction;
 use model::entity::update_state::UpdateActionFunctions;
 
@@ -86,50 +85,48 @@ pub trait ModifierFunctions<O, S>
 }
 
 
-impl<O, B> RetrieverFunctions<O, State<B>> for Controller
+impl<O> RetrieverFunctions<O, State> for Controller
     where
-        B: ChannelBroadcaster + Send + 'static,
         O: RawEntityTypes,
         O: ConvertRaw<<O as RawEntityTypes>::Data>,
-        Retriever: RetrieverFunctions<O, State<B>>,
+        Retriever: RetrieverFunctions<O, State>,
 {
-    fn get_all(conn: &State<B>) -> Result<Vec<O>, EntityError> {
+    fn get_all(conn: &State) -> Result<Vec<O>, EntityError> {
         Retriever::get_all(conn)
     }
 
-    fn get_one(conn: &State<B>, name: &str) -> Result<Option<O>, EntityError> {
+    fn get_one(conn: &State, name: &str) -> Result<Option<O>, EntityError> {
         Retriever::get_one(conn, name)
     }
 }
 
-impl<O, B> ModifierFunctions<O, State<B>> for Controller
+impl<O> ModifierFunctions<O, State> for Controller
     where
-        B: ChannelBroadcaster + Send + 'static,
         O: RawEntityTypes,
         O: GenerateRaw<<O as RawEntityTypes>::NewData>,
         Created<O>: UpdateState<O>,
         Upserted<O>: UpdateState<O>,
         Updated<O>: UpdateState<O>,
         Deleted<O>: UpdateState<O>,
-        UpdateAction: UpdateActionFunctions<O, State<B>>,
-        Modifier: ModifierFunctions<O, State<B>>,
+        UpdateAction: UpdateActionFunctions<O, State>,
+        Modifier: ModifierFunctions<O, State>,
 {
-    fn create(conn: &State<B>, object: O) -> Result<Created<O>, EntityError> {
+    fn create(conn: &State, object: O) -> Result<Created<O>, EntityError> {
         Modifier::create(conn, object)
             .and_then(|res| res.update_state(conn))
     }
 
-    fn upsert(conn: &State<B>, object: O) -> Result<Upserted<O>, EntityError> {
+    fn upsert(conn: &State, object: O) -> Result<Upserted<O>, EntityError> {
         Modifier::upsert(conn, object)
             .and_then(|res| res.update_state(conn))
     }
 
-    fn update(conn: &State<B>, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
+    fn update(conn: &State, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
         Modifier::update(conn, name_object)
             .and_then(|res| res.update_state(conn))
     }
 
-    fn delete(conn: &State<B>, name: &str) -> Result<Deleted<O>, EntityError> {
+    fn delete(conn: &State, name: &str) -> Result<Deleted<O>, EntityError> {
         Modifier::delete(conn, name)
             .and_then(|res| res.update_state(conn))
     }

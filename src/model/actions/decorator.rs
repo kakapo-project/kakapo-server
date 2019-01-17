@@ -40,7 +40,6 @@ use model::table::TableActionFunctions;
 use connection::executor::Conn;
 use model::state::State;
 use model::state::GetConnection;
-use model::state::ChannelBroadcaster;
 use model::state::Channels;
 use model::auth::permissions::*;
 use std::iter::FromIterator;
@@ -48,22 +47,20 @@ use std::iter::FromIterator;
 use model::actions::Action;
 
 ///decorator for permission
-pub struct WithPermissionRequired<A, B, S = State<B>, AU = AuthPermissions>
+pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<S>,
+        AU: AuthPermissionFunctions + Send,
 {
     action: A,
     permission: Permission,
-    phantom_data: PhantomData<(S, B, AU)>,
+    phantom_data: PhantomData<(S, AU)>,
 }
 
-impl<A, B, S, AU> WithPermissionRequired<A, B, S, AU>
+impl<A, S, AU> WithPermissionRequired<A, S, AU>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<S>,
+        AU: AuthPermissionFunctions + Send,
 {
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
@@ -74,14 +71,13 @@ impl<A, B, S, AU> WithPermissionRequired<A, B, S, AU>
     }
 }
 
-impl<A, B, AU> Action<B, State<B>> for WithPermissionRequired<A, B, State<B>, AU>
+impl<A, AU> Action<State> for WithPermissionRequired<A, State, AU>
     where
-        A: Action<B, State<B>>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<State>,
+        AU: AuthPermissionFunctions + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -98,21 +94,19 @@ impl<A, B, AU> Action<B, State<B>> for WithPermissionRequired<A, B, State<B>, AU
 }
 
 ///decorator for login
-pub struct WithLoginRequired<A, B, S = State<B>, AU = AuthPermissions>
+pub struct WithLoginRequired<A, S = State, AU = AuthPermissions>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<S>,
+        AU: AuthPermissionFunctions + Send,
 {
     action: A,
-    phantom_data: PhantomData<(S, B, AU)>,
+    phantom_data: PhantomData<(S, AU)>,
 }
 
-impl<A, B, S, AU> WithLoginRequired<A, B, S, AU>
+impl<A, S, AU> WithLoginRequired<A, S, AU>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<S>,
+        AU: AuthPermissionFunctions + Send,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -122,14 +116,13 @@ impl<A, B, S, AU> WithLoginRequired<A, B, S, AU>
     }
 }
 
-impl<A, B, AU> Action<B, State<B>> for WithLoginRequired<A, B, State<B>, AU>
+impl<A, AU> Action<State> for WithLoginRequired<A, State, AU>
     where
-        A: Action<B, State<B>>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<State>,
+        AU: AuthPermissionFunctions + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -147,25 +140,23 @@ impl<A, B, AU> Action<B, State<B>> for WithLoginRequired<A, B, State<B>, AU>
 
 ///decorator for permission after the value is returned
 /// Warning: this should always be wrapped in a transaction decorator, otherwise, you will modify the state
-pub struct WithPermissionRequiredOnReturn<A, B, S = State<B>, AU = AuthPermissions>
+pub struct WithPermissionRequiredOnReturn<A, S = State, AU = AuthPermissions>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<S>,
+        AU: AuthPermissionFunctions + Send,
 {
     action: A,
     initial_permission: Permission,
     required_permission: Box<Fn(&A::Ret) -> Option<Permission> + Send>,
-    phantom_data: PhantomData<(S, B, AU)>,
+    phantom_data: PhantomData<(S, AU)>,
 }
 
-impl<A, B, S, AU> WithPermissionRequiredOnReturn<A, B, S, AU>
+impl<A, S, AU> WithPermissionRequiredOnReturn<A, S, AU>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
-        Self: Action<B, S>,
+        A: Action<S>,
+        Self: Action<S>,
         S: GetConnection + Send,
-        AU: AuthPermissionFunctions<B> + Send,
+        AU: AuthPermissionFunctions + Send,
 {
     pub fn new<F>(action: A, permission: Permission, required_permission: F) -> Self
         where
@@ -180,14 +171,13 @@ impl<A, B, S, AU> WithPermissionRequiredOnReturn<A, B, S, AU>
     }
 }
 
-impl<A, B, AU> Action<B, State<B>> for WithPermissionRequiredOnReturn<A, B, State<B>, AU>
+impl<A, AU> Action<State> for WithPermissionRequiredOnReturn<A, State, AU>
     where
-        A: Action<B, State<B>>,
-        B: ChannelBroadcaster + Send + 'static,
-        AU: AuthPermissionFunctions<B> + Send,
+        A: Action<State>,
+        AU: AuthPermissionFunctions + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -212,22 +202,20 @@ impl<A, B, AU> Action<B, State<B>> for WithPermissionRequiredOnReturn<A, B, Stat
 }
 
 ///decorator for transactions
-pub struct WithTransaction<A, B, S = State<B>>
+pub struct WithTransaction<A, S = State>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
+        A: Action<S>,
         S: GetConnection + Send,
 {
     action: A,
-    phantom_data: PhantomData<(S, B)>,
+    phantom_data: PhantomData<S>,
 }
 
-impl<A, B, S> WithTransaction<A, B, S>
+impl<A, S> WithTransaction<A, S>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
+        A: Action<S>,
         S: GetConnection + Send,
-        Self: Action<B, S>,
+        Self: Action<S>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -237,13 +225,12 @@ impl<A, B, S> WithTransaction<A, B, S>
     }
 }
 
-impl<A, B> Action<B, State<B>> for WithTransaction<A, B, State<B>>
+impl<A> Action<State> for WithTransaction<A, State>
     where
-        A: Action<B, State<B>>,
-        B: ChannelBroadcaster + Send + 'static,
+        A: Action<State>,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State<B>) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
         debug!("started transaction");
         let conn = state.get_conn();
         conn.transaction::<Self::Ret, Error, _>(||
@@ -254,20 +241,18 @@ impl<A, B> Action<B, State<B>> for WithTransaction<A, B, State<B>>
 }
 
 ///decorator for dispatching to channel
-pub struct WithDispatch<A, B, S = State<B>>
+pub struct WithDispatch<A, S = State>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
+        A: Action<S>,
 {
     action: A,
     channel: Channels,
-    phantom_data: PhantomData<(S, B)>,
+    phantom_data: PhantomData<S>,
 }
 
-impl<A, B, S> WithDispatch<A, B, S>
+impl<A, S> WithDispatch<A, S>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
+        A: Action<S>,
         S: GetConnection + Send,
 {
     pub fn new(action: A, channel: Channels) -> Self {
@@ -279,10 +264,9 @@ impl<A, B, S> WithDispatch<A, B, S>
     }
 }
 
-impl<A, B, S> Action<B, S> for WithDispatch<A, B, S>
+impl<A, S> Action<S> for WithDispatch<A, S>
     where
-        A: Action<B, S>,
-        B: ChannelBroadcaster + Send + 'static,
+        A: Action<S>,
         S: GetConnection + Send,
 {
     type Ret = A::Ret;
@@ -290,7 +274,6 @@ impl<A, B, S> Action<B, S> for WithDispatch<A, B, S>
         debug!("dispatching action");
 
         let result = self.action.call(state)?;
-        B::on_broadcast(&self.channel, &result);
 
         Ok(result)
     }

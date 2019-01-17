@@ -29,8 +29,6 @@ use actix_web::error;
 use actix_web::ResponseError;
 use view::error::Error;
 use std::fmt::Debug;
-use model::state::ChannelBroadcaster;
-use view::action_wrapper::Broadcaster;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -38,10 +36,7 @@ pub type NoQuery = ();
 
 
 /// Build `Action` from an http request
-pub trait ProcedureBuilder<JP, QP, A>
-    where
-        A: Action<Broadcaster>,
-{
+pub trait ProcedureBuilder<JP, QP, A> {
     /// build an Action
     ///
     /// # Arguments
@@ -55,7 +50,6 @@ pub trait ProcedureBuilder<JP, QP, A>
 /// can use lambdas instead of procedure builder
 impl<JP, QP, A, F> ProcedureBuilder<JP, QP, A> for F
     where
-        A: Action<Broadcaster>,
         F: FnOnce(JP, QP) -> A,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
@@ -68,30 +62,30 @@ impl<JP, QP, A, F> ProcedureBuilder<JP, QP, A> for F
 
 /// Container struct for implemeting the `dev::Handler<AppState>` trait
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
-pub struct ProcedureHandler<JP, QP, A, PB>
+pub struct ProcedureHandler<JP, QP, PB, A>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        A: Action<Broadcaster> + 'static,
         PB: ProcedureBuilder<JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
+        A: Action + 'static,
 {
     builder: PB,
     phantom_data: std::marker::PhantomData<(JP, QP, A)>,
 }
 
 
-impl<JP, QP, A, PB> ProcedureHandler<JP, QP, A, PB>
+impl<JP, QP, PB, A> ProcedureHandler<JP, QP, PB, A>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
         PB: ProcedureBuilder<JP, QP, A> + Clone,
-        A: Action<Broadcaster>,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
+        A: Action,
 {
     /// constructor
     pub fn setup(builder: &PB) -> Self {
@@ -102,8 +96,8 @@ impl<JP, QP, A, PB> ProcedureHandler<JP, QP, A, PB>
     }
 }
 
-pub fn procedure_handler_function<JP, QP, A, PB>(
-    procedure_handler: ProcedureHandler<JP, QP, A, PB>,
+pub fn procedure_handler_function<JP, QP, PB, A>(
+    procedure_handler: ProcedureHandler<JP, QP, PB, A>,
     req: HttpRequest<AppState>,
     json_params: Json<JP>,
     query_params: Query<QP>
@@ -111,12 +105,12 @@ pub fn procedure_handler_function<JP, QP, A, PB>(
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
         PB: ProcedureBuilder<JP, QP, A> + Clone,
-        A: Action<Broadcaster>,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
-        <A as Action<Broadcaster>>::Ret: Serializable,
+        <A as Action>::Ret: Serializable,
+        A: Action,
 {
 
     debug!("Procedure called on {:?} QUERY {:?} JSON {:?}", req.path(), &json_params, &query_params);

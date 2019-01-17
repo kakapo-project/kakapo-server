@@ -1,5 +1,4 @@
 use model::state::State;
-use model::state::ChannelBroadcaster;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -106,40 +105,31 @@ impl Permission {
 
 pub struct AuthPermissions;
 
-pub trait AuthPermissionFunctions<B> //TODO: the ChannelBroadcast shouldn't be here
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
+pub trait AuthPermissionFunctions {
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
-    fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>>;
+    fn get_permissions(state: &State) -> Option<HashSet<Permission>>;
 
-    fn is_admin(state: &State<B>) -> bool;
+    fn is_admin(state: &State) -> bool;
 }
 
-impl<B> AuthPermissionFunctions<B> for AuthPermissions
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
-    fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>> {
+impl AuthPermissionFunctions for AuthPermissions {
+    fn get_permissions(state: &State) -> Option<HashSet<Permission>> {
         unimplemented!()
     }
 
-    fn is_admin(state: &State<B>) -> bool {
+    fn is_admin(state: &State) -> bool {
         unimplemented!()
     }
 }
 
 pub struct AllowAll;
-impl<B> AuthPermissionFunctions<B> for AllowAll
-    where
-        B: ChannelBroadcaster + Send + 'static,
-{
-    fn get_permissions(state: &State<B>) -> Option<HashSet<Permission>> {
+impl AuthPermissionFunctions for AllowAll {
+    fn get_permissions(state: &State) -> Option<HashSet<Permission>> {
         Some(HashSet::new())
     }
 
-    fn is_admin(state: &State<B>) -> bool {
+    fn is_admin(state: &State) -> bool {
         true
     }
 }
