@@ -19,11 +19,12 @@ use super::action_wrapper::ActionWrapper;
 use super::procedure::ProcedureBuilder;
 use super::procedure::ProcedureHandler;
 use super::procedure::procedure_handler_function;
+use super::procedure::procedure_bad_request_handler_function;
 
 use model::actions::Action;
-use view::serializers::Serializable;
 use actix_web::dev::JsonConfig;
 use std::fmt::Debug;
+use serde::Serialize;
 // use actix_web::dev::QueryConfig; //TODO: for some reason this can't be imported, probably actix_web issue
 
 
@@ -45,7 +46,7 @@ pub trait CorsBuilderProcedureExt {
             PB: ProcedureBuilder<JP, QP, A> + Clone + 'static,
             Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Ret: Send + Serializable;
+            <A as Action>::Ret: Send + Serialize;
 
 }
 
@@ -60,7 +61,7 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
             QP: Debug + 'static,
             Json<JP>: FromRequest<AppState, Config = JsonConfig<AppState>>,
             Query<QP>: FromRequest<AppState>,
-            <A as Action>::Ret: Send + Serializable,
+            <A as Action>::Ret: Send + Serialize,
     {
         self.resource(path, move |r| {
             r.method(http::Method::POST).with_config(
@@ -71,12 +72,7 @@ impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
                 |((_, json_cfg, query_cfg),)| {
                     json_cfg
                         .error_handler(|err, req| {
-                            let resp = HttpResponse::BadRequest()
-                                .content_type("application/json")
-                                .body(serde_json::to_string(&json!({ "error": err.to_string() }))
-                                    .unwrap_or_default());
-
-                            error::InternalError::from_response(err, resp).into()
+                            procedure_bad_request_handler_function(err)
                         });
                 }
             );

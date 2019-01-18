@@ -16,6 +16,7 @@ use model::actions::Action;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
+#[derive(Debug, Clone, Serialize)]
 pub enum Channels {
     AllTables,
     AllQueries,
@@ -24,7 +25,6 @@ pub enum Channels {
     Query(String),
     Script(String),
     TableData(String),
-    None,
 }
 pub struct State {
     database: DBConnector, //TODO: this should be templated

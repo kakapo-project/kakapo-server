@@ -1,12 +1,12 @@
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OnNotFound {
     Ignore,
     Fail
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OnDuplicate {
     Ignore,
     Fail,
@@ -15,7 +15,7 @@ pub enum OnDuplicate {
 
 
 //TODO: Add output format: indexed, rows (default), flat rows, columns, schema
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TableDataFormat {
     Rows,
     FlatRows,

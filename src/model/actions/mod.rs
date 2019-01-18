@@ -56,22 +56,40 @@ use model::auth::permissions::*;
 use std::iter::FromIterator;
 
 use model::actions::decorator::*;
+use std::fmt::Debug;
 
-pub struct ActionResult<R>
+#[derive(Debug, Clone, Serialize)]
+pub struct ActionOk<R>
     where
         R: Send,
 {
-    result: R,
-    broadcast: (),
+    data: R,
+    channels: Vec<Channels>,
+}
+
+pub type ActionResult<R> = Result<ActionOk<R>, Error>;
+
+pub struct ActionRes;
+impl ActionRes {
+    pub fn new<R>(result: R) -> ActionResult<R>
+        where R: Send
+    {
+        let ok_result = ActionOk {
+            data: result,
+            channels: vec![],
+        };
+
+        Ok(ok_result)
+    }
 }
 
 pub trait Action<S = State>
     where
         Self: Send,
-        Self::Ret: Send,
+        Self::Ret: Send + Debug,
 {
     type Ret;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error>;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret>;
 }
 
 ///decorator for permission in listing items
@@ -104,17 +122,17 @@ impl<T, S, ER> WithFilterListByPermission<T, S, ER>
 
 impl<T, ER> Action<State> for WithFilterListByPermission<T, State, ER>
     where
-        T: Send + Clone + RawEntityTypes,
+        T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, State> + Send,
         for<'a> Vec<T>: FromIterator<&'a T>,
 {
     type Ret = <GetAllEntities<T, State, ER> as Action<State>>::Ret;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
         let user_permissions = AuthPermissions::get_permissions(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
 
-        let GetAllEntitiesResult(inner_results) = raw_results;
+        let GetAllEntitiesResult(inner_results) = &raw_results.data;
 
         debug!("filtering list based on permissions");
         let filtered_results = inner_results.iter()
@@ -124,12 +142,15 @@ impl<T, ER> Action<State> for WithFilterListByPermission<T, State, ER>
             })
             .collect();
 
-        Ok(GetAllEntitiesResult(filtered_results))
+        Ok(ActionOk {
+            data: GetAllEntitiesResult(filtered_results),
+            channels: raw_results.channels,
+        })
     }
 }
 
 ///get all tables
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GetAllEntities<T, S = State, ER = entity::Controller>
     where
         T: Send + Clone,
@@ -158,22 +179,22 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
 
 impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     where
-        T: Send + Clone,
+        T: Send + Clone + Debug,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
     type Ret = GetAllEntitiesResult<T>;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let entities: Vec<T> = ER::get_all(state)
             .or_else(|err| Err(Error::Entity(err)))?;
-        Ok(GetAllEntitiesResult::<T>(entities))
+        ActionRes::new(GetAllEntitiesResult::<T>(entities))
     }
 }
 
 ///get one table
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GetEntity<T, S = State, ER = entity::Controller>
     where
         T: Send + Clone,
@@ -186,8 +207,7 @@ pub struct GetEntity<T, S = State, ER = entity::Controller>
 
 impl<T, S, ER> GetEntity<T, S, ER>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + Debug + RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection + Send,
@@ -208,30 +228,28 @@ impl<T, S, ER> GetEntity<T, S, ER>
 
 impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + Debug + RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
     type Ret = GetEntityResult<T>;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let maybe_entity: Option<T> = ER::get_one(state, &self.name)
             .or_else(|err| Err(Error::Entity(err)))?;
 
         match maybe_entity {
-            Some(entity) => Ok(GetEntityResult::<T>(entity)),
+            Some(entity) => ActionRes::new(GetEntityResult::<T>(entity)),
             None => Err(Error::NotFound),
         }
     }
 }
 
 ///create one table
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CreateEntity<T, EM = entity::Controller>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
         State: GetConnection + Send,
@@ -243,10 +261,10 @@ pub struct CreateEntity<T, EM = entity::Controller>
 
 impl<T, EM> CreateEntity<T, EM>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
+        ActionOk<<Self as Action>::Ret>: Clone,
 {
     pub fn new(data: T) -> WithTransaction<WithPermissionRequiredOnReturn<Self, State>, State> {
         let action = Self {
@@ -274,21 +292,20 @@ impl<T, EM> CreateEntity<T, EM>
 
 impl<T, EM> Action<State> for CreateEntity<T, EM>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + Debug + RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
 {
     type Ret = CreateEntityResult<T>;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
         match &self.on_duplicate {
             OnDuplicate::Update => {
                 EM::upsert(state, self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
-                            Upserted::Update { old, new } => Ok(CreateEntityResult::Updated { old, new }),
-                            Upserted::Create { new } => Ok(CreateEntityResult::Created(new)),
+                            Upserted::Update { old, new } => ActionRes::new(CreateEntityResult::Updated { old, new }),
+                            Upserted::Create { new } => ActionRes::new(CreateEntityResult::Created(new)),
                         }
                     })
             },
@@ -297,8 +314,8 @@ impl<T, EM> Action<State> for CreateEntity<T, EM>
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
-                            Created::Success { new } => Ok(CreateEntityResult::Created(new)),
-                            Created::Fail { existing } => Ok(CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
+                            Created::Success { new } => ActionRes::new(CreateEntityResult::Created(new)),
+                            Created::Fail { existing } => ActionRes::new(CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
                         }
                     })
 
@@ -308,7 +325,7 @@ impl<T, EM> Action<State> for CreateEntity<T, EM>
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
-                            Created::Success { new } => Ok(CreateEntityResult::Created(new)),
+                            Created::Success { new } => ActionRes::new(CreateEntityResult::Created(new)),
                             Created::Fail { .. } => Err(Error::AlreadyExists),
                         }
                     })
@@ -321,8 +338,7 @@ impl<T, EM> Action<State> for CreateEntity<T, EM>
 #[derive(Debug)]
 pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
@@ -335,8 +351,7 @@ pub struct UpdateEntity<T, S = State, EM = entity::Controller>
 
 impl<T, S, EM> UpdateEntity<T, S, EM>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
@@ -360,14 +375,13 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
 
 impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + Debug + RawEntityTypes + Debug,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
     type Ret = UpdateEntityResult<T>;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         match &self.on_not_found {
             OnNotFound::Ignore => {
                 EM::update(state, (&self.name, self.data.clone()))
@@ -375,9 +389,9 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Updated::Success { old, new } =>
-                                Ok(UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new(UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail =>
-                                Ok(UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
+                                ActionRes::new(UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
                         }
                     })
 
@@ -388,7 +402,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Updated::Success { old, new } =>
-                                Ok(UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new(UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail => Err(Error::NotFound),
                         }
                     })
@@ -414,8 +428,7 @@ pub struct DeleteEntity<T, S = State, EM = entity::Controller>
 
 impl<T, S, EM> DeleteEntity<T, S, EM>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
@@ -438,14 +451,13 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
 
 impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
-        T: Send + Clone,
-        T: RawEntityTypes,
+        T: Send + Clone + Debug + RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection + Send,
 {
     type Ret = DeleteEntityResult<T>;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         match &self.on_not_found {
             OnNotFound::Ignore => {
                 EM::delete(state, &self.name)
@@ -453,8 +465,8 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Deleted::Success { old } =>
-                                Ok(DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
-                            Deleted::Fail => Ok(DeleteEntityResult::NotFound(self.name.to_owned())),
+                                ActionRes::new(DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                            Deleted::Fail => ActionRes::new(DeleteEntityResult::NotFound(self.name.to_owned())),
                         }
                     })
 
@@ -465,7 +477,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Deleted::Success { old } =>
-                                Ok(DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                                ActionRes::new(DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
                             Deleted::Fail => Err(Error::NotFound),
                         }
                     })
@@ -511,7 +523,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
         S: GetConnection + Send,
 {
     type Ret = GetTableDataResult;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
@@ -533,7 +545,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
                 */
                 unimplemented!()
             })
-            .and_then(|res| Ok(GetTableDataResult(res)))
+            .and_then(|res| ActionRes::new(GetTableDataResult(res)))
     }
 }
 
@@ -579,7 +591,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
 
 {
     type Ret = InsertTableDataResult;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
@@ -605,7 +617,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
                 */
                 unimplemented!()
             })
-            .and_then(|res| Ok(InsertTableDataResult(res)))
+            .and_then(|res| ActionRes::new(InsertTableDataResult(res)))
     }
 }
 
@@ -649,7 +661,7 @@ impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
         S: GetConnection + Send,
 {
     type Ret = UpdateTableDataResult;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
@@ -674,7 +686,7 @@ impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
                 */
                 unimplemented!()
             })
-            .and_then(|res| Ok(UpdateTableDataResult(res)))
+            .and_then(|res| ActionRes::new(UpdateTableDataResult(res)))
     }
 }
 
@@ -718,7 +730,7 @@ impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
         S: GetConnection + Send,
 {
     type Ret = DeleteTableDataResult;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
@@ -743,7 +755,7 @@ impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
                 */
                 unimplemented!()
             })
-            .and_then(|res| Ok(DeleteTableDataResult(res)))
+            .and_then(|res| ActionRes::new(DeleteTableDataResult(res)))
     }
 }
 
@@ -786,7 +798,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
         S: GetConnection + Send,
 {
     type Ret = RunQueryResult;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.query_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Query>| {
@@ -808,7 +820,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
                 */
                 unimplemented!()
             })
-            .and_then(|res| Ok(RunQueryResult(res)))
+            .and_then(|res| ActionRes::new(RunQueryResult(res)))
     }
 }
 
@@ -849,7 +861,7 @@ impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
         S: GetConnection + Send,
 {
     type Ret = RunScriptResult;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.script_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Script>| {
@@ -862,7 +874,7 @@ impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
                 SC::run_script(state, &script)
                     .or_else(|err| Err(Error::Script(err)))
             })
-            .and_then(|res| Ok(RunScriptResult(res)))
+            .and_then(|res| ActionRes::new(RunScriptResult(res)))
     }
 }
 
@@ -898,8 +910,8 @@ impl<S> Action<S> for AddUser<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -933,8 +945,8 @@ impl<S> Action<S> for RemoveUser<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -968,8 +980,8 @@ impl<S> Action<S> for GetAllUsers<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1005,8 +1017,8 @@ impl<S> Action<S> for SetUserPassword<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1041,8 +1053,8 @@ impl<S> Action<S> for InviteUser<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1076,8 +1088,8 @@ impl<S> Action<S> for AddRole<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1111,8 +1123,8 @@ impl<S> Action<S> for RemoveRole<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1144,8 +1156,8 @@ impl<S> Action<S> for GetAllRoles<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1181,8 +1193,8 @@ impl<S> Action<S> for AttachPermissionForRole<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1218,8 +1230,8 @@ impl<S> Action<S> for DetachPermissionForRole<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1255,8 +1267,8 @@ impl<S> Action<S> for AttachRoleForUser<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1292,8 +1304,8 @@ impl<S> Action<S> for DetachRoleForUser<S>
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }
 
@@ -1312,7 +1324,7 @@ impl<S> Action<S> for Nothing
         S: GetConnection + Send,
 {
     type Ret = ();
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
-        Ok(())
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        ActionRes::new(())
     }
 }

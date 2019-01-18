@@ -19,13 +19,13 @@ use model::entity::error::EntityError;
 use model::schema;
 use std::marker::PhantomData;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GetAllEntitiesResult<T>(pub Vec<T>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GetEntityResult<T>(pub T);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub enum CreateEntityResult<T> {
     Updated {
         old: T,
@@ -38,7 +38,7 @@ pub enum CreateEntityResult<T> {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub enum UpdateEntityResult<T> {
     Updated {
         id: String,
@@ -51,7 +51,7 @@ pub enum UpdateEntityResult<T> {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub enum DeleteEntityResult<T> {
     Deleted {
         id: String,
@@ -61,20 +61,20 @@ pub enum DeleteEntityResult<T> {
     _PhantomData(PhantomData<T>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GetTableDataResult(pub data::TableData);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct InsertTableDataResult(pub data::TableData);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct UpdateTableDataResult(pub data::TableData);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DeleteTableDataResult(pub data::TableData);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RunQueryResult(pub data::TableData);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RunScriptResult(pub serde_json::Value);

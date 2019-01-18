@@ -45,6 +45,8 @@ use model::auth::permissions::*;
 use std::iter::FromIterator;
 
 use model::actions::Action;
+use model::actions::ActionResult;
+use model::actions::ActionOk;
 
 ///decorator for permission
 pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
@@ -77,7 +79,7 @@ impl<A, AU> Action<State> for WithPermissionRequired<A, State, AU>
         AU: AuthPermissionFunctions + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -122,7 +124,7 @@ impl<A, AU> Action<State> for WithLoginRequired<A, State, AU>
         AU: AuthPermissionFunctions + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -175,20 +177,22 @@ impl<A, AU> Action<State> for WithPermissionRequiredOnReturn<A, State, AU>
     where
         A: Action<State>,
         AU: AuthPermissionFunctions + Send,
+        ActionOk<<A as Action>::Ret> : Clone,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
 
         let user_permissions = AU::get_permissions(state).unwrap_or_default();
         if user_permissions.contains(&self.initial_permission) {
-            let result = self.action.call(state)?;
-            match (self.required_permission)(&result) {
-                None => Ok(result),
+            let action_result = self.action.call(state)?;
+            let result = &action_result.data;
+            match (self.required_permission)(result) {
+                None => Ok(action_result.clone()),
                 Some(next_permission) => if user_permissions.contains(&self.initial_permission) {
-                    Ok(result)
+                    Ok(action_result.clone())
                 } else {
                     Err(Error::Unauthorized)
                 }
@@ -230,10 +234,10 @@ impl<A> Action<State> for WithTransaction<A, State>
         A: Action<State>,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
         debug!("started transaction");
         let conn = state.get_conn();
-        conn.transaction::<Self::Ret, Error, _>(||
+        conn.transaction::<ActionOk<Self::Ret>, Error, _>(||
             self.action.call(state)
         )
 
@@ -270,7 +274,7 @@ impl<A, S> Action<S> for WithDispatch<A, S>
         S: GetConnection + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &S) -> Result<Self::Ret, Error> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         debug!("dispatching action");
 
         let result = self.action.call(state)?;

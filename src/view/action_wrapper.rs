@@ -24,6 +24,7 @@ use futures::Async;
 use model::state::State;
 use model::state::Channels;
 use std::marker::PhantomData;
+use model::actions::ActionResult;
 
 
 pub struct ActionWrapper<A: Action + Send> {
@@ -41,17 +42,17 @@ impl<A: Action + Send> ActionWrapper<A> {
 impl<A: Action + Send> Message for ActionWrapper<A>
     where
         A::Ret: 'static,
-        Result<A::Ret, actions::error::Error>: 'static,
+        ActionResult<A::Ret>: 'static,
 {
-    type Result = Result<A::Ret, actions::error::Error>;
+    type Result = ActionResult<A::Ret>;
 }
 
 impl<A: Action + Send> Handler<ActionWrapper<A>> for DatabaseExecutor
     where
         A::Ret: 'static,
-        Result<A::Ret, actions::error::Error>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
+        ActionResult<A::Ret>: MessageResponse<DatabaseExecutor, ActionWrapper<A>> + 'static,
 {
-    type Result = Result<A::Ret, actions::error::Error>;
+    type Result = ActionResult<A::Ret>;
 
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
         let conn = self.get_connection();

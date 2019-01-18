@@ -24,11 +24,12 @@ use model::actions;
 use futures::Async;
 use view::action_wrapper::ActionWrapper;
 
-use view::serializers::Serializable;
 use actix_web::error;
 use actix_web::ResponseError;
 use view::error::Error;
 use std::fmt::Debug;
+use actix_web::error::JsonPayloadError;
+use serde::Serialize;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -109,8 +110,8 @@ pub fn procedure_handler_function<JP, QP, PB, A>(
         QP: Debug,
         Json<JP>: FromRequest<AppState>,
         Query<QP>: FromRequest<AppState>,
-        <A as Action>::Ret: Serializable,
         A: Action,
+        <A as Action>::Ret: Serialize,
 {
 
     debug!("Procedure called on {:?} QUERY {:?} JSON {:?}", req.path(), &json_params, &query_params);
@@ -123,7 +124,7 @@ pub fn procedure_handler_function<JP, QP, PB, A>(
         .and_then(|res| {
             match res {
                 Ok(ok_res) => {
-                    let serialized = ok_res.into_serialize();
+                    let serialized = ok_res;
                     debug!("Responding with message: {:?}", &serialized);
                     Ok(HttpResponse::Ok()
                         .content_type("application/json")
@@ -142,4 +143,12 @@ pub fn procedure_handler_function<JP, QP, PB, A>(
         .responder()
 }
 
+pub fn procedure_bad_request_handler_function(err: JsonPayloadError) -> actix_web::Error {
+    let resp = HttpResponse::BadRequest()
+        .content_type("application/json")
+        .body(serde_json::to_string(&json!({ "error": err.to_string() }))
+            .unwrap_or_default());
+
+    error::InternalError::from_response(err, resp).into()
+}
 
