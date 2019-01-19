@@ -112,11 +112,18 @@ pub trait AuthPermissionFunctions<S>
     /// otherwise returns none
     fn get_permissions(state: &S) -> Option<HashSet<Permission>>;
 
+
+    fn get_all_permissions(state: &S) -> HashSet<Permission>;
+
     fn is_admin(state: &S) -> bool;
 }
 
 impl<S> AuthPermissionFunctions<S> for AuthPermissions {
     fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
+        unimplemented!()
+    }
+
+    fn get_all_permissions(state: &S) -> HashSet<Permission> {
         unimplemented!()
     }
 
@@ -129,6 +136,10 @@ pub struct AllowAll;
 impl<S> AuthPermissionFunctions<S> for AllowAll {
     fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
         Some(HashSet::new())
+    }
+
+    fn get_all_permissions(state: &S) -> HashSet<Permission> {
+        HashSet::new()
     }
 
     fn is_admin(state: &S) -> bool {

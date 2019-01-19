@@ -94,23 +94,25 @@ pub trait Action<S = State>
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
-pub struct WithFilterListByPermission<T, S = State, ER = entity::Controller>
+pub struct WithFilterListByPermission<A, T, S = State, ER = entity::Controller>
     where
+        A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
-    action: GetAllEntities<T, S, ER>,
-    phantom_data: PhantomData<(T, S)>,
+    action: A,
+    phantom_data: PhantomData<(T, S, ER)>,
 }
 
-impl<T, S, ER> WithFilterListByPermission<T, S, ER>
+impl<A, T, S, ER> WithFilterListByPermission<A, T, S, ER>
     where
+        A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
-    pub fn new(action: GetAllEntities<T, S, ER>) -> Self {
+    pub fn new(action: A) -> Self {
         Self {
             action,
             phantom_data: PhantomData,
@@ -118,10 +120,11 @@ impl<T, S, ER> WithFilterListByPermission<T, S, ER>
     }
 }
 
-impl<T, S, ER> Action<S> for WithFilterListByPermission<T, S, ER>
+impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
     where
+        A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S> + Send,
+        ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
     type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
@@ -159,19 +162,19 @@ pub struct GetAllEntities<T, S = State, ER = entity::Controller>
 impl<T, S, ER> GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S> + Send,
+        ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
-    pub fn new(show_deleted: bool) -> WithTransaction<WithFilterListByPermission<T, S, ER>, S> {
+    pub fn new(show_deleted: bool) -> WithFilterListByPermission<WithTransaction<Self, S>, T, S, ER> {
         let action = Self {
             show_deleted,
             phantom_data: PhantomData,
         };
 
-        let action_with_filter = WithFilterListByPermission::new(action);
-        let action_with_transaction = WithTransaction::new(action_with_filter);
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_filter = WithFilterListByPermission::new(action_with_transaction);
 
-        action_with_transaction
+        action_with_filter
     }
 }
 
@@ -202,7 +205,7 @@ pub struct GetEntity<T, S = State, ER = entity::Controller>
 impl<T, S, ER> GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S> + Send,
+        ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
@@ -221,7 +224,7 @@ impl<T, S, ER> GetEntity<T, S, ER>
 impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S> + Send,
+        ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
     type Ret = GetEntityResult<T>;
@@ -238,53 +241,67 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 
 ///create one table
 #[derive(Debug, Clone)]
-pub struct CreateEntity<T, EM = entity::Controller>
+pub struct CreateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, State> + Send,
+        EM: ModifierFunctions<T, S>,
+        S: GetConnection,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<EM>,
+    pub phantom_data: PhantomData<(S, EM)>,
 }
 
-impl<T, EM> CreateEntity<T, EM>
+impl<T, S, EM> CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, State> + Send,
-        ActionOk<<Self as Action>::Ret>: Clone,
+        EM: ModifierFunctions<T, S>,
+        S: GetConnection,
+        ActionOk<<Self as Action<S>>::Ret>: Clone,
 {
-    pub fn new(data: T) -> WithTransaction<WithPermissionRequiredOnReturn<Self, State>, State> {
+    pub fn new(data: T) -> WithPermissionFor<WithTransaction<Self, S>, S> {
+
+        let name = data.get_name();
+        let create_permission = Permission::create_entity::<T>();
+        let update_permission = Permission::modify_entity::<T>(name);
+        let on_duplicate = OnDuplicate::Ignore; //TODO:...
+
         let action = Self {
             data,
-            on_duplicate: OnDuplicate::Ignore,
+            on_duplicate: OnDuplicate::Ignore,  //TODO:...
             phantom_data: PhantomData,
         };
+        
+        let action_with_transaction = WithTransaction::new(action);
 
         let action_with_permission =
-            WithPermissionRequiredOnReturn::new(
-                action,
-                Permission::create_entity::<T>(),
-                |result| {
-                    match result {
-                        CreateEntityResult::Updated { old, .. } => Some(Permission::modify_entity::<T>(old.get_name())),
-                        _ => None,
+            WithPermissionFor::new(
+                action_with_transaction,
+                move |user_permissions, all_permissions| {
+                    match on_duplicate {
+                        OnDuplicate::Update => if all_permissions.contains(&update_permission) {
+                            user_permissions.contains(&update_permission)
+                        } else {
+                            user_permissions.contains(&create_permission)
+                        },
+                        _ => user_permissions.contains(&create_permission),
                     }
                 });
 
-        let action_with_transaction = WithTransaction::new(action_with_permission);
 
-        action_with_transaction
+
+        action_with_permission
     }
 }
 
-impl<T, EM> Action<State> for CreateEntity<T, EM>
+impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, State> + Send,
+        EM: ModifierFunctions<T, S>,
+        S: GetConnection,
 {
     type Ret = CreateEntityResult<T>;
-    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         match &self.on_duplicate {
             OnDuplicate::Update => {
                 EM::upsert(state, self.data.clone())
@@ -326,7 +343,7 @@ impl<T, EM> Action<State> for CreateEntity<T, EM>
 pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S> + Send,
+        EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
     pub name: String,
@@ -399,7 +416,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S> + Send,
+        EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
     pub name: String,
@@ -743,8 +760,8 @@ pub struct RunQuery<S = State, ER = entity::Controller, QC = query::QueryAction>
 
 impl<S, ER, QC> RunQuery<S, ER, QC>
     where
-        ER: entity::RetrieverFunctions<data::Query, S> + Send,
-        QC: query::QueryActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Query, S>,
+        QC: query::QueryActionFunctions<S>,
         S: GetConnection,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {

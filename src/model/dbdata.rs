@@ -159,14 +159,14 @@ impl RawEntityTypes for data::Script {
 
 #[derive(Debug, Deserialize, Insertable)]
 #[table_name = "user_account"]
-pub struct NewUser {
+pub struct NewRawUser {
     pub username: String,
     pub password: String,
     pub email: String,
 }
 
 #[derive(Debug, Queryable)]
-pub struct User {
+pub struct RawUser {
     pub user_account_id: i64,
     pub username: String,
     pub password: String,

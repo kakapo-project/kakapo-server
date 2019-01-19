@@ -9,7 +9,9 @@ use database::DatabaseFunctions;
 use model::state::GetConnection;
 
 pub struct QueryAction;
-pub trait QueryActionFunctions<S> {
+pub trait QueryActionFunctions<S>
+    where Self: Send,
+{
     fn run_query(conn: &S, query: &data::Query) -> Result<data::TableData, QueryError> ;
 }
 

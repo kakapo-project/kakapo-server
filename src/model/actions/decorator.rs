@@ -47,6 +47,7 @@ use std::iter::FromIterator;
 use model::actions::Action;
 use model::actions::ActionResult;
 use model::actions::ActionOk;
+use std::collections::HashSet;
 
 ///decorator for permission
 pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
@@ -148,39 +149,36 @@ impl<A, S, AU> Action<S> for WithLoginRequired<A, S, AU>
 
 ///decorator for permission after the value is returned
 /// Warning: this should always be wrapped in a transaction decorator, otherwise, you will modify the state
-pub struct WithPermissionRequiredOnReturn<A, S = State, AU = AuthPermissions>
+pub struct WithPermissionFor<A, S = State, AU = AuthPermissions>
     where
         A: Action<S>,
         S: GetConnection,
         AU: AuthPermissionFunctions<S>,
 {
     action: A,
-    initial_permission: Permission,
-    required_permission: Box<Fn(&A::Ret) -> Option<Permission> + Send>,
+    required_permission: Box<Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send>,
     phantom_data: PhantomData<(S, AU)>,
 }
 
-impl<A, S, AU> WithPermissionRequiredOnReturn<A, S, AU>
+impl<A, S, AU> WithPermissionFor<A, S, AU>
     where
         A: Action<S>,
-        Self: Action<S>,
         S: GetConnection,
         AU: AuthPermissionFunctions<S>,
 {
-    pub fn new<F>(action: A, permission: Permission, required_permission: F) -> Self
+    pub fn new<F>(action: A, required_permission: F) -> Self
         where
-            F: Send + Fn(&A::Ret) -> Option<Permission> + 'static,
+            F: Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send + 'static,
     {
         Self {
             action,
-            initial_permission: permission,
             required_permission: Box::new(required_permission),
             phantom_data: PhantomData,
         }
     }
 }
 
-impl<A, S, AU> Action<S> for WithPermissionRequiredOnReturn<A, S, AU>
+impl<A, S, AU> Action<S> for WithPermissionFor<A, S, AU>
     where
         A: Action<S>,
         S: GetConnection,
@@ -194,22 +192,15 @@ impl<A, S, AU> Action<S> for WithPermissionRequiredOnReturn<A, S, AU>
         }
 
         let user_permissions = AU::get_permissions(state).unwrap_or_default();
-        if user_permissions.contains(&self.initial_permission) {
-            let action_result = self.action.call(state)?;
-            let result = &action_result.data;
-            match (self.required_permission)(result) {
-                None => Ok(action_result.clone()),
-                Some(next_permission) => if user_permissions.contains(&self.initial_permission) {
-                    Ok(action_result.clone())
-                } else {
-                    Err(Error::Unauthorized)
-                }
-            }
+        let all_permissions = AU::get_all_permissions(state);
+
+        let is_permitted = (self.required_permission)(&user_permissions, &all_permissions);
+
+        if is_permitted {
+            self.action.call(state)
         } else {
-            debug!("Permission denied, required permission: {:?}", &self.initial_permission);
             Err(Error::Unauthorized)
         }
-
     }
 }
 

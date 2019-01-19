@@ -8,7 +8,9 @@ use diesel::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 
 
-use super::dbdata::User;
+use super::dbdata::RawUser;
+use super::dbdata::NewRawUser;
+
 use super::schema::user_account;
 use chrono::{Duration, Local};
 
