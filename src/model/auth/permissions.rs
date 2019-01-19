@@ -105,7 +105,9 @@ impl Permission {
 
 pub struct AuthPermissions;
 
-pub trait AuthPermissionFunctions<S> {
+pub trait AuthPermissionFunctions<S>
+    where Self: Send,
+{
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
     fn get_permissions(state: &S) -> Option<HashSet<Permission>>;

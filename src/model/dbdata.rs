@@ -9,11 +9,16 @@ use diesel::expression_methods::ExpressionMethods;
 use data;
 use std::iter::FromIterator;
 use std::fmt::Debug;
+use model::entity::conversion::ConvertRaw;
+use model::entity::conversion::GenerateRaw;
 
 
 // Queryables
 pub trait RawEntityTypes
-    where Self: Clone + Send + Debug
+    where
+        Self: Clone + Send + Debug,
+        Self::Data: ConvertRaw<Self>,
+        Self::NewData: GenerateRaw<Self>,
 {
     type Data;
     type NewData;

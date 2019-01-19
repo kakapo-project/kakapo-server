@@ -9,15 +9,15 @@ use data;
 
 
 
-pub trait ConvertRaw<RD> {
-    fn convert(raw: &RD) -> Self;
+pub trait ConvertRaw<T> {
+    fn convert(&self) -> T;
 }
 
-impl ConvertRaw<dbdata::RawTable> for data::Table {
-    fn convert(raw: &dbdata::RawTable) -> data::Table {
+impl ConvertRaw<data::Table> for dbdata::RawTable {
+    fn convert(&self) -> data::Table {
         data::Table {
-            name: "".to_string(),
-            description: "".to_string(),
+            name: self.name.to_owned(),
+            description: self.description.to_owned(),
             schema: data::SchemaState {
                 columns: vec![],
                 constraint: vec![],
@@ -26,44 +26,44 @@ impl ConvertRaw<dbdata::RawTable> for data::Table {
     }
 }
 
-impl ConvertRaw<dbdata::RawQuery> for data::Query {
-    fn convert(raw: &dbdata::RawQuery) -> data::Query {
+impl ConvertRaw<data::Query> for dbdata::RawQuery {
+    fn convert(&self) -> data::Query {
         data::Query {
-            name: raw.name.to_owned(),
-            description: raw.description.to_owned(),
-            statement: raw.statement.to_owned(),
-        }
-    }
-}
-
-impl ConvertRaw<dbdata::RawScript> for data::Script {
-    fn convert(raw: &dbdata::RawScript) -> data::Script {
-        data::Script {
-            name: raw.name.to_owned(),
-            description: raw.description.to_owned(),
-            text: raw.script_text.to_owned(),
-        }
-    }
-}
-
-pub trait GenerateRaw<NRD> {
-    fn new(&self, entity_id: i64, modified_by: i64) -> NRD;
-    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> NRD;
-}
-
-impl GenerateRaw<dbdata::NewRawTable> for data::Table {
-    fn new(&self, entity_id: i64, modified_by: i64) -> dbdata::NewRawTable {
-        dbdata::NewRawTable {
-            entity_id,
             name: self.name.to_owned(),
             description: self.description.to_owned(),
-            table_data: serde_json::to_value(self.schema.to_owned()).unwrap(),
+            statement: self.statement.to_owned(),
+        }
+    }
+}
+
+impl ConvertRaw<data::Script> for dbdata::RawScript {
+    fn convert(&self) -> data::Script {
+        data::Script {
+            name: self.name.to_owned(),
+            description: self.description.to_owned(),
+            text: self.script_text.to_owned(),
+        }
+    }
+}
+
+pub trait GenerateRaw<T> {
+    fn new(data: &T, entity_id: i64, modified_by: i64) -> Self;
+    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self;
+}
+
+impl GenerateRaw<data::Table> for dbdata::NewRawTable {
+    fn new(data: &data::Table, entity_id: i64, modified_by: i64) -> Self {
+        dbdata::NewRawTable {
+            entity_id,
+            name: data.name.to_owned(),
+            description: data.description.to_owned(),
+            table_data: serde_json::to_value(data.schema.to_owned()).unwrap(),
             is_deleted: false,
             modified_by
         }
     }
 
-    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> dbdata::NewRawTable {
+    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawTable {
             entity_id,
             name: "".to_string(),
@@ -75,20 +75,20 @@ impl GenerateRaw<dbdata::NewRawTable> for data::Table {
     }
 }
 
-impl GenerateRaw<dbdata::NewRawQuery> for data::Query {
-    fn new(&self, entity_id: i64, modified_by: i64) -> dbdata::NewRawQuery {
+impl GenerateRaw<data::Query> for dbdata::NewRawQuery {
+    fn new(data: &data::Query, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawQuery {
             entity_id,
-            name: self.name.to_owned(),
-            description: self.description.to_owned(),
-            statement: self.statement.to_owned(),
+            name: data.name.to_owned(),
+            description: data.description.to_owned(),
+            statement: data.statement.to_owned(),
             query_info: serde_json::to_value(json!({})).unwrap(),
             is_deleted: false,
             modified_by
         }
     }
 
-    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> dbdata::NewRawQuery {
+    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawQuery {
             entity_id,
             name,
@@ -101,21 +101,21 @@ impl GenerateRaw<dbdata::NewRawQuery> for data::Query {
     }
 }
 
-impl GenerateRaw<dbdata::NewRawScript> for data::Script {
-    fn new(&self, entity_id: i64, modified_by: i64) -> dbdata::NewRawScript {
+impl GenerateRaw<data::Script> for dbdata::NewRawScript {
+    fn new(data: &data::Script, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawScript {
             entity_id,
-            name: self.name.to_owned(),
-            description: self.description.to_owned(),
+            name: data.name.to_owned(),
+            description: data.description.to_owned(),
             script_language: "Python".to_string(), //Only Python is supported right now
-            script_text: self.text.to_owned(),
+            script_text: data.text.to_owned(),
             script_info: serde_json::to_value(json!({})).unwrap(),
             is_deleted: false,
             modified_by,
         }
     }
 
-    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> dbdata::NewRawScript {
+    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawScript {
             entity_id,
             name,

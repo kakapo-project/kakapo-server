@@ -31,8 +31,8 @@ pub struct Controller; //TODO: controller should be state agnostic (dependency i
 
 pub trait RetrieverFunctions<O, S>
     where
+        Self: Send,
         O: RawEntityTypes,
-        O: ConvertRaw<<O as RawEntityTypes>::Data>,
         S: GetConnection,
 {
     /// get all values and returns a list of all database values
@@ -50,8 +50,8 @@ pub trait RetrieverFunctions<O, S>
 
 pub trait ModifierFunctions<O, S>
     where
+        Self: Send,
         O: RawEntityTypes,
-        O: GenerateRaw<<O as RawEntityTypes>::NewData>,
         S: GetConnection,
 {
     ///creates the object if creation succeeded
@@ -88,7 +88,6 @@ pub trait ModifierFunctions<O, S>
 impl<O> RetrieverFunctions<O, State> for Controller
     where
         O: RawEntityTypes,
-        O: ConvertRaw<<O as RawEntityTypes>::Data>,
         Retriever: RetrieverFunctions<O, State>,
 {
     fn get_all(conn: &State) -> Result<Vec<O>, EntityError> {
@@ -103,7 +102,6 @@ impl<O> RetrieverFunctions<O, State> for Controller
 impl<O> ModifierFunctions<O, State> for Controller
     where
         O: RawEntityTypes,
-        O: GenerateRaw<<O as RawEntityTypes>::NewData>,
         Created<O>: UpdateState<O>,
         Upserted<O>: UpdateState<O>,
         Updated<O>: UpdateState<O>,

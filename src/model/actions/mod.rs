@@ -97,7 +97,6 @@ pub trait Action<S = State>
 pub struct WithFilterListByPermission<T, S = State, ER = entity::Controller>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
@@ -108,7 +107,6 @@ pub struct WithFilterListByPermission<T, S = State, ER = entity::Controller>
 impl<T, S, ER> WithFilterListByPermission<T, S, ER>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S>,
         S: GetConnection,
 {
@@ -123,7 +121,6 @@ impl<T, S, ER> WithFilterListByPermission<T, S, ER>
 impl<T, S, ER> Action<S> for WithFilterListByPermission<T, S, ER>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -154,7 +151,6 @@ impl<T, S, ER> Action<S> for WithFilterListByPermission<T, S, ER>
 pub struct GetAllEntities<T, S = State, ER = entity::Controller>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
     pub show_deleted: bool,
     pub phantom_data: PhantomData<(T, S, ER)>,
@@ -163,7 +159,6 @@ pub struct GetAllEntities<T, S = State, ER = entity::Controller>
 impl<T, S, ER> GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -183,7 +178,6 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
 impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -200,7 +194,6 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
 pub struct GetEntity<T, S = State, ER = entity::Controller>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
     pub name: String,
     pub phantom_data: PhantomData<(T, S, ER)>,
@@ -209,7 +202,6 @@ pub struct GetEntity<T, S = State, ER = entity::Controller>
 impl<T, S, ER> GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -229,7 +221,6 @@ impl<T, S, ER> GetEntity<T, S, ER>
 impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
-        T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -250,7 +241,6 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 pub struct CreateEntity<T, EM = entity::Controller>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
 {
     pub data: T,
@@ -261,7 +251,6 @@ pub struct CreateEntity<T, EM = entity::Controller>
 impl<T, EM> CreateEntity<T, EM>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
         ActionOk<<Self as Action>::Ret>: Clone,
 {
@@ -292,7 +281,6 @@ impl<T, EM> CreateEntity<T, EM>
 impl<T, EM> Action<State> for CreateEntity<T, EM>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
 {
     type Ret = CreateEntityResult<T>;
@@ -338,7 +326,6 @@ impl<T, EM> Action<State> for CreateEntity<T, EM>
 pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -351,10 +338,8 @@ pub struct UpdateEntity<T, S = State, EM = entity::Controller>
 impl<T, S, EM> UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T, S> + Send,
+        EM: ModifierFunctions<T, S>,
         S: GetConnection,
-        WithTransaction<Self, S>: Action<S>, //because WithTransaction isn't fully generic
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -375,8 +360,7 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
 impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T, S> + Send,
+        EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
     type Ret = UpdateEntityResult<T>;
@@ -415,7 +399,6 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
         S: GetConnection,
 {
@@ -427,8 +410,7 @@ pub struct DeleteEntity<T, S = State, EM = entity::Controller>
 impl<T, S, EM> DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T, S> + Send,
+        EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -449,8 +431,7 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
 impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
-        T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
-        EM: ModifierFunctions<T, S> + Send,
+        EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
     type Ret = DeleteEntityResult<T>;
@@ -493,8 +474,8 @@ pub struct QueryTableData<S = State, ER = entity::Controller, TC = table::TableA
 
 impl<S, ER, TC> QueryTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -514,8 +495,8 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
 
 impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     type Ret = GetTableDataResult;
@@ -557,8 +538,8 @@ pub struct InsertTableData<S = State, ER = entity::Controller, TC = table::Table
 
 impl<S, ER, TC> InsertTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -580,8 +561,8 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
 
 impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     type Ret = InsertTableDataResult;
@@ -626,8 +607,8 @@ pub struct UpdateTableData<S = State, ER = entity::Controller, TC = table::Table
 
 impl<S, ER, TC> UpdateTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -649,8 +630,8 @@ impl<S, ER, TC> UpdateTableData<S, ER, TC>
 
 impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     type Ret = UpdateTableDataResult;
@@ -694,8 +675,8 @@ pub struct DeleteTableData<S = State, ER = entity::Controller, TC = table::Table
 
 impl<S, ER, TC> DeleteTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -717,8 +698,8 @@ impl<S, ER, TC> DeleteTableData<S, ER, TC>
 
 impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S> + Send,
-        TC: table::TableActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Table, S>,
+        TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
     type Ret = DeleteTableDataResult;

@@ -149,12 +149,12 @@ macro_rules! implement_retriever_and_modifier {
                 conn: &Conn,
             ) -> Result<Vec<O>, EntityError>
             where
-                O: ConvertRaw<RD>,
+                RD: ConvertRaw<O>,
             {
                 let entities: Vec<RD> = query_all_entities(conn, false)?;
 
                 let ok_result = entities.into_iter()
-                    .map(|entity| O::convert(&entity))
+                    .map(|entity| entity.convert())
                     .collect();
 
                 Ok(ok_result)
@@ -165,12 +165,12 @@ macro_rules! implement_retriever_and_modifier {
                 name: &str,
             ) -> Result<Option<O>, EntityError>
             where
-                O: ConvertRaw<RD>,
+                RD: ConvertRaw<O>,
             {
                 let entities: Option<RD> = query_entities_by_name(conn, name.to_string())?;
 
                 let ok_result = match entities {
-                    Some(entity) => Some(O::convert(&entity)),
+                    Some(entity) => Some(entity.convert()),
                     None => None
                 };
 
@@ -187,7 +187,9 @@ macro_rules! implement_retriever_and_modifier {
                 object: O,
             ) -> Result<RD, EntityError>
                 where
-                    O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                    O: RawEntityTypes,
+                    NRD: GenerateRaw<O>,
+                    RD: ConvertRaw<O>,
             {
                 debug!("creating entity");
                 let entity: RawEntity = diesel::insert_into(schema::entity::table)
@@ -200,7 +202,7 @@ macro_rules! implement_retriever_and_modifier {
 
                 debug!("creating entity history");
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
-                    .values(&object.new(entity.entity_id, user_id))
+                    .values(NRD::new(&object, entity.entity_id, user_id))
                     .get_result(conn)
                     .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
@@ -214,11 +216,13 @@ macro_rules! implement_retriever_and_modifier {
                 object: O,
             ) -> Result<RD, EntityError>
                 where
-                    O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                    O: RawEntityTypes,
+                    NRD: GenerateRaw<O>,
+                    RD: ConvertRaw<O>,
             {
 
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
-                    .values(&object.new(entity_id, user_id))
+                    .values(NRD::new(&object, entity_id, user_id))
                     .get_result(conn)
                     .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
@@ -232,11 +236,13 @@ macro_rules! implement_retriever_and_modifier {
                 entity_name: String,
             ) -> Result<(), EntityError>
                 where
-                    O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                    O: RawEntityTypes,
+                    NRD: GenerateRaw<O>,
+                    RD: ConvertRaw<O>,
             {
 
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
-                    .values(&O::tombstone(entity_name, entity_id, user_id))
+                    .values(NRD::tombstone(entity_name, entity_id, user_id))
                     .get_result(conn)
                     .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
@@ -250,20 +256,22 @@ macro_rules! implement_retriever_and_modifier {
                 object: O,
             ) -> Result<Created<O>, EntityError>
             where
-                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                O: RawEntityTypes,
+                NRD: GenerateRaw<O>,
+                RD: ConvertRaw<O>,
             {
                 debug!("string to create entity: name => {}", object.get_name());
                 let entities: Option<RD> = query_entities_by_name(conn, object.get_name())?;
 
                 match entities {
                     Some(entity) => Ok(Created::Fail {
-                        existing: O::convert(&entity)
+                        existing: entity.convert()
                     }),
                     None => {
                         debug!("no object found");
                         let new_val = Modifier::create_internal(conn, user_id, object)?;
                         Ok(Created::Success {
-                            new: O::convert(&new_val),
+                            new: new_val.convert(),
                         })
                     }
                 }
@@ -275,7 +283,9 @@ macro_rules! implement_retriever_and_modifier {
                 object: O,
             ) -> Result<Upserted<O>, EntityError>
             where
-                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                O: RawEntityTypes,
+                NRD: GenerateRaw<O>,
+                RD: ConvertRaw<O>,
             {
                 let entities: Option<RD> = query_entities_by_name(conn, object.get_name())?;
 
@@ -283,14 +293,14 @@ macro_rules! implement_retriever_and_modifier {
                     Some(entity) => {
                         let new_val = Modifier::update_internal(conn, user_id, entity.entity_id, object)?;
                         Ok(Upserted::Update {
-                            old: O::convert(&entity),
-                            new: O::convert(&new_val),
+                            old: entity.convert(),
+                            new: new_val.convert(),
                         })
                     },
                     None => {
                         let new_val = Modifier::create_internal(conn, user_id, object)?;
                         Ok(Upserted::Create {
-                            new: O::convert(&new_val),
+                            new: new_val.convert(),
                         })
                     }
                 }
@@ -302,7 +312,9 @@ macro_rules! implement_retriever_and_modifier {
                 name_object: (&str, O),
             ) -> Result<Updated<O>, EntityError>
             where
-                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                O: RawEntityTypes,
+                NRD: GenerateRaw<O>,
+                RD: ConvertRaw<O>,
             {
                 let (object_name, object) = name_object;
                 let entities: Option<RD> = query_entities_by_name(conn, object_name.to_string())?;
@@ -311,8 +323,8 @@ macro_rules! implement_retriever_and_modifier {
                     Some(entity) => {
                         let new_val = Modifier::update_internal(conn, user_id, entity.entity_id, object)?;
                         Ok(Updated::Success {
-                            old: O::convert(&entity),
-                            new: O::convert(&new_val),
+                            old: entity.convert(),
+                            new: new_val.convert(),
                         })
                     },
                     None => {
@@ -327,7 +339,9 @@ macro_rules! implement_retriever_and_modifier {
                 name: &str,
             ) -> Result<Deleted<O>, EntityError>
             where
-                O: GenerateRaw<NRD> + ConvertRaw<RD> + RawEntityTypes,
+                O: RawEntityTypes,
+                NRD: GenerateRaw<O>,
+                RD: ConvertRaw<O>,
             {
                 let entities: Option<RD> = query_entities_by_name(conn, name.to_string())?;
 
@@ -335,7 +349,7 @@ macro_rules! implement_retriever_and_modifier {
                     Some(entity) => {
                         Modifier::delete_internal::<O>(conn, user_id, entity.entity_id, name.to_string())?;
                         Ok(Deleted::Success {
-                            old: O::convert(&entity),
+                            old: entity.convert(),
                         })
                     },
                     None => {

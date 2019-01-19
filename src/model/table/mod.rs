@@ -14,7 +14,9 @@ use model::state::GetConnection;
 
 
 pub struct TableAction;
-pub trait TableActionFunctions<S> {
+pub trait TableActionFunctions<S>
+    where Self: Send,
+{
     fn query(conn: &S, table: &data::Table) -> Result<data::RawTableData, TableError>;
 
     fn insert_row(conn: &S, table: &data::Table, data: &data::ObjectValues, fail_on_duplicate: bool) -> Result<data::RawTableData, TableError>;
