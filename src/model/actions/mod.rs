@@ -96,10 +96,10 @@ pub trait Action<S = State>
 /// Only defined for GetAllEntities
 pub struct WithFilterListByPermission<T, S = State, ER = entity::Controller>
     where
-        T: Send + Clone + RawEntityTypes,
+        T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     action: GetAllEntities<T, S, ER>,
     phantom_data: PhantomData<(T, S)>,
@@ -107,10 +107,10 @@ pub struct WithFilterListByPermission<T, S = State, ER = entity::Controller>
 
 impl<T, S, ER> WithFilterListByPermission<T, S, ER>
     where
-        T: Send + Clone + RawEntityTypes,
+        T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     pub fn new(action: GetAllEntities<T, S, ER>) -> Self {
         Self {
@@ -122,10 +122,10 @@ impl<T, S, ER> WithFilterListByPermission<T, S, ER>
 
 impl<T, S, ER> Action<S> for WithFilterListByPermission<T, S, ER>
     where
-        T: Send + Clone + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -153,7 +153,6 @@ impl<T, S, ER> Action<S> for WithFilterListByPermission<T, S, ER>
 #[derive(Debug, Clone)]
 pub struct GetAllEntities<T, S = State, ER = entity::Controller>
     where
-        T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
@@ -163,11 +162,10 @@ pub struct GetAllEntities<T, S = State, ER = entity::Controller>
 
 impl<T, S, ER> GetAllEntities<T, S, ER>
     where
-        T: Send + Clone + Debug,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     pub fn new(show_deleted: bool) -> WithTransaction<WithFilterListByPermission<T, S, ER>, S> {
         let action = Self {
@@ -184,11 +182,10 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
 
 impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     where
-        T: Send + Clone + Debug,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = GetAllEntitiesResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -202,7 +199,6 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
 #[derive(Debug, Clone)]
 pub struct GetEntity<T, S = State, ER = entity::Controller>
     where
-        T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
 {
@@ -212,11 +208,10 @@ pub struct GetEntity<T, S = State, ER = entity::Controller>
 
 impl<T, S, ER> GetEntity<T, S, ER>
     where
-        T: Send + Clone + Debug + RawEntityTypes,
+        T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>, //because WithTransaction isn't fully generic
+        S: GetConnection,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
         let action = Self {
@@ -233,10 +228,10 @@ impl<T, S, ER> GetEntity<T, S, ER>
 
 impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
-        T: Send + Clone + Debug + RawEntityTypes,
+        T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = GetEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -254,10 +249,9 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 #[derive(Debug, Clone)]
 pub struct CreateEntity<T, EM = entity::Controller>
     where
-        T: Send + Clone + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
-        State: GetConnection + Send,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
@@ -266,7 +260,7 @@ pub struct CreateEntity<T, EM = entity::Controller>
 
 impl<T, EM> CreateEntity<T, EM>
     where
-        T: Send + Clone + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
         ActionOk<<Self as Action>::Ret>: Clone,
@@ -297,7 +291,7 @@ impl<T, EM> CreateEntity<T, EM>
 
 impl<T, EM> Action<State> for CreateEntity<T, EM>
     where
-        T: Send + Clone + Debug + RawEntityTypes,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, State> + Send,
 {
@@ -343,10 +337,10 @@ impl<T, EM> Action<State> for CreateEntity<T, EM>
 #[derive(Debug)]
 pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
-        T: Send + Clone + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     pub name: String,
     pub data: T,
@@ -356,10 +350,10 @@ pub struct UpdateEntity<T, S = State, EM = entity::Controller>
 
 impl<T, S, EM> UpdateEntity<T, S, EM>
     where
-        T: Send + Clone + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
         WithTransaction<Self, S>: Action<S>, //because WithTransaction isn't fully generic
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -380,10 +374,10 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
 
 impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
-        T: Send + Clone + Debug + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = UpdateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -420,11 +414,10 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 #[derive(Debug)]
 pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
-        T: Send + Clone,
         T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     pub name: String,
     pub on_not_found: OnNotFound,
@@ -433,11 +426,10 @@ pub struct DeleteEntity<T, S = State, EM = entity::Controller>
 
 impl<T, S, EM> DeleteEntity<T, S, EM>
     where
-        T: Send + Clone + RawEntityTypes + Debug,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>, //because WithTransaction isn't fully generic
+        S: GetConnection,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -456,10 +448,10 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
 
 impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
-        T: Send + Clone + Debug + RawEntityTypes,
+        T: RawEntityTypes,
         T: conversion::GenerateRaw<<T as RawEntityTypes>::NewData>,
         EM: ModifierFunctions<T, S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = DeleteEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -503,8 +495,7 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -525,7 +516,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -568,8 +559,7 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -592,8 +582,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
-
+        S: GetConnection,
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -639,8 +628,7 @@ impl<S, ER, TC> UpdateTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -663,7 +651,7 @@ impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = UpdateTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -708,8 +696,7 @@ impl<S, ER, TC> DeleteTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -732,7 +719,7 @@ impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S> + Send,
         TC: table::TableActionFunctions<S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = DeleteTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -777,8 +764,7 @@ impl<S, ER, QC> RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S> + Send,
         QC: query::QueryActionFunctions<S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -800,7 +786,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S> + Send,
         QC: query::QueryActionFunctions<S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -841,8 +827,7 @@ impl<S, ER, SC> RunScript<S, ER, SC>
     where
         ER: entity::RetrieverFunctions<data::Script, S> + Send,
         SC: script::ScriptActionFunctions<S> + Send,
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -863,7 +848,7 @@ impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
     where
         ER: entity::RetrieverFunctions<data::Script, S> + Send,
         SC: script::ScriptActionFunctions<S> + Send,
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -892,8 +877,7 @@ pub struct AddUser<S = State> {
 
 impl<S> AddUser<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(username: String, email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -912,7 +896,7 @@ impl<S> AddUser<S>
 
 impl<S> Action<S> for AddUser<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -928,8 +912,7 @@ pub struct RemoveUser<S = State> {
 
 impl<S> RemoveUser<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -947,7 +930,7 @@ impl<S> RemoveUser<S>
 
 impl<S> Action<S> for RemoveUser<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -963,8 +946,7 @@ pub struct GetAllUsers<S = State> {
 
 impl<S> GetAllUsers<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -982,7 +964,7 @@ impl<S> GetAllUsers<S>
 
 impl<S> Action<S> for GetAllUsers<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -999,8 +981,7 @@ pub struct SetUserPassword<S = State> {
 
 impl<S> SetUserPassword<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(user_identifier: String, password: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1019,7 +1000,7 @@ impl<S> SetUserPassword<S>
 
 impl<S> Action<S> for SetUserPassword<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1036,8 +1017,7 @@ pub struct InviteUser<S = State> {
 
 impl<S> InviteUser<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1055,7 +1035,7 @@ impl<S> InviteUser<S>
 
 impl<S> Action<S> for InviteUser<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1071,8 +1051,7 @@ pub struct AddRole<S = State> {
 
 impl<S> AddRole<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1090,7 +1069,7 @@ impl<S> AddRole<S>
 
 impl<S> Action<S> for AddRole<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1106,8 +1085,7 @@ pub struct RemoveRole<S = State> {
 
 impl<S> RemoveRole<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1125,7 +1103,7 @@ impl<S> RemoveRole<S>
 
 impl<S> Action<S> for RemoveRole<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1140,8 +1118,7 @@ pub struct GetAllRoles<S = State> {
 
 impl<S> GetAllRoles<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new() -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1158,7 +1135,7 @@ impl<S> GetAllRoles<S>
 
 impl<S> Action<S> for GetAllRoles<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1175,8 +1152,7 @@ pub struct AttachPermissionForRole<S = State> {
 
 impl<S> AttachPermissionForRole<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1195,7 +1171,7 @@ impl<S> AttachPermissionForRole<S>
 
 impl<S> Action<S> for AttachPermissionForRole<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1212,8 +1188,7 @@ pub struct DetachPermissionForRole<S = State> {
 
 impl<S> DetachPermissionForRole<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1232,7 +1207,7 @@ impl<S> DetachPermissionForRole<S>
 
 impl<S> Action<S> for DetachPermissionForRole<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1249,8 +1224,7 @@ pub struct AttachRoleForUser<S = State> {
 
 impl<S> AttachRoleForUser<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1269,7 +1243,7 @@ impl<S> AttachRoleForUser<S>
 
 impl<S> Action<S> for AttachRoleForUser<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1286,8 +1260,7 @@ pub struct DetachRoleForUser<S = State> {
 
 impl<S> DetachRoleForUser<S>
     where
-        S: GetConnection + Send,
-        WithTransaction<Self, S>: Action<S>,
+        S: GetConnection,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -1306,7 +1279,7 @@ impl<S> DetachRoleForUser<S>
 
 impl<S> Action<S> for DetachRoleForUser<S>
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -1326,7 +1299,7 @@ impl Nothing {
 
 impl<S> Action<S> for Nothing
     where
-        S: GetConnection + Send,
+        S: GetConnection,
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

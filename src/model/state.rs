@@ -41,7 +41,9 @@ impl State {
     }
 }
 
-pub trait GetConnection {
+pub trait GetConnection
+    where Self: Send
+{
     type Connection;
     fn get_conn<'a>(&'a self) -> &'a Self::Connection;
 
@@ -68,7 +70,9 @@ impl GetConnection for State {
 
 }
 
-pub trait GetUserInfo {
+pub trait GetUserInfo
+    where Self: Send
+{
     fn get_user_id(&self) -> i64;
 }
 

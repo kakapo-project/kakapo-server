@@ -8,10 +8,13 @@ use model::schema;
 use diesel::expression_methods::ExpressionMethods;
 use data;
 use std::iter::FromIterator;
+use std::fmt::Debug;
 
 
 // Queryables
-pub trait RawEntityTypes {
+pub trait RawEntityTypes
+    where Self: Clone + Send + Debug
+{
     type Data;
     type NewData;
 
