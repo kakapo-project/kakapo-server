@@ -7,6 +7,7 @@ use super::schema::{entity, table_schema, query, script, user_account};
 use model::schema;
 use diesel::expression_methods::ExpressionMethods;
 use data;
+use std::iter::FromIterator;
 
 
 // Queryables

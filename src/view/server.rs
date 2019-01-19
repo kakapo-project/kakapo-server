@@ -15,15 +15,11 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use chrono::Duration;
 
-use serde_json;
-
 use std::result::Result;
 use std::result::Result::Ok;
 use std::path::Path as fsPath;
 
 use connection;
-use connection::executor::DatabaseExecutor;
-
 // current module
 use view::procedure;
 use model::actions;

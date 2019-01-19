@@ -52,7 +52,8 @@ use model::actions::ActionOk;
 pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
     where
         A: Action<S>,
-        AU: AuthPermissionFunctions + Send,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     action: A,
     permission: Permission,
@@ -62,7 +63,8 @@ pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
 impl<A, S, AU> WithPermissionRequired<A, S, AU>
     where
         A: Action<S>,
-        AU: AuthPermissionFunctions + Send,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
@@ -73,13 +75,14 @@ impl<A, S, AU> WithPermissionRequired<A, S, AU>
     }
 }
 
-impl<A, AU> Action<State> for WithPermissionRequired<A, State, AU>
+impl<A, S, AU> Action<S> for WithPermissionRequired<A, S, AU>
     where
-        A: Action<State>,
-        AU: AuthPermissionFunctions + Send,
+        A: Action<S>,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -99,7 +102,8 @@ impl<A, AU> Action<State> for WithPermissionRequired<A, State, AU>
 pub struct WithLoginRequired<A, S = State, AU = AuthPermissions>
     where
         A: Action<S>,
-        AU: AuthPermissionFunctions + Send,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     action: A,
     phantom_data: PhantomData<(S, AU)>,
@@ -108,7 +112,8 @@ pub struct WithLoginRequired<A, S = State, AU = AuthPermissions>
 impl<A, S, AU> WithLoginRequired<A, S, AU>
     where
         A: Action<S>,
-        AU: AuthPermissionFunctions + Send,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -118,13 +123,14 @@ impl<A, S, AU> WithLoginRequired<A, S, AU>
     }
 }
 
-impl<A, AU> Action<State> for WithLoginRequired<A, State, AU>
+impl<A, S, AU> Action<S> for WithLoginRequired<A, S, AU>
     where
-        A: Action<State>,
-        AU: AuthPermissionFunctions + Send,
+        A: Action<S>,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -145,7 +151,8 @@ impl<A, AU> Action<State> for WithLoginRequired<A, State, AU>
 pub struct WithPermissionRequiredOnReturn<A, S = State, AU = AuthPermissions>
     where
         A: Action<S>,
-        AU: AuthPermissionFunctions + Send,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     action: A,
     initial_permission: Permission,
@@ -158,7 +165,7 @@ impl<A, S, AU> WithPermissionRequiredOnReturn<A, S, AU>
         A: Action<S>,
         Self: Action<S>,
         S: GetConnection + Send,
-        AU: AuthPermissionFunctions + Send,
+        AU: AuthPermissionFunctions<S> + Send,
 {
     pub fn new<F>(action: A, permission: Permission, required_permission: F) -> Self
         where
@@ -173,14 +180,15 @@ impl<A, S, AU> WithPermissionRequiredOnReturn<A, S, AU>
     }
 }
 
-impl<A, AU> Action<State> for WithPermissionRequiredOnReturn<A, State, AU>
+impl<A, S, AU> Action<S> for WithPermissionRequiredOnReturn<A, S, AU>
     where
-        A: Action<State>,
-        AU: AuthPermissionFunctions + Send,
-        ActionOk<<A as Action>::Ret> : Clone,
+        A: Action<S>,
+        S: Send,
+        AU: AuthPermissionFunctions<S> + Send,
+        ActionOk<<A as Action<S>>::Ret> : Clone,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         if AU::is_admin(state) {
             return self.action.call(state);
         }
@@ -206,6 +214,7 @@ impl<A, AU> Action<State> for WithPermissionRequiredOnReturn<A, State, AU>
 }
 
 ///decorator for transactions
+#[derive(Debug, Clone)]
 pub struct WithTransaction<A, S = State>
     where
         A: Action<S>,
@@ -229,15 +238,16 @@ impl<A, S> WithTransaction<A, S>
     }
 }
 
-impl<A> Action<State> for WithTransaction<A, State>
+impl<A, S> Action<S> for WithTransaction<A, S>
     where
-        A: Action<State>,
+        A: Action<S>,
+        S: GetConnection + Send,
 {
     type Ret = A::Ret;
-    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         debug!("started transaction");
-        let conn = state.get_conn();
-        conn.transaction::<ActionOk<Self::Ret>, Error, _>(||
+
+        state.transaction::<ActionOk<Self::Ret>, Error, _>(||
             self.action.call(state)
         )
 
@@ -250,7 +260,7 @@ pub struct WithDispatch<A, S = State>
         A: Action<S>,
 {
     action: A,
-    channel: Channels,
+    channels: Vec<Channels>,
     phantom_data: PhantomData<S>,
 }
 
@@ -259,10 +269,10 @@ impl<A, S> WithDispatch<A, S>
         A: Action<S>,
         S: GetConnection + Send,
 {
-    pub fn new(action: A, channel: Channels) -> Self {
+    pub fn new(action: A, channels: Vec<Channels>) -> Self {
         Self {
             action,
-            channel,
+            channels,
             phantom_data: PhantomData,
         }
     }
@@ -277,7 +287,8 @@ impl<A, S> Action<S> for WithDispatch<A, S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         debug!("dispatching action");
 
-        let result = self.action.call(state)?;
+        let mut result = self.action.call(state)?;
+        result.channels = self.channels.to_owned();
 
         Ok(result)
     }

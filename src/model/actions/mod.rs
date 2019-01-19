@@ -99,7 +99,7 @@ pub struct WithFilterListByPermission<T, S = State, ER = entity::Controller>
         T: Send + Clone + RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + Send,
 {
     action: GetAllEntities<T, S, ER>,
     phantom_data: PhantomData<(T, S)>,
@@ -120,22 +120,22 @@ impl<T, S, ER> WithFilterListByPermission<T, S, ER>
     }
 }
 
-impl<T, ER> Action<State> for WithFilterListByPermission<T, State, ER>
+impl<T, S, ER> Action<S> for WithFilterListByPermission<T, S, ER>
     where
         T: Send + Clone + RawEntityTypes + Debug,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
-        ER: RetrieverFunctions<T, State> + Send,
-        for<'a> Vec<T>: FromIterator<&'a T>,
+        ER: RetrieverFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
-    type Ret = <GetAllEntities<T, State, ER> as Action<State>>::Ret;
-    fn call(&self, state: &State) -> ActionResult<Self::Ret> {
+    type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let user_permissions = AuthPermissions::get_permissions(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
 
-        let GetAllEntitiesResult(inner_results) = &raw_results.data;
+        let GetAllEntitiesResult(inner_results) = raw_results.data;
 
         debug!("filtering list based on permissions");
-        let filtered_results = inner_results.iter()
+        let filtered_results = inner_results.into_iter()
             .filter(|x| {
                 let required = Permission::read_entity::<T>(x.get_name());
                 user_permissions.contains(&required)
@@ -163,17 +163,22 @@ pub struct GetAllEntities<T, S = State, ER = entity::Controller>
 
 impl<T, S, ER> GetAllEntities<T, S, ER>
     where
-        T: Send + Clone,
+        T: Send + Clone + Debug,
         T: RawEntityTypes,
         T: conversion::ConvertRaw<<T as RawEntityTypes>::Data>,
-        ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        ER: RetrieverFunctions<T, S> + Send,
+        S: GetConnection + Send,
 {
-    pub fn new(show_deleted: bool) -> Self {
-        Self {
+    pub fn new(show_deleted: bool) -> WithTransaction<WithFilterListByPermission<T, S, ER>, S> {
+        let action = Self {
             show_deleted,
             phantom_data: PhantomData,
-        }
+        };
+
+        let action_with_filter = WithFilterListByPermission::new(action);
+        let action_with_transaction = WithTransaction::new(action_with_filter);
+
+        action_with_transaction
     }
 }
 

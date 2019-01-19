@@ -13,7 +13,7 @@ use connection::py::PyRunner;
 use connection::executor::Conn;
 
 use model::actions::Action;
-
+use diesel::Connection;
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
 #[derive(Debug, Clone, Serialize)]
@@ -45,12 +45,25 @@ pub trait GetConnection {
     type Connection;
     fn get_conn<'a>(&'a self) -> &'a Self::Connection;
 
+    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
+        where
+            F: FnOnce() -> Result<G, E>,
+            E: From<diesel::result::Error>;
 }
 
 impl GetConnection for State {
     type Connection = Conn;
     fn get_conn<'a>(&'a self) -> &'a Conn {
         &self.database
+    }
+
+    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
+        where
+            F: FnOnce() -> Result<G, E>,
+            E: From<diesel::result::Error>,
+    {
+        let conn = self.get_conn();
+        conn.transaction::<G, E, _>(f)
     }
 
 }

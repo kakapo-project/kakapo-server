@@ -105,31 +105,31 @@ impl Permission {
 
 pub struct AuthPermissions;
 
-pub trait AuthPermissionFunctions {
+pub trait AuthPermissionFunctions<S> {
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
-    fn get_permissions(state: &State) -> Option<HashSet<Permission>>;
+    fn get_permissions(state: &S) -> Option<HashSet<Permission>>;
 
-    fn is_admin(state: &State) -> bool;
+    fn is_admin(state: &S) -> bool;
 }
 
-impl AuthPermissionFunctions for AuthPermissions {
-    fn get_permissions(state: &State) -> Option<HashSet<Permission>> {
+impl<S> AuthPermissionFunctions<S> for AuthPermissions {
+    fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
         unimplemented!()
     }
 
-    fn is_admin(state: &State) -> bool {
+    fn is_admin(state: &S) -> bool {
         unimplemented!()
     }
 }
 
 pub struct AllowAll;
-impl AuthPermissionFunctions for AllowAll {
-    fn get_permissions(state: &State) -> Option<HashSet<Permission>> {
+impl<S> AuthPermissionFunctions<S> for AllowAll {
+    fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
         Some(HashSet::new())
     }
 
-    fn is_admin(state: &State) -> bool {
+    fn is_admin(state: &S) -> bool {
         true
     }
 }
