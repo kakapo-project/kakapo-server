@@ -311,7 +311,15 @@ impl<A, S> WithDispatch<A, S>
         A: Action<S>,
         S: GetConnection,
 {
-    pub fn new(action: A, channels: Vec<Channels>) -> Self {
+    pub fn new(action: A, channel: Channels) -> Self {
+        Self {
+            action,
+            channels: vec![channel],
+            phantom_data: PhantomData,
+        }
+    }
+
+    pub fn new_multi(action: A, channels: Vec<Channels>) -> Self {
         Self {
             action,
             channels,

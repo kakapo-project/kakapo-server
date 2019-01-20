@@ -263,12 +263,13 @@ impl<T, S, EM> CreateEntity<T, S, EM>
         S: GetConnection,
         ActionOk<<Self as Action<S>>::Ret>: Clone,
 {
-    pub fn new(data: T) -> WithPermissionFor<WithTransaction<Self, S>, S> {
+    pub fn new(data: T) -> WithPermissionFor<WithDispatch<WithTransaction<Self, S>, S>, S> {
 
         let name = data.get_name();
         let create_permission = Permission::create_entity::<T>();
         let update_permission = Permission::modify_entity::<T>(name);
         let on_duplicate = OnDuplicate::Ignore; //TODO:...
+        let channel = Channels::all_entities::<T>(); //TODO: on update this should have table as well
 
         let action = Self {
             data,
@@ -277,10 +278,10 @@ impl<T, S, EM> CreateEntity<T, S, EM>
         };
 
         let action_with_transaction = WithTransaction::new(action);
-
+        let action_with_dispatch = WithDispatch::new(action_with_transaction, channel);
         let action_with_permission =
             WithPermissionFor::new(
-                action_with_transaction,
+                action_with_dispatch,
                 move |user_permissions, all_permissions| {
                     match on_duplicate {
                         OnDuplicate::Update => if all_permissions.contains(&update_permission) {
@@ -362,7 +363,11 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
         EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
-    pub fn new(name: String, data: T) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+        let channels = vec![
+            Channels::all_entities::<T>(),
+            Channels::entity::<T>(&name),
+        ];
         let action = Self {
             name: name.to_owned(),
             data,
@@ -371,8 +376,9 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
         };
 
         let action_with_transaction = WithTransaction::new(action);
+        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::modify_entity::<T>(name));
+            WithPermissionRequired::new(action_with_dispatch, Permission::modify_entity::<T>(name));
 
         action_with_permission
     }
@@ -434,7 +440,11 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
         EM: ModifierFunctions<T, S>,
         S: GetConnection,
 {
-    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+        let channels = vec![
+            Channels::all_entities::<T>(),
+            Channels::entity::<T>(&name),
+        ];
         let action = Self {
             name: name.to_owned(),
             on_not_found: OnNotFound::Ignore,
@@ -442,8 +452,9 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
         };
 
         let action_with_transaction = WithTransaction::new(action);
+        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::modify_entity::<T>(name));
+            WithPermissionRequired::new(action_with_dispatch, Permission::modify_entity::<T>(name));
 
         action_with_permission
     }
@@ -557,7 +568,8 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
         TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
-    pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+        let channels = vec![Channels::table(&table_name)];
         let action = Self {
             table_name: table_name.to_owned(),
             data,
@@ -567,8 +579,9 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
         };
 
         let action_with_transaction = WithTransaction::new(action);
+        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::modify_table_data(table_name));
+            WithPermissionRequired::new(action_with_dispatch, Permission::modify_table_data(table_name));
 
         action_with_permission
     }
@@ -620,7 +633,8 @@ impl<S, ER, TC> UpdateTableData<S, ER, TC>
         TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
-    pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+        let channels = vec![Channels::table(&table_name)];
         let action = Self {
             table_name: table_name.to_owned(),
             keyed_data,
@@ -630,8 +644,9 @@ impl<S, ER, TC> UpdateTableData<S, ER, TC>
         };
 
         let action_with_transaction = WithTransaction::new(action);
+        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::modify_table_data(table_name));
+            WithPermissionRequired::new(action_with_dispatch, Permission::modify_table_data(table_name));
 
         action_with_permission
     }
@@ -682,7 +697,8 @@ impl<S, ER, TC> DeleteTableData<S, ER, TC>
         TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
-    pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+        let channels = vec![Channels::table(&table_name)];
         let action = Self {
             table_name: table_name.to_owned(),
             keys,
@@ -692,8 +708,9 @@ impl<S, ER, TC> DeleteTableData<S, ER, TC>
         };
 
         let action_with_transaction = WithTransaction::new(action);
+        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
         let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::modify_table_data(table_name));
+            WithPermissionRequired::new(action_with_dispatch, Permission::modify_table_data(table_name));
 
         action_with_permission
     }
