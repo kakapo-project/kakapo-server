@@ -13,6 +13,7 @@ use serde::de;
 use std::fmt;
 use linked_hash_map::LinkedHashMap;
 use linked_hash_map::serde::LinkedHashMapVisitor;
+use data::utils::TableDataFormat;
 
 pub mod utils;
 pub mod auth;
@@ -84,11 +85,18 @@ pub struct RawTableDataData {
     values: Vec<Value>
 }
 
+/// Default return value from a query
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawTableData  {
     columns: RawTableDataColumns,
     data: Vec<RawTableDataData>,
+}
+
+impl RawTableData {
+    pub fn format_with(self, format: &TableDataFormat) -> TableData {
+        unimplemented!()
+    }
 }
 
 

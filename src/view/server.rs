@@ -21,16 +21,11 @@ use std::path::Path as fsPath;
 
 use connection;
 // current module
-use view::procedure;
 use model::actions;
 
 use super::state::AppState;
-use super::procedure::{ ProcedureBuilder, NoQuery };
+use super::procedure::NoQuery;
 use super::extensions::CorsBuilderProcedureExt;
-
-use view::error;
-
-use std::error::Error;
 use data;
 use view::environment::Env;
 

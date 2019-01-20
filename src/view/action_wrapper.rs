@@ -1,15 +1,6 @@
 
 use actix::prelude::*;
 
-use actix_web::{
-    AsyncResponder, Error as ActixError,
-    dev::Handler as MsgHandler, http,
-    FromRequest, Json,
-    HttpRequest, HttpResponse, ws,
-};
-
-use serde_json;
-
 use connection::executor::DatabaseExecutor;
 use actix::dev::MessageResponse;
 

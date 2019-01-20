@@ -535,13 +535,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
                     .or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
-                /*
-                match &self.format {
-                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
-                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
-                }
-                */
-                unimplemented!()
+                Ok(table_data.format_with(&self.format))
             })
             .and_then(|res| ActionRes::new(GetTableDataResult(res)))
     }
@@ -605,13 +599,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
-                /*
-                match &self.format {
-                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
-                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
-                }
-                */
-                unimplemented!()
+                Ok(table_data.format_with(&self.format))
             })
             .and_then(|res| ActionRes::new(InsertTableDataResult(res)))
     }
@@ -673,13 +661,7 @@ impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
-                /*
-                match &self.format {
-                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
-                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
-                }
-                */
-                unimplemented!()
+                Ok(table_data.format_with(&self.format))
             })
             .and_then(|res| ActionRes::new(UpdateTableDataResult(res)))
     }
@@ -741,13 +723,7 @@ impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
-                /*
-                match &self.format {
-                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
-                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
-                }
-                */
-                unimplemented!()
+                Ok(table_data.format_with(&self.format))
             })
             .and_then(|res| ActionRes::new(DeleteTableDataResult(res)))
     }
@@ -805,13 +781,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
                     .or_else(|err| Err(Error::Query(err)))
             })
             .and_then(|table_data| {
-                /*
-                match &self.format {
-                    TableDataFormat::Rows => Ok(table_data.into_rows_data()),
-                    TableDataFormat::FlatRows => Ok(table_data.into_rows_flat_data()),
-                }
-                */
-                unimplemented!()
+                Ok(table_data.format_with(&self.format))
             })
             .and_then(|res| ActionRes::new(RunQueryResult(res)))
     }
