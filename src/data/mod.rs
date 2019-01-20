@@ -15,6 +15,10 @@ use linked_hash_map::LinkedHashMap;
 use linked_hash_map::serde::LinkedHashMapVisitor;
 
 pub mod utils;
+pub mod auth;
+pub mod dbdata;
+pub mod schema;
+pub mod conversion;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -20,15 +20,15 @@ use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::entity::error::EntityError;
 
-use model::schema;
+use data::schema;
 
 use model::actions::results::*;
 use model::actions::error::Error;
 use data::utils::OnDuplicate;
 
 use data::utils::OnNotFound;
-use model::entity::conversion;
-use model::dbdata::RawEntityTypes;
+use data::conversion;
+use data::dbdata::RawEntityTypes;
 
 use model::entity::results::Upserted;
 use model::entity::results::Created;
@@ -49,6 +49,39 @@ use model::actions::ActionResult;
 use model::actions::ActionOk;
 use std::collections::HashSet;
 
+
+#[derive(Debug)]
+enum Requirements {
+    AllOf(Vec<Permission>),
+    AnyOf(Vec<Permission>),
+}
+
+impl Requirements {
+    fn is_permitted(&self, user_permissions: &HashSet<Permission>) -> bool {
+        let mut is_permitted = true;
+        match self {
+            Requirements::AllOf(required_permissions) => {
+                is_permitted = true;
+                for required_permission in required_permissions {
+                    if !user_permissions.contains(required_permission) {
+                        is_permitted = false;
+                    }
+                }
+            },
+            Requirements::AnyOf(required_permissions) => {
+                is_permitted = false;
+                for required_permission in required_permissions {
+                    if user_permissions.contains(required_permission) {
+                        is_permitted = true;
+                    }
+                }
+            }
+        };
+
+        is_permitted
+    }
+}
+
 ///decorator for permission
 pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
     where
@@ -57,7 +90,7 @@ pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
         AU: AuthPermissionFunctions<S>,
 {
     action: A,
-    permission: Permission,
+    permissions: Requirements,
     phantom_data: PhantomData<(S, AU)>,
 }
 
@@ -70,7 +103,23 @@ impl<A, S, AU> WithPermissionRequired<A, S, AU>
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
             action,
-            permission,
+            permissions: Requirements::AnyOf(vec![permission]),
+            phantom_data: PhantomData,
+        }
+    }
+
+    pub fn new_any_of(action: A, permissions: Vec<Permission>) -> Self {
+        Self {
+            action,
+            permissions: Requirements::AnyOf(permissions),
+            phantom_data: PhantomData,
+        }
+    }
+
+    pub fn new_all_of(action: A, permissions: Vec<Permission>) -> Self {
+        Self {
+            action,
+            permissions: Requirements::AllOf(permissions),
             phantom_data: PhantomData,
         }
     }
@@ -89,10 +138,12 @@ impl<A, S, AU> Action<S> for WithPermissionRequired<A, S, AU>
         }
 
         let user_permissions = AU::get_permissions(state).unwrap_or_default();
-        if user_permissions.contains(&self.permission) {
+        let is_permitted = self.permissions.is_permitted(&user_permissions);
+
+        if is_permitted {
             self.action.call(state)
         } else {
-            debug!("Permission denied, required permission: {:?}", &self.permission);
+            debug!("Permission denied, required permission: {:?}", &self.permissions);
             Err(Error::Unauthorized)
         }
 

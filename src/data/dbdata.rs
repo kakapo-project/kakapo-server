@@ -3,14 +3,14 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use super::schema::{entity, table_schema, query, script, user_account};
-use model::schema;
+use data::schema::{entity, table_schema, query, script, user_account};
+use data::schema;
 use diesel::expression_methods::ExpressionMethods;
 use data;
 use std::iter::FromIterator;
 use std::fmt::Debug;
-use model::entity::conversion::ConvertRaw;
-use model::entity::conversion::GenerateRaw;
+use data::conversion::ConvertRaw;
+use data::conversion::GenerateRaw;
 
 
 // Queryables

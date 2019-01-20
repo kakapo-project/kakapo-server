@@ -4,6 +4,7 @@ use model::query::error::QueryError;
 
 use diesel::result::Error as DieselError;
 use model::script::error::ScriptError;
+use model::auth::error::UserManagementError;
 
 #[derive(Debug, Fail)]
 pub enum Error {
@@ -15,6 +16,8 @@ pub enum Error {
     Script(ScriptError),
     #[fail(display = "{:?}", 0)]
     Query(QueryError),
+    #[fail(display = "{:?}", 0)]
+    UserManagement(UserManagementError),
     #[fail(display = "Not authorized")]
     Unauthorized,
     #[fail(display = "Not found")]

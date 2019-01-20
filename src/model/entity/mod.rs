@@ -1,18 +1,17 @@
 use diesel::prelude::*;
 
 use diesel::query_source::Table;
-use model::dbdata;
+use data::dbdata;
 use data;
 
 use connection::executor::Conn;
 
-use model::entity::conversion::*;
-use model::dbdata::RawEntityTypes;
+use data::conversion::*;
+use data::dbdata::RawEntityTypes;
 
 mod internals;
 pub mod error;
 pub mod results;
-pub mod conversion;
 mod update_state;
 
 use self::error::EntityError;

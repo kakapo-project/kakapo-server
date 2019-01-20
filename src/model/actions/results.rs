@@ -16,7 +16,7 @@ use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::entity::error::EntityError;
 
-use model::schema;
+use data::schema;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Serialize)]
@@ -78,3 +78,19 @@ pub struct RunQueryResult(pub data::TableData);
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RunScriptResult(pub serde_json::Value);
+
+
+#[derive(Debug, Clone, Serialize)]
+pub struct UserResult(pub data::auth::User);
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AllUsersResult(pub Vec<data::auth::User>);
+
+#[derive(Debug, Clone, Serialize)]
+pub struct InvitationToken(pub String);
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RoleResult(pub data::auth::Role);
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AllRolesResult(pub Vec<data::auth::Role>);

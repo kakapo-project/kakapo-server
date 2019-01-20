@@ -35,6 +35,9 @@ pub enum Permission {
     User { // manage user can detach roles
         username: String,
     },
+    UserEmail {
+        email: String,
+    },
     UserAdmin, //can add or remove users,
     // and add roles if the user has that role
     // and add permission to role if the user has that role and permission
@@ -99,6 +102,12 @@ impl Permission {
     pub fn user(username: String) -> Self {
         Permission::User {
             username,
+        }
+    }
+
+    pub fn user_email(email: String) -> Self {
+        Permission::UserEmail {
+            email,
         }
     }
 }

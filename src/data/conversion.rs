@@ -1,10 +1,10 @@
 use diesel::prelude::*;
 
-use model::schema;
+use data::schema;
 use diesel::query_source::Table;
 use diesel::r2d2::{ PooledConnection, ConnectionManager };
 use diesel::pg::PgConnection;
-use model::dbdata;
+use data::dbdata;
 use data;
 
 

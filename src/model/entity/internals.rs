@@ -1,16 +1,16 @@
 use diesel::prelude::*;
 
-use model::schema;
+use data::schema;
 use diesel::query_source::Table;
-use model::dbdata;
+use data::dbdata;
 use data;
 
 use connection::executor::Conn;
 
-use model::entity::conversion::*;
-use model::dbdata::RawEntityTypes;
-use model::dbdata::RawEntity;
-use model::dbdata::NewRawEntity;
+use data::conversion::*;
+use data::dbdata::RawEntityTypes;
+use data::dbdata::RawEntity;
+use data::dbdata::NewRawEntity;
 
 
 use model::entity::error::EntityError;
