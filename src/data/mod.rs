@@ -52,9 +52,16 @@ pub enum DataType {
 pub enum IndexableValue {
     Integer(i64),
     String(String),
-    //TODO: allow for multiple indexable values if the multiple keys exists
 }
 
+impl IndexableValue {
+    pub fn into_value(self) -> Value {
+        match self {
+            IndexableValue::Integer(x) => Value::Integer(x),
+            IndexableValue::String(x) => Value::String(x),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -94,6 +101,12 @@ pub struct RawTableData  {
 }
 
 impl RawTableData {
+    pub fn new() -> Self {
+        unimplemented!()
+    }
+    pub fn append(&mut self, other: Self) {
+        unimplemented!()
+    }
     pub fn format_with(self, format: &TableDataFormat) -> TableData {
         unimplemented!()
     }
@@ -249,10 +262,21 @@ pub struct TabularKeys {
 #[serde(rename_all = "camelCase")]
 pub struct ObjectValues(Vec<LinkedHashMap<String, Value>>);
 
+impl ObjectValues {
+    pub fn as_list(&self) -> &Vec<LinkedHashMap<String, Value>> {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectKeys(Vec<LinkedHashMap<String, IndexableValue>>);
 
+impl ObjectKeys {
+    pub fn as_list(&self) -> &Vec<LinkedHashMap<String, IndexableValue>> {
+        &self.0
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -329,7 +353,7 @@ pub struct SchemaState {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Table {
-    pub name: String, //TODO: make sure this is an alphanumeric
+    pub name: String, //TODO: make sure this is an alphanumeric, otherwise SQL injection!
     pub description: String,
     pub schema: SchemaState,
 }

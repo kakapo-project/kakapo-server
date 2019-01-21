@@ -17,9 +17,9 @@ pub trait QueryActionFunctions<S>
 
 impl QueryActionFunctions<State> for QueryAction {
     fn run_query(conn: &State, query: &data::Query) -> Result<data::RawTableData, QueryError>  {
-
+        let params = vec![];
         //TODO: Set session authorization
-        Database::exec(conn.get_conn(), &query.statement/*, params*/);
+        Database::exec(conn.get_conn(), &query.statement, params);
         //TODO: Reset session authorization
         unimplemented!()
     }

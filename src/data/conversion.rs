@@ -1,9 +1,6 @@
 use diesel::prelude::*;
 
 use data::schema;
-use diesel::query_source::Table;
-use diesel::r2d2::{ PooledConnection, ConnectionManager };
-use diesel::pg::PgConnection;
 use data::dbdata;
 use data;
 
