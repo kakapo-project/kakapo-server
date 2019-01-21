@@ -9,12 +9,26 @@ use num_cpus;
 
 pub type Conn = PooledConnection<ConnectionManager<PgConnection>>;
 
-pub struct DatabaseExecutor(pub Pool<ConnectionManager<PgConnection>>);
+pub struct DatabaseExecutor {
+    pool: Pool<ConnectionManager<PgConnection>>,
+    script_path: String,
+}
 
 impl DatabaseExecutor {
+    pub fn new(pool: Pool<ConnectionManager<PgConnection>>, script_path: String) -> Self {
+        Self {
+            pool,
+            script_path
+        }
+    }
+
     pub fn get_connection(&self) -> Conn {
-        self.0.get()
+        self.pool.get()
             .expect("Could not get connection")
+    }
+
+    pub fn get_scripts_path(&self) -> String {
+        self.script_path.to_owned()
     }
 }
 
@@ -28,6 +42,7 @@ pub struct Connector {
     user_name: Option<String>,
     pass_name: Option<String>,
     db_name: Option<String>,
+    script_path_dir: Option<String>,
 }
 
 impl Connector {
@@ -38,6 +53,7 @@ impl Connector {
             user_name: None,
             pass_name: None,
             db_name: None,
+            script_path_dir: None,
         }
     }
 
@@ -66,6 +82,11 @@ impl Connector {
         self
     }
 
+    pub fn script_path(mut self, script_path_dir: String) -> Self {
+        self.script_path_dir = Some(script_path_dir);
+        self
+    }
+
     pub fn done(mut self) -> Addr<DatabaseExecutor> {
         let database_url = format!(
             "postgres://{}:{}@{}:{}/{}",
@@ -79,6 +100,7 @@ impl Connector {
         let pool = Pool::builder().build(manager)
             .expect("Could not start connection");
 
-        SyncArbiter::start(num_cpus::get(), move || DatabaseExecutor(pool.clone()))
+        let script_path = self.script_path_dir.unwrap_or_default(); //TODO: should fallback to home
+        SyncArbiter::start(num_cpus::get(), move || DatabaseExecutor::new(pool.clone(), script_path.clone()))
     }
 }

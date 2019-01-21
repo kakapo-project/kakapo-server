@@ -7,6 +7,7 @@ use actix::dev::MessageResponse;
 use model::actions::Action;
 use model::state::State;
 use model::actions::ActionResult;
+use scripting::Scripting;
 
 
 pub struct ActionWrapper<A: Action + Send> {
@@ -38,7 +39,8 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for DatabaseExecutor
 
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
         let conn = self.get_connection();
-        let state = State::new(conn);
+        let scripting = Scripting::new(self.get_scripts_path());
+        let state = State::new(conn, scripting);
         let result = msg.action.call(&state);
         result
     }

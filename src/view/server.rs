@@ -77,6 +77,7 @@ pub fn serve() {
         .user(Env::database_user())
         .pass(Env::database_pass())
         .db(Env::database_db())
+        .script_path(Env::script_path())
         .done();
 
     let server_addr = Env::server_addr();
@@ -85,8 +86,7 @@ pub fn serve() {
     let mut server_cfg = actix_web::server::new(move || {
 
         let www_path = Env::www_path();
-        let script_path = Env::script_path();
-        let state = AppState::new(connection.clone(), &script_path, "Kakapo");
+        let state = AppState::new(connection.clone(),"Kakapo");
 
         App::with_state(state)
             .middleware(Logger::new("Responded [%s] %b bytes %Dms"))

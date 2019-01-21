@@ -15,6 +15,7 @@ use connection::executor::Conn;
 use model::actions::Action;
 use diesel::Connection;
 use data::dbdata::RawEntityTypes;
+use scripting::Scripting;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -49,15 +50,18 @@ impl Channels {
 
 pub struct State {
     database: DBConnector, //TODO: this should be templated
+    scripting: Scripting,
     //user
 }
 
 impl State {
     pub fn new(
         database: DBConnector,
+        scripting: Scripting,
     ) -> Self {
         Self {
             database,
+            scripting,
         }
     }
 }
@@ -66,7 +70,7 @@ pub trait GetConnection
     where Self: Send
 {
     type Connection;
-    fn get_conn<'a>(&'a self) -> &'a Self::Connection;
+    fn get_conn(&self) -> &Self::Connection;
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
         where
@@ -76,7 +80,7 @@ pub trait GetConnection
 
 impl GetConnection for State {
     type Connection = Conn;
-    fn get_conn<'a>(&'a self) -> &'a Conn {
+    fn get_conn(&self) -> &Conn {
         &self.database
     }
 
@@ -88,7 +92,18 @@ impl GetConnection for State {
         let conn = self.get_conn();
         conn.transaction::<G, E, _>(f)
     }
+}
 
+pub trait GetScripting
+    where Self: Send
+{
+    fn get_scripting(&self) -> &Scripting;
+}
+
+impl GetScripting for State {
+    fn get_scripting(&self) -> &Scripting {
+        &self.scripting
+    }
 }
 
 pub trait GetUserInfo

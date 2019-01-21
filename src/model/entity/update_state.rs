@@ -10,6 +10,7 @@ use diesel::RunQueryDsl;
 use model::state::GetConnection;
 use scripting::Scripting;
 use scripting::ScriptFunctions;
+use model::state::GetScripting;
 
 /// This trait does something action specific after the database updates
 /// The name is a little bit confusing because the database store is also modification
@@ -145,18 +146,21 @@ impl UpdateActionFunctions<data::Query, State> for UpdateAction {
 ///Nothing needed here
 impl UpdateActionFunctions<data::Script, State> for UpdateAction {
     fn create_entity(conn: &State, new: &data::Script) -> Result<(), EntityError> {
-        Scripting::build();
+        let scripting = conn.get_scripting();
+        //Scripting::build();
         Ok(())
     }
 
     fn update_entity(conn: &State, old: &data::Script, new: &data::Script) -> Result<(), EntityError> {
+        let scripting = conn.get_scripting();
         //TODO: this should be debounced so that docker doesn't get called all the time
-        Scripting::build();
+        //Scripting::build();
         Ok(())
     }
 
     fn delete_entity(conn: &State, old: &data::Script) -> Result<(), EntityError> {
-        Scripting::delete();
+        let scripting = conn.get_scripting();
+        //Scripting::delete();
         Ok(())
     }
 }
