@@ -794,7 +794,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
                 }
             })
             .and_then(|query| {
-                QC::run_query(state, &query)
+                QC::run_query(state, &query, &self.params)
                     .or_else(|err| Err(Error::Query(err)))
             })
             .and_then(|table_data| {

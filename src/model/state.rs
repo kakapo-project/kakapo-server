@@ -95,8 +95,12 @@ pub trait GetUserInfo
     where Self: Send
 {
     fn get_user_id(&self) -> i64;
+
+    fn get_db_user(&self) -> String;
 }
 
 impl GetUserInfo for State {
     fn get_user_id(&self) -> i64 { 1 }
+
+    fn get_db_user(&self) -> String { "my_user".to_string() }
 }

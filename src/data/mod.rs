@@ -367,6 +367,14 @@ pub enum QueryParams {
     Unnamed(Vec<Value>),
 }
 
+impl QueryParams {
+    pub fn value_list(&self) -> Vec<Value> {
+        match self {
+            QueryParams::Unnamed(x) => x.to_owned()
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Query {
