@@ -2,12 +2,6 @@
 
 use actix::prelude::*;
 
-use std::result::Result;
-use std::result::Result::Ok;
-
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-
 use data;
 use connection::py::PyRunner;
 
