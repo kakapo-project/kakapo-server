@@ -4,29 +4,21 @@ use actix::prelude::*;
 
 use actix_web::{
     AsyncResponder, Error as ActixError,
-    dev::Handler as MsgHandler, http,
     FromRequest, Json, Query,
-    HttpRequest, HttpResponse, ws,
+    HttpRequest, HttpResponse,
 };
 
 use serde_json;
 
 use connection::executor::DatabaseExecutor;
-use actix::dev::MessageResponse;
-
-use actix_web::middleware::cors::CorsBuilder;
 use futures::Future;
 
 
 use super::state::AppState;
 use model::actions::Action;
-use model::actions;
-use futures::Async;
 use view::action_wrapper::ActionWrapper;
 
 use actix_web::error;
-use actix_web::ResponseError;
-use view::error::Error;
 use std::fmt::Debug;
 use actix_web::error::JsonPayloadError;
 use serde::Serialize;

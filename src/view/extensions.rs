@@ -2,10 +2,9 @@
 use actix::prelude::*;
 
 use actix_web::{
-    AsyncResponder, error, Error as ActixError,
-    dev::Handler as MsgHandler, http,
+    http,
     FromRequest, Json, Query,
-    HttpRequest, HttpResponse, ws,
+    HttpRequest,
 };
 
 use connection::executor::DatabaseExecutor;

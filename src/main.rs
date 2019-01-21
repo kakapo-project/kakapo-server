@@ -20,7 +20,6 @@ extern crate env_logger;
 extern crate failure;
 extern crate futures;
 extern crate http;
-#[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
 extern crate linked_hash_map;
@@ -32,8 +31,6 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
-extern crate objekt;
 extern crate openssl;
 extern crate tokio;
 extern crate tokio_core;

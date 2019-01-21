@@ -1,4 +1,3 @@
-use model::state::State;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

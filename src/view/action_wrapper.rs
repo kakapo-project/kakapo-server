@@ -4,17 +4,8 @@ use actix::prelude::*;
 use connection::executor::DatabaseExecutor;
 use actix::dev::MessageResponse;
 
-use actix_web::middleware::cors::CorsBuilder;
-use futures::Future;
-
-
-use super::state::AppState;
-use model::actions;
 use model::actions::Action;
-use futures::Async;
 use model::state::State;
-use model::state::Channels;
-use std::marker::PhantomData;
 use model::actions::ActionResult;
 
 

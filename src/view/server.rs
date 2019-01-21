@@ -3,9 +3,9 @@ use actix::prelude::*;
 
 use actix_web::{
     App, Error as ActixError,
-    dev::JsonConfig, error as http_error, http, http::NormalizePath, middleware,
-    HttpRequest, HttpResponse, fs, fs::{NamedFile},
-    ResponseError, State,
+    http, http::NormalizePath,
+    fs, fs::{NamedFile},
+    State,
 };
 
 use actix_web::middleware::cors::Cors;

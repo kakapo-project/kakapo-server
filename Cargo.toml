@@ -26,7 +26,6 @@ jsonwebtoken = "5.0"
 linked-hash-map = { version = "0.5.1", features = ["serde_impl"] }
 log = "0.4"
 num_cpus = "1.8.0"
-objekt = "0.1.1"
 openssl = "0.10.16"
 pq-sys = { version = ">=0.3.0, <0.5.0" }
 serde = "1.0"
