@@ -35,7 +35,8 @@ impl<T> UpdateState<T> for Created<T> {
             _ => Ok(()),
         }?;
 
-        //TODO: add proper permissions
+        //TODO: add proper permissions in the db table
+        //TODO: add database permissions
         Ok(self)
     }
 }
@@ -51,7 +52,8 @@ impl<T> UpdateState<T> for Upserted<T> {
             Upserted::Create { new } => UpdateAction::create_entity(&state, &new),
         }?;
 
-        //TODO: add proper permissions
+        //TODO: add proper permissions in the db table
+        //TODO: add database permissions
         Ok(self)
     }
 }
@@ -82,7 +84,8 @@ impl<T> UpdateState<T> for Deleted<T> {
             _ => Ok(()),
         }?;
 
-        //TODO: remove permissions
+        //TODO: add proper permissions in the db table
+        //TODO: add database permissions
         Ok(self)
     }
 }

@@ -12,9 +12,14 @@ use database::Database;
 use database::DatabaseFunctions;
 use model::state::GetConnection;
 use database::DbError;
+use std::marker::PhantomData;
 
 
-pub struct TableAction;
+pub struct TableAction<D = Database> {
+    phantom_data: PhantomData<D>,
+}
+
+
 pub trait TableActionFunctions<S>
     where Self: Send,
 {
@@ -29,17 +34,22 @@ pub trait TableActionFunctions<S>
     fn delete_row(conn: &S, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError>;
 }
 
-impl TableActionFunctions<State> for TableAction {
+impl<D> TableActionFunctions<State> for TableAction<D>
+    where
+        D: DatabaseFunctions,
+{
     fn query(conn: &State, table: &data::Table) -> Result<data::RawTableData, TableError> {
 
         let query = format!("SELECT * FROM {}", &table.name);
-        Database::exec(conn.get_conn(), &query, vec![])
+        D::exec(conn.get_conn(), &query, vec![])
             .or_else(|err| Err(TableError::db_error(err)))
     }
 
     fn insert_row(conn: &State, table: &data::Table, data: &data::ObjectValues, fail_on_duplicate: bool) -> Result<data::RawTableData, TableError> {
+
+        let table_column_names = table.get_column_names();
         let raw_data = data.as_list();
-        let mut results = data::RawTableData::new();
+        let mut results = data::RawTableData::new(vec![], table_column_names.to_owned());
 
         for row in raw_data {
             let column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
@@ -54,11 +64,11 @@ impl TableActionFunctions<State> for TableAction {
                 params=column_counts.join(","),
             );
 
-            let new_row = Database::exec(conn.get_conn(), &query, values)
+            let new_row = D::exec(conn.get_conn(), &query, values)
                 .or_else(|err| {
                     match err {
                         DbError::AlreadyExists => if !fail_on_duplicate {
-                            Ok(data::RawTableData::new())
+                            Ok(data::RawTableData::new(vec![], table_column_names.to_owned()))
                         } else {
                             Err(TableError::db_error(err))
                         },
@@ -66,7 +76,11 @@ impl TableActionFunctions<State> for TableAction {
                     }
                 })?;
 
-            results.append(new_row);
+            results.append(new_row)
+                .or_else(|err| {
+                    error!("columns names are mismatched");
+                    Err(TableError::Unknown)
+                })?;
         }
 
         Ok(results)
@@ -75,17 +89,18 @@ impl TableActionFunctions<State> for TableAction {
     fn upsert_row(conn: &State, table: &data::Table, data: &data::ObjectValues) -> Result<data::RawTableData, TableError> {
         //TODO: doing this because I want to know whether it was an insert or update so that I can put in the correct data in the transactions table
         // otherise, maybe ON CONFLICT with triggers would have been the proper choice
-        Database::exec(conn.get_conn(), "SELECT id FROM table WHERE id = my_id", vec![]);
-        Database::exec(conn.get_conn(), "INSERT INTO table (value1, value2, value3) VALUES (1, 2, 3)", vec![]);
-        Database::exec(conn.get_conn(), "UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id", vec![]);
+        D::exec(conn.get_conn(), "SELECT id FROM table WHERE id = my_id", vec![]);
+        D::exec(conn.get_conn(), "INSERT INTO table (value1, value2, value3) VALUES (1, 2, 3)", vec![]);
+        D::exec(conn.get_conn(), "UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id", vec![]);
         unimplemented!()
     }
 
     fn update_row(conn: &State, table: &data::Table, keys: &data::ObjectKeys, data: &data::ObjectValues, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
 
+        let table_column_names = table.get_column_names();
         let raw_keys = keys.as_list();
         let raw_data = data.as_list();
-        let mut results = data::RawTableData::new();
+        let mut results = data::RawTableData::new(vec![], table_column_names.to_owned());
 
         for (key, row) in raw_keys.iter().zip(raw_data) {
             let column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
@@ -111,11 +126,11 @@ impl TableActionFunctions<State> for TableAction {
                     .join(" AND "),
             );
 
-            let new_row = Database::exec(conn.get_conn(), &query, values)
+            let new_row = D::exec(conn.get_conn(), &query, values)
                 .or_else(|err| {
                     match err {
                         DbError::NotFound => if !fail_on_not_found {
-                            Ok(data::RawTableData::new())
+                            Ok(data::RawTableData::new(vec![], table_column_names.to_owned()))
                         } else {
                             Err(TableError::db_error(err))
                         },
@@ -123,7 +138,11 @@ impl TableActionFunctions<State> for TableAction {
                     }
                 })?;
 
-            results.append(new_row);
+            results.append(new_row)
+                .or_else(|err| {
+                    error!("columns names are mismatched");
+                    Err(TableError::Unknown)
+                })?;
         }
 
         Ok(results)
@@ -131,8 +150,10 @@ impl TableActionFunctions<State> for TableAction {
     }
 
     fn delete_row(conn: &State, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
+
+        let table_column_names = table.get_column_names();
         let raw_keys = keys.as_list();
-        let mut results = data::RawTableData::new();
+        let mut results = data::RawTableData::new(vec![], table_column_names.to_owned());
 
         for key in raw_keys {
             let key_names: Vec<String> = key.keys().map(|x| x.to_owned()).collect();
@@ -147,11 +168,11 @@ impl TableActionFunctions<State> for TableAction {
                     .join(" AND "),
             );
 
-            let new_row = Database::exec(conn.get_conn(), &query, values)
+            let new_row = D::exec(conn.get_conn(), &query, values)
                 .or_else(|err| {
                     match err {
                         DbError::NotFound => if !fail_on_not_found {
-                            Ok(data::RawTableData::new())
+                            Ok(data::RawTableData::new(vec![], table_column_names.to_owned()))
                         } else {
                             Err(TableError::db_error(err))
                         },
@@ -159,7 +180,11 @@ impl TableActionFunctions<State> for TableAction {
                     }
                 })?;
 
-            results.append(new_row);
+            results.append(new_row)
+                .or_else(|err| {
+                    error!("columns names are mismatched");
+                    Err(TableError::Unknown)
+                })?;
         }
 
         Ok(results)

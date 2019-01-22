@@ -20,6 +20,7 @@ pub mod auth;
 pub mod dbdata;
 pub mod schema;
 pub mod conversion;
+pub mod methods;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,11 +86,44 @@ pub struct RawTableDataColumns {
     values: Vec<String>
 }
 
+impl RawTableDataColumns {
+
+    pub fn new(keys: Vec<String>, values: Vec<String>) -> Self {
+        Self { keys, values }
+    }
+
+    pub fn get_value_columns(self) -> Vec<String> {
+        self.values
+    }
+
+    pub fn get_key_columns(self) -> Vec<String> {
+        self.keys
+    }
+
+    pub fn value_columns(&self) -> &Vec<String> {
+        &self.values
+    }
+
+    pub fn key_columns(&self) -> &Vec<String> {
+        &self.keys
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawTableDataData {
     keys: Vec<IndexableValue>,
     values: Vec<Value>
+}
+
+impl RawTableDataData {
+    pub fn get_values(self) -> Vec<Value> {
+        self.values
+    }
+
+    pub fn get_keys(self) -> Vec<IndexableValue> {
+        self.keys
+    }
 }
 
 /// Default return value from a query
@@ -100,15 +134,56 @@ pub struct RawTableData  {
     data: Vec<RawTableDataData>,
 }
 
+#[derive(Debug, Fail)]
+pub enum DataError {
+    #[fail(display = "mismatched columns")]
+    MismatchedColumns,
+}
+
 impl RawTableData {
-    pub fn new() -> Self {
-        unimplemented!()
+    pub fn new(key_names: Vec<String>, value_names: Vec<String>) -> Self {
+        Self {
+            columns: RawTableDataColumns::new(key_names, value_names),
+            data: vec![],
+        }
     }
-    pub fn append(&mut self, other: Self) {
-        unimplemented!()
+
+    pub fn append(&mut self, other: Self) -> Result<(), DataError> {
+        if self.columns.value_columns() != other.columns.value_columns() {
+            return Err(DataError::MismatchedColumns)
+        }
+
+        if self.columns.key_columns() != other.columns.key_columns() {
+            return Err(DataError::MismatchedColumns)
+        }
+
+        self.data.extend(other.data);
+        Ok(())
     }
+
     pub fn format_with(self, format: &TableDataFormat) -> TableData {
-        unimplemented!()
+        let col_names = self.columns.get_value_columns();
+
+        match format {
+            TableDataFormat::Rows => {
+                let mut objects = vec![];
+                for table_row in self.data {
+                    let mut row = LinkedHashMap::new();
+                    for (col_name, value) in col_names.iter().zip(table_row.get_values()) {
+                        row.insert(col_name.to_owned(), value);
+                    }
+                    objects.push(row);
+                }
+
+                TableData::Data(ObjectValues(objects))
+            },
+            TableDataFormat::FlatRows => {
+                let data = self.data.into_iter()
+                    .map(|x| x.get_values())
+                    .collect();
+                TableData::FlatData(TabularValues::new(col_names, data))
+            }
+        }
     }
 }
 
@@ -201,7 +276,29 @@ pub enum KeyData {
 
 impl KeyData {
     pub fn normalize(&self) -> ObjectKeys {
-        unimplemented!()
+        match self {
+            KeyData::Data(object_keys) => object_keys.to_owned(),
+            KeyData::FlatData(tabular_keys) => {
+                let columns = tabular_keys.to_owned().get_columns();
+                let data = tabular_keys.to_owned().get_data();
+
+                let mut object_data = vec![];
+                for row in data {
+                    let mut object_row = LinkedHashMap::new();
+                    for (col_name, value) in columns.iter().zip(row) {
+                        object_row.insert(col_name.to_owned(), value);
+                    }
+                    object_data.push(object_row);
+                }
+
+                ObjectKeys::new(object_data)
+            },
+            KeyData::Keyed(keyed_table_data) => {
+                let (object_keys, object_values) = keyed_table_data.normalize();
+
+                object_keys
+            },
+        }
     }
 }
 
@@ -251,6 +348,20 @@ pub struct TabularValues {
     data: Vec<Vec<Value>>,
 }
 
+impl TabularValues {
+    pub fn new(columns: Vec<String>, data: Vec<Vec<Value>>) -> Self {
+        Self { columns, data }
+    }
+
+    pub fn get_columns(self) -> Vec<String> {
+        self.columns
+    }
+
+    pub fn get_data(self) -> Vec<Vec<Value>> {
+        self.data
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TabularKeys {
@@ -258,11 +369,25 @@ pub struct TabularKeys {
     data: Vec<Vec<IndexableValue>>,
 }
 
+impl TabularKeys {
+    pub fn get_columns(self) -> Vec<String> {
+        self.columns
+    }
+
+    pub fn get_data(self) -> Vec<Vec<IndexableValue>> {
+        self.data
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectValues(Vec<LinkedHashMap<String, Value>>);
 
 impl ObjectValues {
+    pub fn new(data: Vec<LinkedHashMap<String, Value>>) -> Self {
+        ObjectValues(data)
+    }
+
     pub fn as_list(&self) -> &Vec<LinkedHashMap<String, Value>> {
         &self.0
     }
@@ -273,6 +398,10 @@ impl ObjectValues {
 pub struct ObjectKeys(Vec<LinkedHashMap<String, IndexableValue>>);
 
 impl ObjectKeys {
+    pub fn new(data: Vec<LinkedHashMap<String, IndexableValue>>) -> Self {
+        ObjectKeys(data)
+    }
+
     pub fn as_list(&self) -> &Vec<LinkedHashMap<String, IndexableValue>> {
         &self.0
     }
@@ -356,6 +485,12 @@ pub struct Table {
     pub name: String, //TODO: make sure this is an alphanumeric, otherwise SQL injection!
     pub description: String,
     pub schema: SchemaState,
+}
+
+impl Table {
+    pub fn get_column_names(&self) -> Vec<String> {
+        unimplemented!()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

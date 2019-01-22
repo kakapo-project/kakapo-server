@@ -87,7 +87,7 @@ impl Connector {
         self
     }
 
-    pub fn done(mut self) -> Addr<DatabaseExecutor> {
+    pub fn done(self) -> Addr<DatabaseExecutor> {
         let database_url = format!(
             "postgres://{}:{}@{}:{}/{}",
             self.user_name.unwrap_or_default(),

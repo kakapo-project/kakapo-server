@@ -6,6 +6,7 @@ use data;
 use model::script::error::ScriptError;
 
 use serde_json;
+use model::state::GetScripting;
 
 pub struct ScriptAction;
 pub trait ScriptActionFunctions<S> {
@@ -17,9 +18,9 @@ impl ScriptActionFunctions<State> for ScriptAction {
     /// NOTE: this doesn't have a timeout it probably should
     /// Warning: if you have access to the script you may have access to anything stored in that container, potential vulnerability?
     fn run_script(conn: &State, script: &data::Script) -> Result<serde_json::Value, ScriptError>  {
-        //TODO: debug mode
+        //TODO: debug mode for state
 
-        //let script_runner_process = conn.get_execute_script();
+        let scripting = conn.get_scripting();
         unimplemented!()
     }
 }

@@ -12,7 +12,9 @@ pub enum DbError {
 }
 
 pub struct Database;
-pub trait DatabaseFunctions {
+pub trait DatabaseFunctions
+    where Self: Send,
+{
     fn exec(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError>;
 }
 

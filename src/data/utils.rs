@@ -14,7 +14,7 @@ pub enum OnDuplicate {
 }
 
 
-//TODO: Add output format: indexed, rows (default), flat rows, columns, schema
+//TODO: Add output format: indexed, rows (default), flat rows, columns
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TableDataFormat {
     Rows,

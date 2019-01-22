@@ -241,7 +241,7 @@ macro_rules! implement_retriever_and_modifier {
                     RD: ConvertRaw<O>,
             {
 
-                let new_val: RD = diesel::insert_into(schema::$data_table::table)
+                let _new_val: RD = diesel::insert_into(schema::$data_table::table)
                     .values(NRD::tombstone(entity_name, entity_id, user_id))
                     .get_result(conn)
                     .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
