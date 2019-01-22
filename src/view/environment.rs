@@ -33,10 +33,6 @@ impl Env {
         get_var("DATABASE_DB")
     }
 
-    pub fn www_path() -> String {
-        get_var("WWW_PATH")
-    }
-
     pub fn script_path() -> String {
         get_var("SCRIPTS_PATH")
     }

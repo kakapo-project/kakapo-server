@@ -25,17 +25,9 @@ use model::actions;
 
 use super::state::AppState;
 use super::procedure::NoQuery;
-use super::extensions::CorsBuilderProcedureExt;
+use super::extensions::ProcedureExt;
 use data;
 use view::environment::Env;
-
-//static routes
-fn index(_state: State<AppState>) -> Result<NamedFile, ActixError> {
-    let www_path = Env::www_path();
-    let path = fsPath::new(&www_path).join("index.html");
-    Ok(NamedFile::open(path)?)
-}
-
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -85,7 +77,6 @@ pub fn serve() {
 
     let mut server_cfg = actix_web::server::new(move || {
 
-        let www_path = Env::www_path();
         let state = AppState::new(connection.clone(),"Kakapo");
 
         App::with_state(state)
@@ -99,129 +90,116 @@ pub fn serve() {
                     .max_age(Duration::days(1))
                     .secure(is_secure), // this can only be true if you have https
             ))
-            .configure(|app| Cors::for_app(app)
-                //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
-                //.allowed_origin("http://localhost:8080")
-                .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-                .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                .allowed_header(http::header::CONTENT_TYPE)
-                .max_age(3600)
+            .scope("/manage", |scope| {
+                scope
                 .procedure(
-                    "/manage/getAllTables",
+                    "/getAllTables",
                     |_: NoQuery, get_all_entities: GetAllEntities|
                         actions::GetAllEntities::<data::Table>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
-                    "/manage/getAllQueries",
+                    "/getAllQueries",
                     |_: NoQuery, get_all_entities: GetAllEntities|
                         actions::GetAllEntities::<data::Query>::new(get_all_entities.show_deleted)
                 )
                 .procedure(
-                    "/manage/getAllScripts",
+                    "/getAllScripts",
                     |_: NoQuery, get_all_entities: GetAllEntities|
                         actions::GetAllEntities::<data::Script>::new(get_all_entities.show_deleted)
                 )
 
                 .procedure(
-                    "/manage/getTable",
+                    "/getTable",
                     |_: NoQuery, get_entity: GetEntity|
                         actions::GetEntity::<data::Table>::new(get_entity.name)
                 )
                 .procedure(
-                    "/manage/getQuery",
+                    "/getQuery",
                     |_: NoQuery, get_entity: GetEntity|
                         actions::GetEntity::<data::Query>::new(get_entity.name)
                 )
                 .procedure(
-                    "/manage/getScript",
+                    "/getScript",
                     |_: NoQuery, get_entity: GetEntity|
                         actions::GetEntity::<data::Script>::new(get_entity.name)
                 )
                 .procedure(
-                    "/manage/createTable",
+                    "/createTable",
                     |entity: data::Table, _: NoQuery|
                         actions::CreateEntity::<data::Table>::new(entity)
                 )
                 .procedure(
-                    "/manage/createQuery",
+                    "/createQuery",
                     |entity: data::Query, _: NoQuery|
                         actions::CreateEntity::<data::Query>::new(entity)
                 )
                 .procedure(
-                    "/manage/createScript",
+                    "/createScript",
                     |entity: data::Script, _: NoQuery|
                         actions::CreateEntity::<data::Script>::new(entity)
                 )
                 .procedure(
-                    "/manage/updateTable",
+                    "/updateTable",
                     |entity: data::Table, get_entity: GetEntity|
                         actions::UpdateEntity::<data::Table>::new(get_entity.name, entity)
                 )
                 .procedure(
-                    "/manage/updateQuery",
+                    "/updateQuery",
                     |entity: data::Query, get_entity: GetEntity|
                         actions::UpdateEntity::<data::Query>::new(get_entity.name, entity)
                 )
                 .procedure(
-                    "/manage/updateScript",
+                    "/updateScript",
                     |entity: data::Script, get_entity: GetEntity|
                         actions::UpdateEntity::<data::Script>::new(get_entity.name, entity)
                 )
                 .procedure(
-                    "/manage/deleteTable",
+                    "/deleteTable",
                     |_: NoQuery, get_entity: GetEntity|
                         actions::DeleteEntity::<data::Table>::new(get_entity.name)
                 )
                 .procedure(
-                    "/manage/deleteQuery",
+                    "/deleteQuery",
                     |_: NoQuery, get_entity: GetEntity|
                         actions::DeleteEntity::<data::Query>::new(get_entity.name)
                 )
                 .procedure(
-                    "/manage/deleteScript",
+                    "/deleteScript",
                     |_: NoQuery, get_entity: GetEntity|
                         actions::DeleteEntity::<data::Script>::new(get_entity.name)
                 )
                 .procedure(
-                    "/manage/queryTableData",
+                    "/queryTableData",
                     |_: NoQuery, get_table: GetEntity|
                         actions::QueryTableData::<_>::new(get_table.name)
                 )
                 .procedure(
-                    "/manage/insertTableData",
+                    "/insertTableData",
                     |data: data::TableData, get_table: GetEntity|
                         actions::InsertTableData::<_>::new(get_table.name, data)
                 )
                 .procedure(
-                    "/manage/updateTableData",
+                    "/updateTableData",
                     |keyed_data: data::KeyedTableData, get_table: GetEntity|
                         actions::UpdateTableData::<_>::new(get_table.name, keyed_data)
                 )
                 .procedure(
-                    "/manage/deleteTableData",
+                    "/deleteTableData",
                     |keys: data::KeyData, get_table: GetEntity|
                         actions::DeleteTableData::<_>::new(get_table.name, keys)
                 )
                 .procedure(
-                    "/manage/runQuery",
+                    "/runQuery",
                     |params: data::QueryParams, get_query: GetEntity|
                         actions::RunQuery::<_>::new(get_query.name, params)
                 )
                 .procedure(
-                    "/manage/runScript",
+                    "/runScript",
                     |param: data::ScriptParam, get_script: GetEntity|
                         actions::RunScript::<_>::new(get_script.name, param)
                 )
-                .register())
-            .resource("/", |r| {
-                r.method(http::Method::GET).with(index)
             })
             .default_resource(|r| r.h(NormalizePath::default()))
-            .handler(
-                "/",
-                fs::StaticFiles::new(fsPath::new(&www_path))
-                    .unwrap()
-                    .show_files_listing())
     });
 
     server_cfg = server_cfg

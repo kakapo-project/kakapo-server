@@ -2,9 +2,9 @@
 use actix::prelude::*;
 
 use actix_web::{
-    http,
+    App, http,
     FromRequest, Json, Query,
-    HttpRequest,
+    HttpRequest, Scope,
 };
 
 use connection::executor::DatabaseExecutor;
@@ -28,7 +28,7 @@ use serde::Serialize;
 
 
 /// extend actix cors routes to handle RPC
-pub trait CorsBuilderProcedureExt {
+pub trait ProcedureExt {
 
     /// Create an RPC call
     ///
@@ -36,7 +36,7 @@ pub trait CorsBuilderProcedureExt {
     /// * `path` - A string representing the url path
     /// * `procedure_builder` - An object extending `ProcedureBuilder` for building a message
     ///
-    fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
+    fn procedure<JP, QP, A, PB>(self, path: &str, procedure_builder: PB) -> Self
         where
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             JP: Debug + 'static,
@@ -50,8 +50,8 @@ pub trait CorsBuilderProcedureExt {
 }
 
 
-impl CorsBuilderProcedureExt for CorsBuilder<AppState> {
-    fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<AppState>
+impl ProcedureExt for Scope<AppState> {
+    fn procedure<JP, QP, A, PB>(self, path: &str, procedure_builder: PB) -> Scope<AppState>
         where
             DatabaseExecutor: Handler<ActionWrapper<A>>,
             A: Action + Send + 'static,
