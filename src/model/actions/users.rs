@@ -58,6 +58,44 @@ use model::actions::ActionRes;
 use model::actions::ActionResult;
 use data::auth::Role;
 
+pub struct Authenticate<S = State, AF = Auth> {
+    user_identifier: String,
+    password: String,
+    phantom_data: PhantomData<(S, AF)>,
+}
+
+impl<S, AF> Authenticate<S, AF>
+    where
+        S: GetConnection,
+        AF: AuthFunctions<S>,
+{
+    pub fn new(user_identifier: String, password: String) -> WithTransaction<Self, S> {
+        let action = Self {
+            user_identifier,
+            password,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+
+        action_with_transaction
+    }
+}
+
+impl<S, AF> Action<S> for Authenticate<S, AF>
+    where
+        S: GetConnection,
+        AF: AuthFunctions<S>,
+{
+    type Ret = bool;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        AF::authenticate(state, &self.user_identifier, &self.password)
+            .or_else(|err| Err(Error::UserManagement(err)))
+            .and_then(|res| ActionRes::new(res))
+    }
+}
+
+
 /// User Auth: Add user
 pub struct AddUser<S = State, AF = Auth> {
     user: data::auth::NewUser,

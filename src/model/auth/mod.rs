@@ -26,6 +26,7 @@ pub trait AuthFunctions<S>
         Self: Send,
         S: GetConnection,
 {
+    fn authenticate(state: &S, user_identifier: &str, password: &str) -> Result<bool, UserManagementError>;
     fn add_user(state: &S, user: &NewUser) -> Result<User, UserManagementError>;
     fn remove_user(state: &S, user_identifier: &str) -> Result<User, UserManagementError>;
     fn get_all_users(state: &S) -> Result<Vec<User>, UserManagementError>;
@@ -49,6 +50,9 @@ impl<S> AuthFunctions<S> for Auth
     where
         S: GetConnection,
 {
+    fn authenticate(state: &S, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
+        unimplemented!()
+    }
     fn add_user(state: &S, user: &NewUser) -> Result<User, UserManagementError> {
         unimplemented!()
     }
