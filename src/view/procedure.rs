@@ -119,16 +119,12 @@ pub fn procedure_handler_function<JP, QP, PB, A>(
                     let serialized = ok_res;
                     debug!("Responding with message: {:?}", &serialized);
                     Ok(HttpResponse::Ok()
-                        .content_type("application/json")
-                        .body(serde_json::to_string(&serialized)
-                            .unwrap_or_default()))
+                        .json(serialized))
                 },
                 Err(err) => {
                     debug!("Responding with error message: {:?}", &err);
                     Ok(HttpResponse::InternalServerError()
-                        .content_type("application/json")
-                        .body(serde_json::to_string(&json!({ "error": err.to_string() }))
-                            .unwrap_or_default()))
+                        .json(json!({ "error": err.to_string() })))
                 }
             }
         })
@@ -137,9 +133,7 @@ pub fn procedure_handler_function<JP, QP, PB, A>(
 
 pub fn procedure_bad_request_handler_function(err: JsonPayloadError) -> actix_web::Error {
     let resp = HttpResponse::BadRequest()
-        .content_type("application/json")
-        .body(serde_json::to_string(&json!({ "error": err.to_string() }))
-            .unwrap_or_default());
+        .json(json!({ "error": err.to_string() }));
 
     error::InternalError::from_response(err, resp).into()
 }

@@ -88,7 +88,7 @@ pub fn serve() {
                     .path("/")
                     .domain(Env::domain())
                     .max_age(Duration::days(1))
-                    .secure(is_secure), // this can only be true if you have https
+                    .secure(is_secure),
             ))
             .scope("/manage", |scope| {
                 scope
