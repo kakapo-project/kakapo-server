@@ -8,9 +8,7 @@ use actix_web::{
     State,
 };
 
-use actix_web::middleware::cors::Cors;
 use actix_web::middleware::Logger;
-use actix_web::middleware::identity::{CookieIdentityPolicy, IdentityService};
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use chrono::Duration;
@@ -82,14 +80,6 @@ pub fn serve() {
         App::with_state(state)
             .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
             .middleware(Logger::new("Requested [%r] FROM %a \"%{User-Agent}i\""))
-            .middleware(IdentityService::new(
-                CookieIdentityPolicy::new(Env::secret_key().as_bytes())
-                    .name("kakapo-server")
-                    .path("/")
-                    .domain(Env::domain())
-                    .max_age(Duration::days(1))
-                    .secure(is_secure),
-            ))
             .scope("/manage", |scope| {
                 scope
                 .procedure(
