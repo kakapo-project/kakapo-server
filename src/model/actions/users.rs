@@ -87,11 +87,11 @@ impl<S, AF> Action<S> for Authenticate<S, AF>
         S: GetConnection,
         AF: AuthFunctions<S>,
 {
-    type Ret = bool;
+    type Ret = Option<()>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::authenticate(state, &self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(res))
+            .and_then(|res| ActionRes::new(Some(())))
     }
 }
 

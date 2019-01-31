@@ -14,7 +14,7 @@ use connection::executor::DatabaseExecutor;
 use futures::Future;
 
 
-use super::state::AppState;
+use connection::AppState;
 use model::actions::Action;
 use view::action_wrapper::ActionWrapper;
 
@@ -22,6 +22,9 @@ use actix_web::error;
 use std::fmt::Debug;
 use actix_web::error::JsonPayloadError;
 use serde::Serialize;
+use connection::GetAppState;
+use connection::Auth;
+use connection::Broadcaster;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -29,7 +32,7 @@ pub type NoQuery = ();
 
 
 /// Build `Action` from an http request
-pub trait ProcedureBuilder<JP, QP, A> {
+pub trait ProcedureBuilder<S, AU, B, JP, QP, A> {
     /// build an Action
     ///
     /// # Arguments
@@ -41,11 +44,14 @@ pub trait ProcedureBuilder<JP, QP, A> {
 }
 
 /// can use lambdas instead of procedure builder
-impl<JP, QP, A, F> ProcedureBuilder<JP, QP, A> for F
+impl<S, AU, B, JP, QP, A, F> ProcedureBuilder<S, AU, B, JP, QP, A> for F
     where
         F: FnOnce(JP, QP) -> A,
-        Json<JP>: FromRequest<AppState>,
-        Query<QP>: FromRequest<AppState>,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
+        S: GetAppState<AU, B>,
+        AU: Auth,
+        B: Broadcaster,
 {
     fn build(self, json_param: JP, query_params: QP) -> A {
         self(json_param, query_params)
@@ -55,30 +61,36 @@ impl<JP, QP, A, F> ProcedureBuilder<JP, QP, A> for F
 
 /// Container struct for implemeting the `dev::Handler<AppState>` trait
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
-pub struct ProcedureHandler<JP, QP, PB, A>
+pub struct ProcedureHandler<S, AU, B, JP, QP, PB, A>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        PB: ProcedureBuilder<JP, QP, A> + Clone,
+        PB: ProcedureBuilder<S, AU, B, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
-        Json<JP>: FromRequest<AppState>,
-        Query<QP>: FromRequest<AppState>,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
         A: Action + 'static,
+        S: GetAppState<AU, B>,
+        AU: Auth,
+        B: Broadcaster,
 {
     builder: PB,
-    phantom_data: std::marker::PhantomData<(JP, QP, A)>,
+    phantom_data: std::marker::PhantomData<(S, AU, B, JP, QP, A)>,
 }
 
 
-impl<JP, QP, PB, A> ProcedureHandler<JP, QP, PB, A>
+impl<S, AU, B, JP, QP, PB, A> ProcedureHandler<S, AU, B, JP, QP, PB, A>
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        PB: ProcedureBuilder<JP, QP, A> + Clone,
+        PB: ProcedureBuilder<S, AU, B, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
-        Json<JP>: FromRequest<AppState>,
-        Query<QP>: FromRequest<AppState>,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
         A: Action,
+        S: GetAppState<AU, B>,
+        AU: Auth,
+        B: Broadcaster,
 {
     /// constructor
     pub fn setup(builder: &PB) -> Self {
@@ -89,27 +101,31 @@ impl<JP, QP, PB, A> ProcedureHandler<JP, QP, PB, A>
     }
 }
 
-pub fn procedure_handler_function<JP, QP, PB, A>(
-    procedure_handler: ProcedureHandler<JP, QP, PB, A>,
-    req: HttpRequest<AppState>,
+pub fn procedure_handler_function<S, AU, B, JP, QP, PB, A>(
+    procedure_handler: ProcedureHandler<S, AU, B, JP, QP, PB, A>,
+    req: HttpRequest<S>,
     json_params: Json<JP>,
     query_params: Query<QP>
 ) -> AsyncResponse
     where
         DatabaseExecutor: Handler<ActionWrapper<A>>,
-        PB: ProcedureBuilder<JP, QP, A> + Clone,
+        PB: ProcedureBuilder<S, AU, B, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
-        Json<JP>: FromRequest<AppState>,
-        Query<QP>: FromRequest<AppState>,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
         A: Action,
         <A as Action>::Ret: Serialize,
+        S: GetAppState<AU, B>,
+        AU: Auth,
+        B: Broadcaster,
 {
 
     debug!("Procedure called on {:?} QUERY {:?} JSON {:?}", req.path(), &json_params, &query_params);
     let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());
 
     req.state()
+        .get_app_state()
         .connect()
         .send(ActionWrapper::new(action))
         .from_err()

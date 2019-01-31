@@ -1,8 +1,8 @@
 [package]
-name = "kakapo"
+name = "kakapo_api"
 version = "0.1.0"
 authors = ["Atta Zadeh <atta.h.zadeh@gmail.com>"]
-path = "src/server/main.rs"
+path = "src/lib.rs"
 
 [dependencies]
 actix = "0.7.7"
@@ -14,8 +14,6 @@ bigdecimal = "0.0.14"
 byteorder = "1"
 bytes = "0.4"
 chrono = { version = "0.4.6", features = ["serde"] }
-clap = "2.32"
-dotenv = "0.9.0"
 env_logger = "*"
 failure = "0.1.2"
 futures = "0.1"
