@@ -24,6 +24,8 @@ pub enum Error {
     NotFound,
     #[fail(display = "Already exists")]
     AlreadyExists,
+    #[fail(display = "{:?}", 0)]
+    SerializationError(serde_json::Error),
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }

@@ -40,20 +40,18 @@ pub trait ProcedureBuilder<S, AU, B, JP, QP, A> {
     ///
     /// # Returns
     /// an Action
-    fn build(self, json_param: JP, query_params: QP) -> A;
+    fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error>;
 }
 
 /// can use lambdas instead of procedure builder
-impl<S, AU, B, JP, QP, A, F> ProcedureBuilder<S, AU, B, JP, QP, A> for F
+impl<S, AU, B, A, F> ProcedureBuilder<S, AU, B, serde_json::Value, serde_json::Value, A> for F
     where
-        F: FnOnce(JP, QP) -> A,
-        Json<JP>: FromRequest<S>,
-        Query<QP>: FromRequest<S>,
+        F: FnOnce(serde_json::Value, serde_json::Value) -> Result<A, serde_json::Error>,
         S: GetAppState<AU, B>,
         AU: Auth,
         B: Broadcaster,
 {
-    fn build(self, json_param: JP, query_params: QP) -> A {
+    fn build(self, json_param: serde_json::Value, query_params: serde_json::Value) -> Result<A, serde_json::Error> {
         self(json_param, query_params)
     }
 }

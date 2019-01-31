@@ -11,12 +11,13 @@ use std::iter::FromIterator;
 use std::fmt::Debug;
 use data::conversion::ConvertRaw;
 use data::conversion::GenerateRaw;
+use serde::Serialize;
 
 
 // Queryables
 pub trait RawEntityTypes
     where
-        Self: Clone + Send + Debug,
+        Self: Clone + Send + Debug + Serialize,
         Self::Data: ConvertRaw<Self>,
         Self::NewData: GenerateRaw<Self>,
 {

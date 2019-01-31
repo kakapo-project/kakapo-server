@@ -61,6 +61,7 @@ use std::fmt::Debug;
 
 use model::auth::Auth;
 use model::auth::AuthFunctions;
+use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ActionOk<R>
@@ -90,7 +91,7 @@ impl ActionRes {
 pub trait Action<S = State>
     where
         Self: Send,
-        Self::Ret: Send + Debug,
+        Self::Ret: Send + Debug + Serialize,
 {
     type Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret>;

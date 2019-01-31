@@ -7,15 +7,16 @@ use actix::dev::MessageResponse;
 use model::actions::Action;
 use model::state::State;
 use model::actions::ActionResult;
+use model::actions::error::Error;
 use scripting::Scripting;
 
 
 pub struct ActionWrapper<A: Action + Send> {
-    action: A,
+    action: Result<A, serde_json::Error>,
 }
 
 impl<A: Action + Send> ActionWrapper<A> {
-    pub fn new(action: A) -> Self {
+    pub fn new(action: Result<A, serde_json::Error>) -> Self {
         Self {
             action,
         }
@@ -38,10 +39,12 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for DatabaseExecutor
     type Result = ActionResult<A::Ret>;
 
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
+        let action_req = msg.action.or_else(|err| Err(Error::SerializationError(err)))?;
+
         let conn = self.get_connection();
         let scripting = Scripting::new(self.get_scripts_path());
         let state = State::new(conn, scripting);
-        let result = msg.action.call(&state);
+        let result = action_req.call(&state);
         result
     }
 }
