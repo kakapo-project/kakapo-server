@@ -48,3 +48,57 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for DatabaseExecutor
         result
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use model::state::GetConnection;
+    use connection::AppStateBuilder;
+    use connection::AppState;
+    use futures::Future;
+    use actix_web::HttpResponse;
+    use actix_web::AsyncResponder;
+    use model::actions::ActionRes;
+
+    struct TestAction;
+    impl<S> Action<S> for TestAction
+        where S: GetConnection
+    {
+        type Ret = String;
+
+        fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+            ActionRes::new("Hello World!".to_string())
+        }
+    }
+
+    fn mock_executor() -> AppState {
+        AppStateBuilder::new()
+            .host("localhost")
+            .port(5432)
+            .user("test")
+            .pass("password")
+            .done()
+    }
+
+    #[test]
+    fn test_handle_action() {
+        actix::System::run(|| {
+            let executor = mock_executor();
+            let action = TestAction;
+
+
+            let f = executor
+                .connect()
+                .send(ActionWrapper::new(Ok(action)))
+                .map_err(|_| ())
+                .map(|res| {
+                    assert_eq!(res.unwrap().get_data(), "Hello World!");
+
+                    actix::System::current().stop();
+                });
+
+            tokio::spawn(f);
+        });
+    }
+}

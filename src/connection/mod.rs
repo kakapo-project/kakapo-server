@@ -63,8 +63,8 @@ impl AppStateBuilder {
         }
     }
 
-    pub fn host(mut self, param: String) -> Self {
-        self.host_name = Some(param);
+    pub fn host(mut self, param: &str) -> Self {
+        self.host_name = Some(param.to_string());
         self
     }
 
@@ -73,23 +73,23 @@ impl AppStateBuilder {
         self
     }
 
-    pub fn user(mut self, param: String) -> Self {
-        self.user_name = Some(param);
+    pub fn user(mut self, param: &str) -> Self {
+        self.user_name = Some(param.to_string());
         self
     }
 
-    pub fn pass(mut self, param: String) -> Self {
-        self.pass_name = Some(param);
+    pub fn pass(mut self, param: &str) -> Self {
+        self.pass_name = Some(param.to_string());
         self
     }
 
-    pub fn db(mut self, param: String) -> Self {
-        self.db_name = Some(param);
+    pub fn db(mut self, param: &str) -> Self {
+        self.db_name = Some(param.to_string());
         self
     }
 
-    pub fn script_path(mut self, script_path_dir: String) -> Self {
-        self.script_path_dir = Some(script_path_dir);
+    pub fn script_path(mut self, script_path_dir: &str) -> Self {
+        self.script_path_dir = Some(script_path_dir.to_string().to_string());
         self
     }
 

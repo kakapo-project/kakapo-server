@@ -62,10 +62,10 @@ pub struct GetTableDataResult(pub data::TableData);
 pub struct InsertTableDataResult(pub data::TableData);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct UpdateTableDataResult(pub data::TableData);
+pub struct ModifyTableDataResult(pub data::TableData);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct DeleteTableDataResult(pub data::TableData);
+pub struct RemoveTableDataResult(pub data::TableData);
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RunQueryResult(pub data::TableData);

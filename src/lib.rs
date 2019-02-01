@@ -48,7 +48,6 @@ use log::LevelFilter;
 use env_logger::{Builder, Target};
 
 // Internal dependencies
-use view::server;
 use scripting::ScriptFunctions;
 
 pub use connection::AppStateBuilder as KakapoStateBuilder;
@@ -74,6 +73,6 @@ impl<S, A, B> KakapoRouter<S, A, B> for CorsBuilder<S>
         B: KakapoBroadcaster,
 {
     fn kakapo_routes(&mut self) -> &mut CorsBuilder<S> {
-        server::router::<S, A, B>(self)
+        view::router::<S, A, B>(self)
     }
 }

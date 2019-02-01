@@ -104,7 +104,7 @@ pub struct KeyValuePairObject {
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum KeyedTableData {
-    /// ```
+    ///```json
     /// {
     ///   42: {
     ///     "message": "hello world",
@@ -115,11 +115,11 @@ pub enum KeyedTableData {
     ///     "category": "farewell",
     ///   }
     /// }
-    /// ```
+    ///```
     Simplified(LinkedHashMap<
         IndexableValue,
         LinkedHashMap<String, Value>>), //can only be used if only one key exists
-    /// ```
+    ///```json
     /// [
     ///   {
     ///     "keys": {
@@ -140,9 +140,9 @@ pub enum KeyedTableData {
     ///     }
     ///   }
     /// ]
-    /// ```
+    ///```
     Data(Vec<KeyValuePairObject>),
-    /// ```
+    ///```json
     /// {
     ///   "columns": {
     ///     "keys": [ "id" ],
@@ -159,7 +159,7 @@ pub enum KeyedTableData {
     ///     }
     ///   ]
     /// }
-    /// ```
+    ///```
     FlatData(RawTableData), //default output format
 }
 
@@ -176,7 +176,7 @@ pub enum KeyData {
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum TableData {
-    /// ```
+    ///```json
     /// [
     ///   {
     ///     "id": 42,
@@ -189,10 +189,10 @@ pub enum TableData {
     ///     "category": "farewell",
     ///   }
     /// ]
-    /// ```
+    ///```
     Data(ObjectValues),
     //ColumnData(BTreeMap<String, Vec<Value>>),
-    /// ```
+    ///```json
     /// {
     ///   "columns": [ "id", "message", "category" ],
     ///   "data": [
@@ -200,7 +200,7 @@ pub enum TableData {
     ///     [ 43, "goodbye world", "farewell" ],
     ///  ]
     /// }
-    /// ```
+    ///```
     FlatData(TabularValues),
     Keyed(KeyedTableData),
 }

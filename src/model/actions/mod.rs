@@ -72,6 +72,14 @@ pub struct ActionOk<R>
     channels: Vec<Channels>,
 }
 
+impl<R> ActionOk<R>
+    where R: Send
+{
+    pub fn get_data(self) -> R {
+        self.data
+    }
+}
+
 pub type ActionResult<R> = Result<ActionOk<R>, Error>;
 
 pub struct ActionRes;
@@ -620,7 +628,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
 }
 
 #[derive(Debug)]
-pub struct UpdateTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
+pub struct ModifyTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
     pub keyed_data: data::KeyedTableData,
     pub format: TableDataFormat,
@@ -628,7 +636,7 @@ pub struct UpdateTableData<S = State, ER = entity::Controller, TC = table::Table
     pub phantom_data: PhantomData<(S, ER, TC)>,
 }
 
-impl<S, ER, TC> UpdateTableData<S, ER, TC>
+impl<S, ER, TC> ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
@@ -653,13 +661,13 @@ impl<S, ER, TC> UpdateTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
+impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
-    type Ret = UpdateTableDataResult;
+    type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
@@ -679,12 +687,12 @@ impl<S, ER, TC> Action<S> for UpdateTableData<S, ER, TC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(UpdateTableDataResult(res)))
+            .and_then(|res| ActionRes::new(ModifyTableDataResult(res)))
     }
 }
 
 #[derive(Debug)]
-pub struct DeleteTableData<S = State, ER = entity::Controller, TC = table::TableAction>  {
+pub struct RemoveTableData<S = State, ER = entity::Controller, TC = table::TableAction>  {
     pub table_name: String,
     pub keys: data::KeyData,
     pub format: TableDataFormat,
@@ -692,7 +700,7 @@ pub struct DeleteTableData<S = State, ER = entity::Controller, TC = table::Table
     pub phantom_data: PhantomData<(S, ER, TC)>,
 }
 
-impl<S, ER, TC> DeleteTableData<S, ER, TC>
+impl<S, ER, TC> RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
@@ -717,13 +725,13 @@ impl<S, ER, TC> DeleteTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
+impl<S, ER, TC> Action<S> for RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         S: GetConnection,
 {
-    type Ret = DeleteTableDataResult;
+    type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         ER::get_one(state, &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
@@ -743,7 +751,7 @@ impl<S, ER, TC> Action<S> for DeleteTableData<S, ER, TC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(DeleteTableDataResult(res)))
+            .and_then(|res| ActionRes::new(RemoveTableDataResult(res)))
     }
 }
 
