@@ -21,7 +21,7 @@ use model::entity::ModifierFunctions;
 use model::state::State;
 
 use model::state::GetConnection;
-use model::state::GetUserInfo;
+use model::auth::permissions::GetUserInfo;
 
 use std::error::Error;
 

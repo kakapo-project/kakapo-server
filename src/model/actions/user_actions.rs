@@ -53,7 +53,7 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use data::auth::Role;
-use model::state::GetUserInfo;
+use model::auth::permissions::GetUserInfo;
 
 pub struct Authenticate<S = State, AF = Auth> {
     user_identifier: String,
@@ -63,7 +63,7 @@ pub struct Authenticate<S = State, AF = Auth> {
 
 impl<S, AF> Authenticate<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, password: String) -> WithTransaction<Self, S> {
@@ -81,7 +81,7 @@ impl<S, AF> Authenticate<S, AF>
 
 impl<S, AF> Action<S> for Authenticate<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = Option<()>;
@@ -120,7 +120,7 @@ impl<S, AF> AddUser<S, AF>
 
 impl<S, AF> Action<S> for AddUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -159,7 +159,7 @@ impl<S, AF> SetupUser<S, AF>
 
 impl<S, AF> Action<S> for SetupUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -281,7 +281,7 @@ impl<S, AF> SetUserPassword<S, AF>
 
 impl<S, AF> Action<S> for SetUserPassword<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;

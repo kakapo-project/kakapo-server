@@ -43,7 +43,7 @@ use std::iter::FromIterator;
 use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
-use model::state::GetUserInfo;
+use model::auth::permissions::GetUserInfo;
 
 
 #[derive(Debug)]
@@ -79,22 +79,20 @@ impl Requirements {
 }
 
 ///decorator for permission
-pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
+pub struct WithPermissionRequired<A, S = State>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
-        AU: AuthPermissionFunctions<S>,
 {
     action: A,
     permissions: Requirements,
-    phantom_data: PhantomData<(S, AU)>,
+    phantom_data: PhantomData<(S)>,
 }
 
-impl<A, S, AU> WithPermissionRequired<A, S, AU>
+impl<A, S> WithPermissionRequired<A, S>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
-        AU: AuthPermissionFunctions<S>,
 {
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
@@ -121,19 +119,18 @@ impl<A, S, AU> WithPermissionRequired<A, S, AU>
     }
 }
 
-impl<A, S, AU> Action<S> for WithPermissionRequired<A, S, AU>
+impl<A, S> Action<S> for WithPermissionRequired<A, S>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
-        AU: AuthPermissionFunctions<S>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if AU::is_admin(state) {
+        if S::is_admin(state) {
             return self.action.call(state);
         }
 
-        let user_permissions = AU::get_permissions(state).unwrap_or_default();
+        let user_permissions = S::get_permissions(state).unwrap_or_default();
         let is_permitted = self.permissions.is_permitted(&user_permissions);
 
         if is_permitted {
@@ -147,21 +144,19 @@ impl<A, S, AU> Action<S> for WithPermissionRequired<A, S, AU>
 }
 
 ///decorator for login
-pub struct WithLoginRequired<A, S = State, AU = AuthPermissions>
+pub struct WithLoginRequired<A, S = State>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
-        AU: AuthPermissionFunctions<S>,
 {
     action: A,
-    phantom_data: PhantomData<(S, AU)>,
+    phantom_data: PhantomData<(S)>,
 }
 
-impl<A, S, AU> WithLoginRequired<A, S, AU>
+impl<A, S> WithLoginRequired<A, S>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
-        AU: AuthPermissionFunctions<S>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -171,19 +166,18 @@ impl<A, S, AU> WithLoginRequired<A, S, AU>
     }
 }
 
-impl<A, S, AU> Action<S> for WithLoginRequired<A, S, AU>
+impl<A, S> Action<S> for WithLoginRequired<A, S>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
-        AU: AuthPermissionFunctions<S>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if AU::is_admin(state) {
+        if S::is_admin(state) {
             return self.action.call(state);
         }
 
-        let user_permissions = AU::get_permissions(state);
+        let user_permissions = S::get_permissions(state);
         match user_permissions {
             None => {
                 debug!("Permission denied, required login");
@@ -196,22 +190,20 @@ impl<A, S, AU> Action<S> for WithLoginRequired<A, S, AU>
 
 ///decorator for permission after the value is returned
 /// Warning: this should always be wrapped in a transaction decorator, otherwise, you will modify the state
-pub struct WithPermissionFor<A, S = State, AU = AuthPermissions>
+pub struct WithPermissionFor<A, S = State>
     where
         A: Action<S>,
-        S: GetConnection,
-        AU: AuthPermissionFunctions<S>,
+        S: GetConnection + GetUserInfo,
 {
     action: A,
     required_permission: Box<Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send>,
-    phantom_data: PhantomData<(S, AU)>,
+    phantom_data: PhantomData<(S)>,
 }
 
-impl<A, S, AU> WithPermissionFor<A, S, AU>
+impl<A, S> WithPermissionFor<A, S>
     where
         A: Action<S>,
-        S: GetConnection,
-        AU: AuthPermissionFunctions<S>,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new<F>(action: A, required_permission: F) -> Self
         where
@@ -225,21 +217,20 @@ impl<A, S, AU> WithPermissionFor<A, S, AU>
     }
 }
 
-impl<A, S, AU> Action<S> for WithPermissionFor<A, S, AU>
+impl<A, S> Action<S> for WithPermissionFor<A, S>
     where
         A: Action<S>,
-        S: GetConnection,
-        AU: AuthPermissionFunctions<S>,
+        S: GetConnection + GetUserInfo,
         <A as Action<S>>::Ret : Clone,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if AU::is_admin(state) {
+        if S::is_admin(state) {
             return self.action.call(state);
         }
 
-        let user_permissions = AU::get_permissions(state).unwrap_or_default();
-        let all_permissions = AU::get_all_permissions(state);
+        let user_permissions = S::get_permissions(state).unwrap_or_default();
+        let all_permissions = S::get_all_permissions(state);
 
         let is_permitted = (self.required_permission)(&user_permissions, &all_permissions);
 

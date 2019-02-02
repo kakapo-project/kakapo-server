@@ -51,7 +51,7 @@ use model::auth::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::GetUserInfo;
+use model::auth::permissions::GetUserInfo;
 
 
 ///decorator for permission in listing items
@@ -91,7 +91,7 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
 {
     type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        let user_permissions = AuthPermissions::get_permissions(state).unwrap_or_default();
+        let user_permissions = S::get_permissions(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
 
         let GetAllEntitiesResult(inner_results) = raw_results;

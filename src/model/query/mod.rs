@@ -7,7 +7,7 @@ use model::query::error::QueryError;
 use database::Database;
 use database::DatabaseFunctions;
 use model::state::GetConnection;
-use model::state::GetUserInfo;
+use model::auth::permissions::GetUserInfo;
 use data::Value;
 use data::QueryParams;
 use std::marker::PhantomData;

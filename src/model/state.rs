@@ -54,12 +54,12 @@ impl Channels {
 #[serde(rename_all = "camelCase")]
 pub struct AuthClaims {
     iss: String,
-    sub: i64,
+    sub: i64, // == user_id
     iat: i64,
     exp: i64,
     username: String,
     is_admin: bool,
-    roles: Vec<String>,
+    roles: String, //the default role that the user is interacting with
 }
 
 impl AuthClaims {
@@ -70,16 +70,12 @@ impl AuthClaims {
     pub fn is_user_admin(&self) -> bool {
         self.is_admin
     }
-
-    pub fn get_roles(&self) -> HashSet<String> {
-        HashSet::from_iter(self.roles.iter().cloned())
-    }
 }
 
 pub struct State {
-    database: DBConnector, //TODO: this should be templated
-    scripting: Scripting,
-    claims: Option<AuthClaims>,
+    pub database: DBConnector, //TODO: this should be templated
+    pub scripting: Scripting,
+    pub claims: Option<AuthClaims>,
 }
 
 impl State {
@@ -133,40 +129,5 @@ pub trait GetScripting
 impl GetScripting for State {
     fn get_scripting(&self) -> &Scripting {
         &self.scripting
-    }
-}
-
-pub trait GetUserInfo
-    where Self: Send
-{
-    const ADMIN_USER_ID: i64;
-
-    fn get_user_id(&self) -> Option<i64>;
-
-    fn is_user_admin(&self) -> bool;
-
-    fn get_user_roles(&self) -> Option<HashSet<String>>;
-
-    fn get_db_user(&self) -> String;
-
-}
-
-impl GetUserInfo for State {
-    const ADMIN_USER_ID: i64 = 1;
-
-    fn get_user_id(&self) -> Option<i64> {
-        self.claims.to_owned().map(|x| x.get_user_id())
-    }
-
-    fn is_user_admin(&self) -> bool {
-        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
-    }
-
-    fn get_user_roles(&self) -> Option<HashSet<String>> {
-        self.claims.to_owned().map(|x| x.get_roles())
-    }
-
-    fn get_db_user(&self) -> String {
-        "my_user".to_string()
     }
 }

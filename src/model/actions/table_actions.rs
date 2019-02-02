@@ -51,7 +51,7 @@ use model::auth::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::GetUserInfo;
+use model::auth::permissions::GetUserInfo;
 
 
 // Table Actions

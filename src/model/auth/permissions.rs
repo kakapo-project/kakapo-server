@@ -1,5 +1,10 @@
 use std::collections::HashSet;
-use model::state::GetUserInfo;
+
+use model::auth::internal::PermissionMgr;
+use model::auth::internal::PermissionMgrFunctions;
+use model::state::State;
+use std::marker::PhantomData;
+use model::state::GetConnection;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Permission {
@@ -112,37 +117,57 @@ impl Permission {
     }
 }
 
-pub struct AuthPermissions;
 
-pub trait AuthPermissionFunctions<S>
-    where Self: Send,
+pub trait GetUserInfo
+    where Self: Send + GetConnection
 {
+    const ADMIN_USER_ID: i64;
+
+    fn get_user_id(&self) -> Option<i64>;
+
+    fn is_admin(&self) -> bool;
+
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
-    fn get_permissions(state: &S) -> Option<HashSet<Permission>>;
+    fn get_permissions(&self) -> Option<HashSet<Permission>>;
 
+    fn get_all_permissions(&self) -> HashSet<Permission>;
 
-    fn get_all_permissions(state: &S) -> HashSet<Permission>;
+    fn get_db_user(&self) -> String;
 
-    fn is_admin(state: &S) -> bool;
 }
 
 /// Note that the permissions here are grabbed from either the jwt, or the
 /// database
-impl<S> AuthPermissionFunctions<S> for AuthPermissions
-    where S: GetUserInfo,
-{
-    fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
-        let roles = state.get_user_roles();
+impl GetUserInfo for State {
+    const ADMIN_USER_ID: i64 = 1;
+
+    fn get_user_id(&self) -> Option<i64> {
+        self.claims.to_owned().map(|x| x.get_user_id())
+    }
+
+    fn is_admin(&self) -> bool {
+        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
+    }
+
+    fn get_permissions(&self) -> Option<HashSet<Permission>> {
+        unimplemented!()
+    }
+
+    fn get_all_permissions(&self) -> HashSet<Permission> {
+        let raw_permissions_result = PermissionMgr::get_all_permissions(self);
+        let raw_permissions = match raw_permissions_result {
+            Ok(res) => res,
+            Err(err) => {
+                error!("encountered an error when trying to get all permissions: {:?}", err);
+                vec![]
+            }
+        };
 
         unimplemented!()
     }
 
-    fn get_all_permissions(state: &S) -> HashSet<Permission> {
-        unimplemented!()
-    }
-
-    fn is_admin(state: &S) -> bool {
-        state.is_user_admin()
+    fn get_db_user(&self) -> String {
+        "my_user".to_string()
     }
 }

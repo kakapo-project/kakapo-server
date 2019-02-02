@@ -1,8 +1,29 @@
+use connection::executor::Conn;
+use diesel::RunQueryDsl;
+use model::state::State;
+use model::state::GetConnection;
+use data::dbdata::RawPermission;
+use model::auth::error::UserManagementError;
+use std::error::Error;
+use diesel::query_builder::SqlQuery;
+use diesel::sql_types::Integer;
+use diesel::sql_types::BigInt;
 
 
-pub fn get_all_permissions() -> i32 {
+pub struct PermissionMgr;
 
-    let query = r#"
+pub trait PermissionMgrFunctions<S>
+    where Self: Send
+{
+
+    fn get_user_permissions(state: &S, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError>;
+    fn get_all_permissions(state: &S) -> Result<Vec<RawPermission>, UserManagementError>;
+}
+
+impl PermissionMgrFunctions<State> for PermissionMgr {
+
+    fn get_user_permissions(state: &State, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
+        let query = r#"
         SELECT
             DISTINCT ON("permission"."permission_id")
             * FROM "user"
@@ -14,8 +35,31 @@ pub fn get_all_permissions() -> i32 {
             ON "role"."role_id" = "role_permission"."role_id"
         INNER JOIN "permission"
             ON "role_permission"."permission_id" = "permission"."permission_id"
-        WHERE "user"."user_id" = 2;
-    "#;
+        WHERE "user"."user_id" = $1;
+        "#;
 
-    42
+        let conn = state.get_conn();
+        let result: Vec<RawPermission> = diesel::sql_query(query)
+            .bind::<BigInt, _>(user_id)
+            .load(conn)
+            .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
+
+        Ok(result)
+    }
+
+    fn get_all_permissions(state: &State) -> Result<Vec<RawPermission>, UserManagementError> {
+
+        let query = r#"
+        SELECT
+            DISTINCT ON("permission"."permission_id")
+            * FROM "permission";
+        "#;
+
+        let conn = state.get_conn();
+        let result: Vec<RawPermission> = diesel::sql_query(query)
+            .load(conn)
+            .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
+
+        Ok(result)
+    }
 }

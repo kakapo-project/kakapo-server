@@ -19,12 +19,13 @@ use model::auth::error::UserManagementError;
 use model::state::GetConnection;
 use data::auth::Role;
 use model::auth::permissions::Permission;
+use model::auth::permissions::GetUserInfo;
 
 pub struct Auth;
 pub trait AuthFunctions<S>
     where
         Self: Send,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     fn authenticate(state: &S, user_identifier: &str, password: &str) -> Result<bool, UserManagementError>;
     fn add_user(state: &S, user: &NewUser) -> Result<User, UserManagementError>;
@@ -48,7 +49,7 @@ pub trait AuthFunctions<S>
 
 impl<S> AuthFunctions<S> for Auth
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     fn authenticate(state: &S, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
         unimplemented!()

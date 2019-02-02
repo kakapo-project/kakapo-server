@@ -3,7 +3,7 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, user};
+use data::schema::{entity, table_schema, query, script, user, role, permission};
 use data::schema;
 use data;
 use std::iter::FromIterator;
@@ -171,4 +171,11 @@ pub struct RawUser {
     pub username: String,
     pub password: String,
     pub email: String,
+}
+
+#[derive(Debug, Queryable, QueryableByName)]
+#[table_name = "permission"]
+pub struct RawPermission {
+    pub permission_id: i64,
+    pub name: String,
 }
