@@ -24,10 +24,6 @@ use std::result::Result;
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-
 use data;
 
 use connection::py::PyRunner;

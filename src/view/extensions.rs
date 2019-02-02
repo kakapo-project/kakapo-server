@@ -7,8 +7,6 @@ use actix_web::{
     HttpRequest, Scope,
 };
 
-use connection::executor::DatabaseExecutor;
-
 use actix_web::middleware::cors::CorsBuilder;
 
 
@@ -26,6 +24,7 @@ use std::fmt::Debug;
 use serde::Serialize;
 use connection::GetAppState;
 use connection::Broadcaster;
+use connection::executor::Executor;
 // use actix_web::dev::QueryConfig; //TODO: for some reason this can't be imported, probably actix_web issue
 
 
@@ -44,7 +43,7 @@ pub trait ProcedureExt<S, B>
     ///
     fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut Self
         where
-            DatabaseExecutor: Handler<ActionWrapper<A>>,
+            Executor: Handler<ActionWrapper<A>>,
             JP: Debug + 'static,
             QP: Debug + 'static,
             A: Action + Send + 'static,
@@ -63,7 +62,7 @@ impl<S, B> ProcedureExt<S, B> for CorsBuilder<S>
 {
     fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<S>
         where
-            DatabaseExecutor: Handler<ActionWrapper<A>>,
+            Executor: Handler<ActionWrapper<A>>,
             A: Action + Send + 'static,
             PB: ProcedureBuilder<S, B, JP, QP, A> + Clone + 'static,
             JP: Debug + 'static,

@@ -27,8 +27,6 @@ table! {
     permission (permission_id) {
         permission_id -> Int8,
         name -> Varchar,
-        description -> Varchar,
-        permission_info -> Json,
     }
 }
 
@@ -121,18 +119,19 @@ table! {
 }
 
 table! {
-    user_account (user_account_id) {
-        user_account_id -> Int8,
+    user (user_id) {
+        user_id -> Int8,
         username -> Varchar,
         password -> Varchar,
         email -> Varchar,
+        display_name -> Varchar,
     }
 }
 
 table! {
-    user_account_role (user_account_role_id) {
-        user_account_role_id -> Int8,
-        user_account_id -> Int8,
+    user_role (user_role_id) {
+        user_role_id -> Int8,
+        user_id -> Int8,
         role_id -> Int8,
     }
 }
@@ -146,22 +145,22 @@ table! {
 }
 
 joinable!(entity -> scope (scope_id));
-joinable!(entity -> user_account (created_by));
+joinable!(entity -> user (created_by));
 joinable!(entity_tag -> entity (entity_id));
 joinable!(entity_tag -> tag (tag_id));
-joinable!(entity_usage -> user_account (used_by));
+joinable!(entity_usage -> user (used_by));
 joinable!(query -> entity (entity_id));
-joinable!(query -> user_account (modified_by));
+joinable!(query -> user (modified_by));
 joinable!(role_permission -> permission (permission_id));
 joinable!(role_permission -> role (role_id));
 joinable!(script -> entity (entity_id));
-joinable!(script -> user_account (modified_by));
+joinable!(script -> user (modified_by));
 joinable!(table_schema -> entity (entity_id));
-joinable!(table_schema -> user_account (modified_by));
+joinable!(table_schema -> user (modified_by));
 joinable!(table_schema_transaction -> table_schema (table_schema_id));
-joinable!(table_schema_transaction -> user_account (made_by));
-joinable!(user_account_role -> role (role_id));
-joinable!(user_account_role -> user_account (user_account_id));
+joinable!(table_schema_transaction -> user (made_by));
+joinable!(user_role -> role (role_id));
+joinable!(user_role -> user (user_id));
 
 allow_tables_to_appear_in_same_query!(
     entity,
@@ -176,7 +175,7 @@ allow_tables_to_appear_in_same_query!(
     table_schema,
     table_schema_transaction,
     tag,
-    user_account,
-    user_account_role,
+    user,
+    user_role,
     version,
 );

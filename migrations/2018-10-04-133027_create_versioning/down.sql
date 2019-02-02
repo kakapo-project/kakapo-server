@@ -1,2 +1,2 @@
 
-DROP TABLE version;
+DROP TABLE "version";

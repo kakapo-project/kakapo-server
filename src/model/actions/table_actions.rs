@@ -4,10 +4,6 @@ use std::result::Result;
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-
 use data;
 
 use connection::py::PyRunner;
@@ -55,6 +51,7 @@ use model::auth::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
+use model::state::GetUserInfo;
 
 
 // Table Actions
@@ -69,7 +66,7 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -90,7 +87,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -127,7 +124,7 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -152,7 +149,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -192,7 +189,7 @@ impl<S, ER, TC> ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -217,7 +214,7 @@ impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -256,7 +253,7 @@ impl<S, ER, TC> RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -281,7 +278,7 @@ impl<S, ER, TC> Action<S> for RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

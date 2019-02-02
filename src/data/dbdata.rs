@@ -3,9 +3,8 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, user_account};
+use data::schema::{entity, table_schema, query, script, user};
 use data::schema;
-use diesel::expression_methods::ExpressionMethods;
 use data;
 use std::iter::FromIterator;
 use std::fmt::Debug;
@@ -159,7 +158,7 @@ impl RawEntityTypes for data::Script {
 
 
 #[derive(Debug, Deserialize, Insertable)]
-#[table_name = "user_account"]
+#[table_name = "user"]
 pub struct NewRawUser {
     pub username: String,
     pub password: String,
@@ -168,7 +167,7 @@ pub struct NewRawUser {
 
 #[derive(Debug, Queryable)]
 pub struct RawUser {
-    pub user_account_id: i64,
+    pub user_id: i64,
     pub username: String,
     pub password: String,
     pub email: String,

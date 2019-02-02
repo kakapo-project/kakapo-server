@@ -7,10 +7,6 @@ use std::result::Result;
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-
 use data;
 
 use connection::py::PyRunner;
@@ -47,6 +43,7 @@ use std::iter::FromIterator;
 use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
+use model::state::GetUserInfo;
 
 
 #[derive(Debug)]
@@ -85,7 +82,7 @@ impl Requirements {
 pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AU: AuthPermissionFunctions<S>,
 {
     action: A,
@@ -96,7 +93,7 @@ pub struct WithPermissionRequired<A, S = State, AU = AuthPermissions>
 impl<A, S, AU> WithPermissionRequired<A, S, AU>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AU: AuthPermissionFunctions<S>,
 {
     pub fn new(action: A, permission: Permission) -> Self {
@@ -127,7 +124,7 @@ impl<A, S, AU> WithPermissionRequired<A, S, AU>
 impl<A, S, AU> Action<S> for WithPermissionRequired<A, S, AU>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AU: AuthPermissionFunctions<S>,
 {
     type Ret = A::Ret;
@@ -153,7 +150,7 @@ impl<A, S, AU> Action<S> for WithPermissionRequired<A, S, AU>
 pub struct WithLoginRequired<A, S = State, AU = AuthPermissions>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AU: AuthPermissionFunctions<S>,
 {
     action: A,
@@ -163,7 +160,7 @@ pub struct WithLoginRequired<A, S = State, AU = AuthPermissions>
 impl<A, S, AU> WithLoginRequired<A, S, AU>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AU: AuthPermissionFunctions<S>,
 {
     pub fn new(action: A) -> Self {
@@ -177,7 +174,7 @@ impl<A, S, AU> WithLoginRequired<A, S, AU>
 impl<A, S, AU> Action<S> for WithLoginRequired<A, S, AU>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AU: AuthPermissionFunctions<S>,
 {
     type Ret = A::Ret;
@@ -276,6 +273,15 @@ impl<A, S> WithTransaction<A, S>
             action,
             phantom_data: PhantomData,
         }
+    }
+}
+
+impl From<diesel::result::Error> for Error {
+    // as far as I can tell, this function will only run if the transaction fails, which wouldn't
+    // normally return any specific error, it will return the inner error
+    // this is needed for the transaction part below
+    fn from(diesel_error: diesel::result::Error) -> Self {
+        Error::Unknown
     }
 }
 

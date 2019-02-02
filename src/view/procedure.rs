@@ -10,7 +10,7 @@ use actix_web::{
 
 use serde_json;
 
-use connection::executor::DatabaseExecutor;
+use connection::executor::Executor;
 use futures::Future;
 
 
@@ -24,6 +24,7 @@ use actix_web::error::JsonPayloadError;
 use serde::Serialize;
 use connection::GetAppState;
 use connection::Broadcaster;
+use actix_web::http::header;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -59,7 +60,7 @@ impl<S, B, A, F> ProcedureBuilder<S, B, serde_json::Value, serde_json::Value, A>
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
 pub struct ProcedureHandler<S, B, JP, QP, PB, A>
     where
-        DatabaseExecutor: Handler<ActionWrapper<A>>,
+        Executor: Handler<ActionWrapper<A>>,
         PB: ProcedureBuilder<S, B, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
@@ -76,7 +77,7 @@ pub struct ProcedureHandler<S, B, JP, QP, PB, A>
 
 impl<S, B, JP, QP, PB, A> ProcedureHandler<S, B, JP, QP, PB, A>
     where
-        DatabaseExecutor: Handler<ActionWrapper<A>>,
+        Executor: Handler<ActionWrapper<A>>,
         PB: ProcedureBuilder<S, B, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
@@ -102,7 +103,7 @@ pub fn procedure_handler_function<S, B, JP, QP, PB, A>(
     query_params: Query<QP>
 ) -> AsyncResponse
     where
-        DatabaseExecutor: Handler<ActionWrapper<A>>,
+        Executor: Handler<ActionWrapper<A>>,
         PB: ProcedureBuilder<S, B, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
@@ -116,11 +117,12 @@ pub fn procedure_handler_function<S, B, JP, QP, PB, A>(
 
     debug!("Procedure called on {:?} QUERY {:?} JSON {:?}", req.path(), &json_params, &query_params);
     let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());
+    let auth_header = req.headers().get(header::AUTHORIZATION).map(|x| x.as_bytes());
 
     req.state()
         .get_app_state()
         .connect()
-        .send(ActionWrapper::new(action))
+        .send(ActionWrapper::new(auth_header, action))
         .from_err()
         .and_then(|res| {
             match res {

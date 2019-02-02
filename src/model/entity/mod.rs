@@ -1,6 +1,4 @@
-use diesel::prelude::*;
 
-use diesel::query_source::Table;
 use data::dbdata;
 use data;
 

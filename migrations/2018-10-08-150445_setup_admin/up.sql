@@ -1,22 +1,22 @@
 
-TRUNCATE scope CASCADE;
-TRUNCATE user_account CASCADE;
+TRUNCATE "scope" CASCADE;
+TRUNCATE "user" CASCADE;
 
-INSERT INTO scope (scope_id, name, description, scope_info)
+INSERT INTO "scope" ("scope_id", "name", "description", "scope_info")
 VALUES (1, 'main', '', '{}');
 
-INSERT INTO user_account (user_account_id, username, password, email)
-VALUES (1, 'admin', 'password', 'admin@example.com');
+INSERT INTO "user" ("user_id", "username", "password", "email", "display_name")
+VALUES (1, 'admin', 'password', 'admin@example.com', 'Admin');
 
 
-ALTER TABLE scope ADD CONSTRAINT scope_main_is_0_check CHECK (
-    (scope_id != 1 AND name != 'main') OR
-    (scope_id = 1 AND name = 'main')
+ALTER TABLE "scope" ADD CONSTRAINT "scope_main_is_0_check" CHECK (
+    ("scope_id" != 1 AND "name" != 'main') OR
+    ("scope_id" = 1 AND "name" = 'main')
 );
 
-ALTER TABLE user_account ADD CONSTRAINT user_account_admin_is_0_check CHECK (
-    (user_account_id != 1 AND username != 'admin') OR
-    (user_account_id = 1 AND username = 'admin')
+ALTER TABLE "user" ADD CONSTRAINT "user_admin_is_0_check" CHECK (
+    ("user_id" != 1 AND "username" != 'admin') OR
+    ("user_id" = 1 AND "username" = 'admin')
 );
 
 

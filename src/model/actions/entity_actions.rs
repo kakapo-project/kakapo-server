@@ -4,10 +4,6 @@ use std::result::Result;
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-
 use data;
 
 use connection::py::PyRunner;
@@ -55,6 +51,7 @@ use model::auth::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
+use model::state::GetUserInfo;
 
 
 ///decorator for permission in listing items
@@ -64,7 +61,7 @@ pub struct WithFilterListByPermission<A, T, S = State, ER = entity::Controller>
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     action: A,
     phantom_data: PhantomData<(T, S, ER)>,
@@ -75,7 +72,7 @@ impl<A, T, S, ER> WithFilterListByPermission<A, T, S, ER>
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -90,7 +87,7 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -125,7 +122,7 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(show_deleted: bool) -> WithFilterListByPermission<WithTransaction<Self, S>, T, S, ER> {
         let action = Self {
@@ -144,7 +141,7 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = GetAllEntitiesResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -168,7 +165,7 @@ impl<T, S, ER> GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
         let action = Self {
@@ -187,7 +184,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = GetEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -207,7 +204,7 @@ pub struct CreateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
@@ -218,7 +215,7 @@ impl<T, S, EM> CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         <Self as Action<S>>::Ret: Clone,
 {
     pub fn new(data: T) -> WithPermissionFor<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -261,7 +258,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = CreateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -307,7 +304,7 @@ pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub name: String,
     pub data: T,
@@ -319,7 +316,7 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![
@@ -346,7 +343,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = UpdateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -385,7 +382,7 @@ pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub name: String,
     pub on_not_found: OnNotFound,
@@ -396,7 +393,7 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![
@@ -422,7 +419,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = DeleteEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -458,6 +455,11 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
 mod test {
     use super::*;
 
+
+    use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
+    use diesel::pg::PgConnection;
+    use diesel::Connection;
+
     use serde_json::from_value;
     use scripting::Scripting;
     use diesel::r2d2::Pool;
@@ -468,7 +470,7 @@ mod test {
         let conn_manager = ConnectionManager::new(conn_url);
         let pool = Pool::new(conn_manager).unwrap();
         let pooled_conn = pool.get().unwrap();
-        State::new(pooled_conn, Scripting::new(script_path))
+        State::new(pooled_conn, Scripting::new(script_path), None)
     }
 
     #[test]

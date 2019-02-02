@@ -4,10 +4,6 @@ use std::result::Result;
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-
 use data;
 
 use connection::py::PyRunner;
@@ -55,6 +51,7 @@ use model::auth::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
+use model::state::GetUserInfo;
 
 
 // Query Action
@@ -70,7 +67,7 @@ impl<S, ER, QC> RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S>,
         QC: query::QueryActionFunctions<S>,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -92,7 +89,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S> + Send,
         QC: query::QueryActionFunctions<S> + Send,
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

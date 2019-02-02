@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use model::state::GetUserInfo;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Permission {
@@ -126,8 +127,14 @@ pub trait AuthPermissionFunctions<S>
     fn is_admin(state: &S) -> bool;
 }
 
-impl<S> AuthPermissionFunctions<S> for AuthPermissions {
+/// Note that the permissions here are grabbed from either the jwt, or the
+/// database
+impl<S> AuthPermissionFunctions<S> for AuthPermissions
+    where S: GetUserInfo,
+{
     fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
+        let roles = state.get_user_roles();
+
         unimplemented!()
     }
 
@@ -136,6 +143,6 @@ impl<S> AuthPermissionFunctions<S> for AuthPermissions {
     }
 
     fn is_admin(state: &S) -> bool {
-        unimplemented!()
+        state.is_user_admin()
     }
 }

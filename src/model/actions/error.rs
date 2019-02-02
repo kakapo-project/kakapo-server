@@ -2,7 +2,6 @@ use model::entity::error::EntityError;
 use model::table::error::TableError;
 use model::query::error::QueryError;
 
-use diesel::result::Error as DieselError;
 use model::script::error::ScriptError;
 use model::auth::error::UserManagementError;
 
@@ -28,12 +27,4 @@ pub enum Error {
     SerializationError(serde_json::Error),
     #[fail(display = "An unknown error occurred")]
     Unknown,
-}
-
-impl From<DieselError> for Error {
-    //as far as I can tell, this function will only run if the transaction fails, which wouldn't
-    //normally return any specific error, it will return the inner error
-    fn from(diesel_error: DieselError) -> Self {
-        Error::Unknown
-    }
 }

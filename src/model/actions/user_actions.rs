@@ -5,10 +5,6 @@ use std::result::Result;
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-
 use data;
 
 use connection::py::PyRunner;
@@ -57,6 +53,7 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use data::auth::Role;
+use model::state::GetUserInfo;
 
 pub struct Authenticate<S = State, AF = Auth> {
     user_identifier: String,
@@ -104,7 +101,7 @@ pub struct AddUser<S = State, AF = Auth> {
 
 impl<S, AF> AddUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -142,7 +139,7 @@ pub struct SetupUser<S = State, AF = Auth> {
 
 impl<S, AF> SetupUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -181,7 +178,7 @@ pub struct RemoveUser<S = State, AF = Auth> {
 
 impl<S, AF> RemoveUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -200,7 +197,7 @@ impl<S, AF> RemoveUser<S, AF>
 
 impl<S, AF> Action<S> for RemoveUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -219,7 +216,7 @@ pub struct GetAllUsers<S = State, AF = Auth> {
 
 impl<S, AF> GetAllUsers<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
@@ -238,7 +235,7 @@ impl<S, AF> GetAllUsers<S, AF>
 
 impl<S, AF> Action<S> for GetAllUsers<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = AllUsersResult;
@@ -258,7 +255,7 @@ pub struct SetUserPassword<S = State, AF = Auth> {
 
 impl<S, AF> SetUserPassword<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, password: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -304,7 +301,7 @@ pub struct InviteUser<S = State, AF = Auth> {
 
 impl<S, AF> InviteUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -323,7 +320,7 @@ impl<S, AF> InviteUser<S, AF>
 
 impl<S, AF> Action<S> for InviteUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = InvitationToken;
@@ -342,7 +339,7 @@ pub struct AddRole<S = State, AF = Auth> {
 
 impl<S, AF> AddRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -361,7 +358,7 @@ impl<S, AF> AddRole<S, AF>
 
 impl<S, AF> Action<S> for AddRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -380,7 +377,7 @@ pub struct RemoveRole<S = State, AF = Auth> {
 
 impl<S, AF> RemoveRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -399,7 +396,7 @@ impl<S, AF> RemoveRole<S, AF>
 
 impl<S, AF> Action<S> for RemoveRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -417,7 +414,7 @@ pub struct GetAllRoles<S = State, AF = Auth> {
 
 impl<S, AF> GetAllRoles<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new() -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -435,7 +432,7 @@ impl<S, AF> GetAllRoles<S, AF>
 
 impl<S, AF> Action<S> for GetAllRoles<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = AllRolesResult;
@@ -455,7 +452,7 @@ pub struct AttachPermissionForRole<S = State, AF = Auth> {
 
 impl<S, AF> AttachPermissionForRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -480,7 +477,7 @@ impl<S, AF> AttachPermissionForRole<S, AF>
 
 impl<S, AF> Action<S> for AttachPermissionForRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -500,7 +497,7 @@ pub struct DetachPermissionForRole<S = State, AF = Auth> {
 
 impl<S, AF> DetachPermissionForRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -525,7 +522,7 @@ impl<S, AF> DetachPermissionForRole<S, AF>
 
 impl<S, AF> Action<S> for DetachPermissionForRole<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -545,7 +542,7 @@ pub struct AttachRoleForUser<S = State, AF = Auth> {
 
 impl<S, AF> AttachRoleForUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -569,7 +566,7 @@ impl<S, AF> AttachRoleForUser<S, AF>
 
 impl<S, AF> Action<S> for AttachRoleForUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -589,7 +586,7 @@ pub struct DetachRoleForUser<S = State, AF = Auth> {
 
 impl<S, AF> DetachRoleForUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -613,7 +610,7 @@ impl<S, AF> DetachRoleForUser<S, AF>
 
 impl<S, AF> Action<S> for DetachRoleForUser<S, AF>
     where
-        S: GetConnection,
+        S: GetConnection + GetUserInfo,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;

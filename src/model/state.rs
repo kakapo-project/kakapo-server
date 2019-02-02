@@ -16,6 +16,8 @@ use model::actions::Action;
 use diesel::Connection;
 use data::dbdata::RawEntityTypes;
 use scripting::Scripting;
+use std::collections::HashSet;
+use std::iter::FromIterator;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -48,20 +50,48 @@ impl Channels {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthClaims {
+    iss: String,
+    sub: i64,
+    iat: i64,
+    exp: i64,
+    username: String,
+    is_admin: bool,
+    roles: Vec<String>,
+}
+
+impl AuthClaims {
+    pub fn get_user_id(&self) -> i64 {
+        self.sub
+    }
+
+    pub fn is_user_admin(&self) -> bool {
+        self.is_admin
+    }
+
+    pub fn get_roles(&self) -> HashSet<String> {
+        HashSet::from_iter(self.roles.iter().cloned())
+    }
+}
+
 pub struct State {
     database: DBConnector, //TODO: this should be templated
     scripting: Scripting,
-    //user
+    claims: Option<AuthClaims>,
 }
 
 impl State {
     pub fn new(
         database: DBConnector,
         scripting: Scripting,
+        claims: Option<AuthClaims>,
     ) -> Self {
         Self {
             database,
             scripting,
+            claims,
         }
     }
 }
@@ -109,13 +139,34 @@ impl GetScripting for State {
 pub trait GetUserInfo
     where Self: Send
 {
-    fn get_user_id(&self) -> i64;
+    const ADMIN_USER_ID: i64;
+
+    fn get_user_id(&self) -> Option<i64>;
+
+    fn is_user_admin(&self) -> bool;
+
+    fn get_user_roles(&self) -> Option<HashSet<String>>;
 
     fn get_db_user(&self) -> String;
+
 }
 
 impl GetUserInfo for State {
-    fn get_user_id(&self) -> i64 { 1 }
+    const ADMIN_USER_ID: i64 = 1;
 
-    fn get_db_user(&self) -> String { "my_user".to_string() }
+    fn get_user_id(&self) -> Option<i64> {
+        self.claims.to_owned().map(|x| x.get_user_id())
+    }
+
+    fn is_user_admin(&self) -> bool {
+        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
+    }
+
+    fn get_user_roles(&self) -> Option<HashSet<String>> {
+        self.claims.to_owned().map(|x| x.get_roles())
+    }
+
+    fn get_db_user(&self) -> String {
+        "my_user".to_string()
+    }
 }

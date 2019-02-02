@@ -1,6 +1,7 @@
 
 pub mod permissions;
 pub mod error;
+mod internal;
 
 use jsonwebtoken::{decode, encode, Header, Validation};
 use bcrypt::verify;
@@ -11,7 +12,6 @@ use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use data::dbdata::RawUser;
 use data::dbdata::NewRawUser;
 
-use data::schema::user_account;
 use chrono::{Duration, Local};
 use data::auth::User;
 use data::auth::NewUser;
