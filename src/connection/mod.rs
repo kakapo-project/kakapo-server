@@ -17,12 +17,6 @@ pub struct AppState {
     db_connections: Addr<executor::DatabaseExecutor>,
 }
 
-///Implement this for your state to authenticate
-pub trait Auth {
-    fn create_token(&self) -> i32;
-    fn validate_token(&self) -> bool;
-}
-
 ///Implement this for your state for broadcasting info
 pub trait Broadcaster {
     fn publish(&self, channels: Vec<String>);
@@ -36,17 +30,15 @@ pub struct AppStateBuilder {
     pass_name: Option<String>,
     db_name: Option<String>,
     script_path_dir: Option<String>,
+    secret: Option<String>,
 }
 
 /// Implement this for your state
-pub trait GetAppState<A, B>
+pub trait GetAppState<B>
     where
-        A: Auth,
         B: Broadcaster,
 {
     fn get_app_state(&self) -> &AppState;
-
-    fn get_auth(&self) -> A;
 
     fn get_broadcaster(&self) -> B;
 }
@@ -60,6 +52,7 @@ impl AppStateBuilder {
             pass_name: None,
             db_name: None,
             script_path_dir: None,
+            secret: None,
         }
     }
 
@@ -89,7 +82,12 @@ impl AppStateBuilder {
     }
 
     pub fn script_path(mut self, script_path_dir: &str) -> Self {
-        self.script_path_dir = Some(script_path_dir.to_string().to_string());
+        self.script_path_dir = Some(script_path_dir.to_string());
+        self
+    }
+
+    pub fn token_secret(mut self, secret: &str) -> Self {
+        self.secret = Some(secret.to_string());
         self
     }
 
@@ -110,6 +108,8 @@ impl AppStateBuilder {
         let connections = SyncArbiter::start(
             num_cpus::get(),
             move || executor::DatabaseExecutor::new(pool.clone(), script_path.clone()));
+
+        let token_secret = self.secret.unwrap_or("HELLO_WORLD_HELLO_WORLD".to_string()); //TODO: should fallback to randomly generated
 
         AppState {
             db_connections: connections,

@@ -46,7 +46,6 @@ use std::iter::FromIterator;
 
 use model::actions::Action;
 use model::actions::ActionResult;
-use model::actions::ActionOk;
 use std::collections::HashSet;
 
 
@@ -234,7 +233,7 @@ impl<A, S, AU> Action<S> for WithPermissionFor<A, S, AU>
         A: Action<S>,
         S: GetConnection,
         AU: AuthPermissionFunctions<S>,
-        ActionOk<<A as Action<S>>::Ret> : Clone,
+        <A as Action<S>>::Ret : Clone,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -289,7 +288,7 @@ impl<A, S> Action<S> for WithTransaction<A, S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         debug!("started transaction");
 
-        state.transaction::<ActionOk<Self::Ret>, Error, _>(||
+        state.transaction::<Self::Ret, Error, _>(||
             self.action.call(state)
         )
 
@@ -338,7 +337,8 @@ impl<A, S> Action<S> for WithDispatch<A, S>
         debug!("dispatching action");
 
         let mut result = self.action.call(state)?;
-        result.channels = self.channels.to_owned();
+
+        unimplemented!(); //need to send to broadcaster
 
         Ok(result)
     }

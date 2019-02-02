@@ -93,7 +93,7 @@ mod test {
                 .send(ActionWrapper::new(Ok(action)))
                 .map_err(|_| ())
                 .map(|res| {
-                    assert_eq!(res.unwrap().get_data(), "Hello World!");
+                    assert_eq!(res.unwrap(), "Hello World!");
 
                     actix::System::current().stop();
                 });

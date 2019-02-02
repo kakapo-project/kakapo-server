@@ -34,7 +34,6 @@ use view::procedure::NoQuery;
 use view::extensions::ProcedureExt;
 use data;
 use actix_web::middleware::cors::CorsBuilder;
-use connection::Auth;
 use connection::Broadcaster;
 use model::actions::Action;
 use serde_json::Value;
@@ -198,14 +197,13 @@ pub mod users {
     pub fn authenticate(data: Value, query: Value) -> Result<impl Action, Error> {
         let auth_data: AuthData = from_value(data)?;
         let _: NoQuery = from_value(query)?;
-        Ok(actions::users::Authenticate::<_>::new(auth_data.username, auth_data.password))
+        Ok(actions::Authenticate::<_>::new(auth_data.username, auth_data.password))
     }
 }
 
-pub fn router<S, A, B>(app: &mut CorsBuilder<S>) -> &mut CorsBuilder<S>
+pub fn router<S, B>(app: &mut CorsBuilder<S>) -> &mut CorsBuilder<S>
     where
-        S: GetAppState<A, B> + 'static,
-        A: Auth,
+        S: GetAppState<B> + 'static,
         B: Broadcaster,
 {
     app

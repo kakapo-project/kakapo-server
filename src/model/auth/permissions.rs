@@ -139,18 +139,3 @@ impl<S> AuthPermissionFunctions<S> for AuthPermissions {
         unimplemented!()
     }
 }
-
-pub struct AllowAll;
-impl<S> AuthPermissionFunctions<S> for AllowAll {
-    fn get_permissions(state: &S) -> Option<HashSet<Permission>> {
-        Some(HashSet::new())
-    }
-
-    fn get_all_permissions(state: &S) -> HashSet<Permission> {
-        HashSet::new()
-    }
-
-    fn is_admin(state: &S) -> bool {
-        true
-    }
-}

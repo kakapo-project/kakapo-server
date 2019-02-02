@@ -53,26 +53,23 @@ use scripting::ScriptFunctions;
 pub use connection::AppStateBuilder as KakapoStateBuilder;
 pub use connection::AppState as KakapoState;
 pub use connection::GetAppState as GetKakapoState;
-pub use connection::Auth as KakapoAuth;
 pub use connection::Broadcaster as KakapoBroadcaster;
 
 
-pub trait KakapoRouter<S, A, B>
+pub trait KakapoRouter<S, B>
     where
-        S: GetKakapoState<A, B> + 'static,
-        A: KakapoAuth,
+        S: GetKakapoState<B> + 'static,
         B: KakapoBroadcaster,
 {
     fn kakapo_routes(&mut self) -> &mut Self;
 }
 
-impl<S, A, B> KakapoRouter<S, A, B> for CorsBuilder<S>
+impl<S, B> KakapoRouter<S, B> for CorsBuilder<S>
     where
-        S: GetKakapoState<A, B> + 'static,
-        A: KakapoAuth,
+        S: GetKakapoState<B> + 'static,
         B: KakapoBroadcaster,
 {
     fn kakapo_routes(&mut self) -> &mut CorsBuilder<S> {
-        view::router::<S, A, B>(self)
+        view::router::<S, B>(self)
     }
 }
