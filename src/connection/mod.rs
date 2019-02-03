@@ -11,6 +11,7 @@ use diesel::r2d2::Pool;
 use actix::sync::SyncArbiter;
 use num_cpus;
 use std::sync::Arc;
+use model::state::Channels;
 
 ///Put this somewhere in your State
 #[derive(Clone)]
@@ -18,11 +19,17 @@ pub struct AppState {
     connections: Addr<executor::Executor>,
 }
 
+#[derive(Debug, Fail)]
+pub enum BroadcasterError {
+    #[fail(display = "An unknown error occurred")]
+    Unknown,
+}
+
 ///Implement this for your state for broadcasting info
 pub trait Broadcaster
     where Self: Send + Sync + 'static
 {
-    fn publish(&self, channels: Vec<String>);
+    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError>;
 }
 
 /// Builder for the AppState

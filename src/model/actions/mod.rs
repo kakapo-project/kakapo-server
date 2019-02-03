@@ -71,15 +71,39 @@ use model::auth::AuthFunctions;
 use serde::Serialize;
 
 
-pub type ActionResult<R> = Result<R, Error>;
+#[derive(Debug, Clone)]
+pub struct OkAction<R> {
+    name: String,
+    data: R,
+}
+
+impl<R> OkAction<R>
+    where R: Send,
+{
+
+    pub fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
+
+    pub fn get_data_ref(&self) -> &R {
+        &self.data
+    }
+
+    pub fn get_data(self) -> R {
+        self.data
+    }
+}
+
+pub type ActionResult<R> = Result<OkAction<R>, Error>;
 
 pub struct ActionRes;
 impl ActionRes {
-    pub fn new<R>(result: R) -> ActionResult<R>
+    pub fn new<R>(name: &str, data: R) -> ActionResult<R>
         where R: Send
     {
-        Ok(result)
+        Ok(OkAction { name: name.to_string(), data })
     }
+
 }
 
 pub trait Action<S = State>

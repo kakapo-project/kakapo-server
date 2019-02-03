@@ -14,7 +14,7 @@ use connection::Broadcaster;
 use std::sync::Arc;
 
 
-pub struct ActionWrapper<A: Action + Send> {
+pub struct ActionWrapper<A: Action> {
     action: Result<A, serde_json::Error>,
     broadcaster: Arc<Broadcaster>,
     auth_header: Option<Vec<u8>>,
@@ -90,6 +90,8 @@ mod test {
     use actix_web::HttpResponse;
     use actix_web::AsyncResponder;
     use model::actions::ActionRes;
+    use model::state::Channels;
+    use connection::BroadcasterError;
 
     struct TestAction;
     impl<S> Action<S> for TestAction
@@ -98,7 +100,14 @@ mod test {
         type Ret = String;
 
         fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-            ActionRes::new("Hello World!".to_string())
+            ActionRes::new("TestAction", "Hello World!".to_string())
+        }
+    }
+
+    struct TestBroadcaster;
+    impl Broadcaster for TestBroadcaster {
+        fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
+            Ok(())
         }
     }
 
@@ -116,14 +125,15 @@ mod test {
         actix::System::run(|| {
             let executor = mock_executor();
             let action = TestAction;
+            let arc = Arc::new(TestBroadcaster);
 
 
             let f = executor
                 .connect()
-                .send(ActionWrapper::new(None, Ok(action)))
+                .send(ActionWrapper::new(None, arc,Ok(action)))
                 .map_err(|_| ())
                 .map(|res| {
-                    assert_eq!(res.unwrap(), "Hello World!");
+                    assert_eq!(res.unwrap().get_data(), "Hello World!");
 
                     actix::System::current().stop();
                 });

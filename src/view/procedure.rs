@@ -131,7 +131,7 @@ pub fn procedure_handler_function<S, B, JP, QP, PB, A>(
         .and_then(|res| {
             match res {
                 Ok(ok_res) => {
-                    let serialized = ok_res;
+                    let serialized = ok_res.get_data();
                     debug!("Responding with message: {:?}", &serialized);
                     Ok(HttpResponse::Ok()
                         .json(serialized))

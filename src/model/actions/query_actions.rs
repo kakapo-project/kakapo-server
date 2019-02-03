@@ -52,6 +52,7 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
+use model::state::GetBroadcaster;
 
 
 // Query Action
@@ -67,7 +68,7 @@ impl<S, ER, QC> RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S>,
         QC: query::QueryActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -89,7 +90,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S> + Send,
         QC: query::QueryActionFunctions<S> + Send,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -108,6 +109,6 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(RunQueryResult(res)))
+            .and_then(|res| ActionRes::new("RunQuery", RunQueryResult(res)))
     }
 }

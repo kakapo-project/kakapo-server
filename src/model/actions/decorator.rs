@@ -46,6 +46,8 @@ use std::collections::HashSet;
 use model::auth::permissions::GetUserInfo;
 use model::auth::auth_store::AuthStore;
 use model::auth::auth_store::AuthStoreFunctions;
+use model::state::GetBroadcaster;
+use model::actions::OkAction;
 
 
 #[derive(Debug)]
@@ -84,7 +86,7 @@ impl Requirements {
 pub struct WithPermissionRequired<A, S = State>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     action: A,
     permissions: Requirements,
@@ -94,7 +96,7 @@ pub struct WithPermissionRequired<A, S = State>
 impl<A, S> WithPermissionRequired<A, S>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
@@ -125,7 +127,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
     where
         A: Action<S>,
         AuthStore: AuthStoreFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -150,7 +152,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
 pub struct WithLoginRequired<A, S = State>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     action: A,
     phantom_data: PhantomData<(S)>,
@@ -159,7 +161,7 @@ pub struct WithLoginRequired<A, S = State>
 impl<A, S> WithLoginRequired<A, S>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -173,7 +175,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
     where
         A: Action<S>,
         AuthStore: AuthStoreFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -197,7 +199,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
 pub struct WithPermissionFor<A, S = State>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     action: A,
     required_permission: Box<Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send>,
@@ -207,7 +209,7 @@ pub struct WithPermissionFor<A, S = State>
 impl<A, S> WithPermissionFor<A, S>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new<F>(action: A, required_permission: F) -> Self
         where
@@ -224,9 +226,8 @@ impl<A, S> WithPermissionFor<A, S>
 impl<A, S> Action<S> for WithPermissionFor<A, S>
     where
         A: Action<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AuthStore: AuthStoreFunctions<S>,
-        <A as Action<S>>::Ret : Clone,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -290,7 +291,7 @@ impl<A, S> Action<S> for WithTransaction<A, S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         debug!("started transaction");
 
-        state.transaction::<Self::Ret, Error, _>(||
+        state.transaction::<OkAction<Self::Ret>, Error, _>(||
             self.action.call(state)
         )
 
@@ -310,7 +311,7 @@ pub struct WithDispatch<A, S = State>
 impl<A, S> WithDispatch<A, S>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetBroadcaster + GetBroadcaster,
 {
     pub fn new(action: A, channel: Channels) -> Self {
         Self {
@@ -332,16 +333,19 @@ impl<A, S> WithDispatch<A, S>
 impl<A, S> Action<S> for WithDispatch<A, S>
     where
         A: Action<S>,
-        S: GetConnection,
+        S: GetConnection + GetBroadcaster + GetBroadcaster,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         debug!("dispatching action");
 
-        let mut result = self.action.call(state)?;
+        let result = self.action.call(state)?;
 
-        unimplemented!(); //need to send to broadcaster
-
+        state.publish(
+            self.channels.to_owned(),
+            result.get_name(),
+            result.get_data_ref()
+        );
 
         Ok(result)
     }

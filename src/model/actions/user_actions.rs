@@ -54,6 +54,7 @@ use model::actions::ActionRes;
 use model::actions::ActionResult;
 use data::auth::Role;
 use model::auth::permissions::GetUserInfo;
+use model::state::GetBroadcaster;
 
 pub struct Authenticate<S = State, AF = Auth> {
     user_identifier: String,
@@ -88,7 +89,7 @@ impl<S, AF> Action<S> for Authenticate<S, AF>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::authenticate(state, &self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(Some(())))
+            .and_then(|res| ActionRes::new("Authenticate", Some(())))
     }
 }
 
@@ -101,7 +102,7 @@ pub struct AddUser<S = State, AF = Auth> {
 
 impl<S, AF> AddUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -120,14 +121,14 @@ impl<S, AF> AddUser<S, AF>
 
 impl<S, AF> Action<S> for AddUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::add_user(state, &self.user)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(UserResult(res)))
+            .and_then(|res| ActionRes::new("AddUser", UserResult(res)))
     }
 }
 
@@ -139,7 +140,7 @@ pub struct SetupUser<S = State, AF = Auth> {
 
 impl<S, AF> SetupUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -159,14 +160,14 @@ impl<S, AF> SetupUser<S, AF>
 
 impl<S, AF> Action<S> for SetupUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::add_user(state, &self.user)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(UserResult(res)))
+            .and_then(|res| ActionRes::new("SetupUser", UserResult(res)))
     }
 }
 
@@ -178,7 +179,7 @@ pub struct RemoveUser<S = State, AF = Auth> {
 
 impl<S, AF> RemoveUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -197,14 +198,14 @@ impl<S, AF> RemoveUser<S, AF>
 
 impl<S, AF> Action<S> for RemoveUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::remove_user(state, &self.user_identifier)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(UserResult(res)))
+            .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
     }
 }
 
@@ -216,7 +217,7 @@ pub struct GetAllUsers<S = State, AF = Auth> {
 
 impl<S, AF> GetAllUsers<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
@@ -235,14 +236,14 @@ impl<S, AF> GetAllUsers<S, AF>
 
 impl<S, AF> Action<S> for GetAllUsers<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = AllUsersResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::get_all_users(state)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(AllUsersResult(res)))
+            .and_then(|res| ActionRes::new("GetAllUsers", AllUsersResult(res)))
     }
 }
 
@@ -255,7 +256,7 @@ pub struct SetUserPassword<S = State, AF = Auth> {
 
 impl<S, AF> SetUserPassword<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, password: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -281,14 +282,14 @@ impl<S, AF> SetUserPassword<S, AF>
 
 impl<S, AF> Action<S> for SetUserPassword<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::modify_user_password(state, &self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(UserResult(res)))
+            .and_then(|res| ActionRes::new("SetUserPassword", UserResult(res)))
     }
 }
 
@@ -301,7 +302,7 @@ pub struct InviteUser<S = State, AF = Auth> {
 
 impl<S, AF> InviteUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -327,7 +328,7 @@ impl<S, AF> Action<S> for InviteUser<S, AF>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::invite_user(state, &self.email)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(InvitationToken(res)))
+            .and_then(|res| ActionRes::new("InviteUser", InvitationToken(res)))
     }
 }
 
@@ -339,7 +340,7 @@ pub struct AddRole<S = State, AF = Auth> {
 
 impl<S, AF> AddRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -358,14 +359,14 @@ impl<S, AF> AddRole<S, AF>
 
 impl<S, AF> Action<S> for AddRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::add_role(state, &self.role)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(RoleResult(res)))
+            .and_then(|res| ActionRes::new("AddRole", RoleResult(res)))
     }
 }
 
@@ -377,7 +378,7 @@ pub struct RemoveRole<S = State, AF = Auth> {
 
 impl<S, AF> RemoveRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -396,14 +397,14 @@ impl<S, AF> RemoveRole<S, AF>
 
 impl<S, AF> Action<S> for RemoveRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::remove_role(state, &self.rolename)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(RoleResult(res)))
+            .and_then(|res| ActionRes::new("RemoveRole", RoleResult(res)))
     }
 }
 
@@ -414,7 +415,7 @@ pub struct GetAllRoles<S = State, AF = Auth> {
 
 impl<S, AF> GetAllRoles<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new() -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -432,14 +433,14 @@ impl<S, AF> GetAllRoles<S, AF>
 
 impl<S, AF> Action<S> for GetAllRoles<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = AllRolesResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::get_all_roles(state)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(AllRolesResult(res)))
+            .and_then(|res| ActionRes::new("GetAllRoles", AllRolesResult(res)))
     }
 }
 
@@ -452,7 +453,7 @@ pub struct AttachPermissionForRole<S = State, AF = Auth> {
 
 impl<S, AF> AttachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -477,14 +478,14 @@ impl<S, AF> AttachPermissionForRole<S, AF>
 
 impl<S, AF> Action<S> for AttachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::attach_permission_for_role(state, &self.permission, &self.rolename)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(RoleResult(res)))
+            .and_then(|res| ActionRes::new("AttachPermissionForRole", RoleResult(res)))
     }
 }
 
@@ -497,7 +498,7 @@ pub struct DetachPermissionForRole<S = State, AF = Auth> {
 
 impl<S, AF> DetachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -522,14 +523,14 @@ impl<S, AF> DetachPermissionForRole<S, AF>
 
 impl<S, AF> Action<S> for DetachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::detach_permission_for_role(state, &self.permission, &self.rolename)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(RoleResult(res)))
+            .and_then(|res| ActionRes::new("DetachPermissionForRole", RoleResult(res)))
     }
 }
 
@@ -542,7 +543,7 @@ pub struct AttachRoleForUser<S = State, AF = Auth> {
 
 impl<S, AF> AttachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -566,14 +567,14 @@ impl<S, AF> AttachRoleForUser<S, AF>
 
 impl<S, AF> Action<S> for AttachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::attach_role_for_user(state, &self.rolename, &self.user_identifier)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(UserResult(res)))
+            .and_then(|res| ActionRes::new("AttachRoleForUser", UserResult(res)))
     }
 }
 
@@ -586,7 +587,7 @@ pub struct DetachRoleForUser<S = State, AF = Auth> {
 
 impl<S, AF> DetachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -610,14 +611,14 @@ impl<S, AF> DetachRoleForUser<S, AF>
 
 impl<S, AF> Action<S> for DetachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         AF::detach_role_for_user(state, &self.rolename, &self.user_identifier)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new(UserResult(res)))
+            .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))
     }
 }
 
@@ -637,6 +638,6 @@ impl<S> Action<S> for Nothing
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ActionRes::new(())
+        ActionRes::new("Nothing", ())
     }
 }

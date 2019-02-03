@@ -20,6 +20,8 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 use connection::Broadcaster;
 use std::sync::Arc;
+use serde::Serialize;
+use model::actions::error::Error;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -138,5 +140,27 @@ pub trait GetScripting
 impl GetScripting for State {
     fn get_scripting(&self) -> &Scripting {
         &self.scripting
+    }
+}
+
+pub trait GetBroadcaster
+    where Self: Send
+{
+    fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
+        where R: Serialize;
+}
+
+impl GetBroadcaster for State {
+    fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
+        where R: Serialize
+    {
+        let payload = serde_json::to_value(action_result)
+            .or_else(|err| Err(Error::SerializationError(err)))?;
+
+
+        self.broadcaster.publish(channels, action_name, payload)
+            .or_else(|err| Err(Error::PublishError(err)))?;
+
+        Ok(())
     }
 }

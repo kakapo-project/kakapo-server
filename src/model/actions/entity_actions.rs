@@ -54,6 +54,7 @@ use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::auth::auth_store::AuthStore;
 use model::auth::auth_store::AuthStoreFunctions;
+use model::state::GetBroadcaster;
 
 
 ///decorator for permission in listing items
@@ -96,8 +97,9 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let user_permissions = S::get_permissions::<AuthStore>(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
+        let raw_results_name = raw_results.get_name();
 
-        let GetAllEntitiesResult(inner_results) = raw_results;
+        let GetAllEntitiesResult(inner_results) = raw_results.get_data();
 
         debug!("filtering list based on permissions");
         let filtered_results = inner_results.into_iter()
@@ -107,7 +109,7 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
             })
             .collect();
 
-        Ok(GetAllEntitiesResult(filtered_results))
+        ActionRes::new(&raw_results_name, GetAllEntitiesResult(filtered_results))
     }
 }
 
@@ -150,7 +152,7 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let entities: Vec<T> = ER::get_all(state)
             .or_else(|err| Err(Error::Entity(err)))?;
-        ActionRes::new(GetAllEntitiesResult::<T>(entities))
+        ActionRes::new("GetAllEntities", GetAllEntitiesResult::<T>(entities))
     }
 }
 
@@ -168,7 +170,7 @@ impl<T, S, ER> GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
         let action = Self {
@@ -187,7 +189,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = GetEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -195,7 +197,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
             .or_else(|err| Err(Error::Entity(err)))?;
 
         match maybe_entity {
-            Some(entity) => ActionRes::new(GetEntityResult::<T>(entity)),
+            Some(entity) => ActionRes::new("GetEntity", GetEntityResult::<T>(entity)),
             None => Err(Error::NotFound),
         }
     }
@@ -207,7 +209,7 @@ pub struct CreateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
@@ -218,7 +220,7 @@ impl<T, S, EM> CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
         <Self as Action<S>>::Ret: Clone,
 {
     pub fn new(data: T) -> WithPermissionFor<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -261,7 +263,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = CreateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -271,8 +273,8 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
-                            Upserted::Update { old, new } => ActionRes::new(CreateEntityResult::Updated { old, new }),
-                            Upserted::Create { new } => ActionRes::new(CreateEntityResult::Created(new)),
+                            Upserted::Update { old, new } => ActionRes::new("CreateEntity", CreateEntityResult::Updated { old, new }),
+                            Upserted::Create { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created(new)),
                         }
                     })
             },
@@ -281,8 +283,8 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
-                            Created::Success { new } => ActionRes::new(CreateEntityResult::Created(new)),
-                            Created::Fail { existing } => ActionRes::new(CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
+                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created(new)),
+                            Created::Fail { existing } => ActionRes::new("CreateEntity", CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
                         }
                     })
 
@@ -292,7 +294,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         match res {
-                            Created::Success { new } => ActionRes::new(CreateEntityResult::Created(new)),
+                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created(new)),
                             Created::Fail { .. } => Err(Error::AlreadyExists),
                         }
                     })
@@ -307,7 +309,7 @@ pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub name: String,
     pub data: T,
@@ -319,7 +321,7 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![
@@ -346,7 +348,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = UpdateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -357,9 +359,9 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Updated::Success { old, new } =>
-                                ActionRes::new(UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new("UpdateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail =>
-                                ActionRes::new(UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
+                                ActionRes::new("UpdateEntity", UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
                         }
                     })
 
@@ -370,7 +372,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Updated::Success { old, new } =>
-                                ActionRes::new(UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new("UpdateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail => Err(Error::NotFound),
                         }
                     })
@@ -385,7 +387,7 @@ pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub name: String,
     pub on_not_found: OnNotFound,
@@ -396,7 +398,7 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![
@@ -422,7 +424,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = DeleteEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -433,8 +435,8 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Deleted::Success { old } =>
-                                ActionRes::new(DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
-                            Deleted::Fail => ActionRes::new(DeleteEntityResult::NotFound(self.name.to_owned())),
+                                ActionRes::new("DeleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                            Deleted::Fail => ActionRes::new("DeleteEntity", DeleteEntityResult::NotFound(self.name.to_owned())),
                         }
                     })
 
@@ -445,7 +447,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
                     .and_then(|res| {
                         match res {
                             Deleted::Success { old } =>
-                                ActionRes::new(DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                                ActionRes::new("DeleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
                             Deleted::Fail => Err(Error::NotFound),
                         }
                     })
@@ -467,6 +469,16 @@ mod test {
     use scripting::Scripting;
     use diesel::r2d2::Pool;
     use model::state::AuthClaims;
+    use connection::Broadcaster;
+    use std::sync::Arc;
+    use connection::BroadcasterError;
+
+    struct TestBroadcaster;
+    impl Broadcaster for TestBroadcaster {
+        fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
+            Ok(())
+        }
+    }
 
     fn get_state() -> State {
         let script_path = "./path/to/scripts".to_string();
@@ -477,7 +489,8 @@ mod test {
 
         let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
         let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
-        State::new(pooled_conn, Scripting::new(script_path), Some(claims))
+        let broadcaster = Arc::new(TestBroadcaster);
+        State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster)
     }
 
     #[test]

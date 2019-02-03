@@ -52,6 +52,7 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
+use model::state::GetBroadcaster;
 
 
 // Query Action
@@ -66,7 +67,7 @@ impl<S, ER, SC> RunScript<S, ER, SC>
     where
         ER: entity::RetrieverFunctions<data::Script, S> + Send,
         SC: script::ScriptActionFunctions<S> + Send,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -87,7 +88,7 @@ impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
     where
         ER: entity::RetrieverFunctions<data::Script, S> + Send,
         SC: script::ScriptActionFunctions<S> + Send,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -103,6 +104,6 @@ impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
                 SC::run_script(state, &script)
                     .or_else(|err| Err(Error::Script(err)))
             })
-            .and_then(|res| ActionRes::new(RunScriptResult(res)))
+            .and_then(|res| ActionRes::new("RunScript", RunScriptResult(res)))
     }
 }

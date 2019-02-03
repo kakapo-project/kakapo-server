@@ -52,6 +52,7 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
+use model::state::GetBroadcaster;
 
 
 // Table Actions
@@ -66,7 +67,7 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -87,7 +88,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -106,7 +107,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(GetTableDataResult(res)))
+            .and_then(|res| ActionRes::new("QueryTableData", GetTableDataResult(res)))
     }
 }
 
@@ -124,7 +125,7 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -149,7 +150,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -172,7 +173,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(InsertTableDataResult(res)))
+            .and_then(|res| ActionRes::new("InsertTableData", InsertTableDataResult(res)))
     }
 }
 
@@ -189,7 +190,7 @@ impl<S, ER, TC> ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -214,7 +215,7 @@ impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
 {
     type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -236,7 +237,7 @@ impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(ModifyTableDataResult(res)))
+            .and_then(|res| ActionRes::new("ModifyTableData", ModifyTableDataResult(res)))
     }
 }
 
@@ -253,7 +254,7 @@ impl<S, ER, TC> RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -278,7 +279,7 @@ impl<S, ER, TC> Action<S> for RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -300,6 +301,6 @@ impl<S, ER, TC> Action<S> for RemoveTableData<S, ER, TC>
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
             })
-            .and_then(|res| ActionRes::new(RemoveTableDataResult(res)))
+            .and_then(|res| ActionRes::new("RemoveTableData", RemoveTableDataResult(res)))
     }
 }
