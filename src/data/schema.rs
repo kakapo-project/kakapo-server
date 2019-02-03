@@ -26,7 +26,7 @@ table! {
 table! {
     permission (permission_id) {
         permission_id -> Int8,
-        name -> Varchar,
+        data -> Json,
     }
 }
 

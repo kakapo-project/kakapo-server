@@ -44,6 +44,8 @@ use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
 use model::auth::permissions::GetUserInfo;
+use model::auth::auth_store::AuthStore;
+use model::auth::auth_store::AuthStoreFunctions;
 
 
 #[derive(Debug)]
@@ -122,6 +124,7 @@ impl<A, S> WithPermissionRequired<A, S>
 impl<A, S> Action<S> for WithPermissionRequired<A, S>
     where
         A: Action<S>,
+        AuthStore: AuthStoreFunctions<S>,
         S: GetConnection + GetUserInfo,
 {
     type Ret = A::Ret;
@@ -130,7 +133,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions(state).unwrap_or_default();
+        let user_permissions = S::get_permissions::<AuthStore>(state).unwrap_or_default();
         let is_permitted = self.permissions.is_permitted(&user_permissions);
 
         if is_permitted {
@@ -169,6 +172,7 @@ impl<A, S> WithLoginRequired<A, S>
 impl<A, S> Action<S> for WithLoginRequired<A, S>
     where
         A: Action<S>,
+        AuthStore: AuthStoreFunctions<S>,
         S: GetConnection + GetUserInfo,
 {
     type Ret = A::Ret;
@@ -177,7 +181,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions(state);
+        let user_permissions = S::get_permissions::<AuthStore>(state);
         match user_permissions {
             None => {
                 debug!("Permission denied, required login");
@@ -221,6 +225,7 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo,
+        AuthStore: AuthStoreFunctions<S>,
         <A as Action<S>>::Ret : Clone,
 {
     type Ret = A::Ret;
@@ -229,8 +234,8 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions(state).unwrap_or_default();
-        let all_permissions = S::get_all_permissions(state);
+        let user_permissions = S::get_permissions::<AuthStore>(state).unwrap_or_default();
+        let all_permissions = S::get_all_permissions::<AuthStore>(state);
 
         let is_permitted = (self.required_permission)(&user_permissions, &all_permissions);
 

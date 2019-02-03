@@ -26,17 +26,22 @@ impl<D> QueryActionFunctions<State> for QueryAction<D>
     where D: DatabaseFunctions,
 {
     fn run_query(conn: &State, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError>  {
-        let db_user = conn.get_db_user();
+        let username = conn.get_username();
         let db_params = params.value_list();
 
-        let result = D::exec(conn.get_conn(), "SET SESSION AUTHORIZATION $1", vec![Value::String(db_user)])
-            .and_then(|res| {
-                D::exec(conn.get_conn(), &query.statement, db_params)
-            })
-            .or_else(|err| Err(QueryError::db_error(err)));
+        if let Some(db_user) = username.to_owned() {
+            D::exec(conn.get_conn(), "SET SESSION AUTHORIZATION $1", vec![Value::String(db_user)])
+                .or_else(|err| Err(QueryError::db_error(err)))?;
+        }
 
-        D::exec(conn.get_conn(), "RESET SESSION AUTHORIZATION", vec![])
-            .or_else(|err| Err(QueryError::db_error(err)))
-            .and_then(|res| result)
+        let result = D::exec(conn.get_conn(), &query.statement, db_params)
+            .or_else(|err| Err(QueryError::db_error(err)))?;
+
+        if let Some(db_user) = username {
+            D::exec(conn.get_conn(), "RESET SESSION AUTHORIZATION", vec![])
+                .or_else(|err| Err(QueryError::db_error(err)))?;
+        }
+
+        Ok(result)
     }
 }

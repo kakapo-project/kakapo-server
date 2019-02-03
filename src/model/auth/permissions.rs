@@ -1,26 +1,27 @@
 use std::collections::HashSet;
 
-use model::auth::internal::PermissionMgr;
-use model::auth::internal::PermissionMgrFunctions;
+use model::auth::auth_store::AuthStore;
+use model::auth::auth_store::AuthStoreFunctions;
 use model::state::State;
 use std::marker::PhantomData;
 use model::state::GetConnection;
+use std::iter::FromIterator;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Permission {
     HasRole {
         rolename: String
     },
 
     GetEntity {
-        type_name: &'static str,
+        type_name: String,
         entity_name: String,
     },
     CreateEntity {
-        type_name: &'static str,
+        type_name: String,
     },
     ModifyEntity {
-        type_name: &'static str,
+        type_name: String,
         entity_name: String,
     },
 
@@ -58,20 +59,20 @@ impl Permission {
 
     pub fn read_entity<T>(name: String) -> Self {
         Permission::GetEntity {
-            type_name: "temporary...", //TODO: this should be a const
+            type_name: "temporary...".to_string(), //TODO: this should be a const
             entity_name: name,
         }
     }
 
     pub fn create_entity<T>() -> Self {
         Permission::CreateEntity {
-            type_name: "temporary...", //TODO: this should be a const
+            type_name: "temporary...".to_string(), //TODO: this should be a const
         }
     }
 
     pub fn modify_entity<T>(name: String) -> Self {
         Permission::ModifyEntity {
-            type_name: "temporary...", //TODO: this should be a const
+            type_name: "temporary...".to_string(), //TODO: this should be a const
             entity_name: name,
         }
     }
@@ -119,7 +120,8 @@ impl Permission {
 
 
 pub trait GetUserInfo
-    where Self: Send + GetConnection
+    where
+        Self: Send + Sized + GetConnection,
 {
     const ADMIN_USER_ID: i64;
 
@@ -129,11 +131,13 @@ pub trait GetUserInfo
 
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
-    fn get_permissions(&self) -> Option<HashSet<Permission>>;
+    fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
+        where AS: AuthStoreFunctions<Self>;
 
-    fn get_all_permissions(&self) -> HashSet<Permission>;
+    fn get_all_permissions<AS>(&self) -> HashSet<Permission>
+        where AS: AuthStoreFunctions<Self>;
 
-    fn get_db_user(&self) -> String;
+    fn get_username(&self) -> Option<String>;
 
 }
 
@@ -150,12 +154,32 @@ impl GetUserInfo for State {
         self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
     }
 
-    fn get_permissions(&self) -> Option<HashSet<Permission>> {
-        unimplemented!()
+    fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
+        where AS: AuthStoreFunctions<Self>
+    {
+        self.get_user_id().map(|user_id| {
+            let raw_permissions_result = AS::get_user_permissions(self, user_id);
+            let raw_permissions = match raw_permissions_result {
+                Ok(res) => res,
+                Err(err) => {
+                    error!("encountered an error when trying to get all permissions: {:?}", err);
+                    vec![]
+                }
+            };
+
+            let permissions = raw_permissions.into_iter()
+                .flat_map(|raw_permission| {
+                    raw_permission.as_permission()
+                });
+
+            HashSet::from_iter(permissions)
+        })
     }
 
-    fn get_all_permissions(&self) -> HashSet<Permission> {
-        let raw_permissions_result = PermissionMgr::get_all_permissions(self);
+    fn get_all_permissions<AS>(&self) -> HashSet<Permission>
+        where AS: AuthStoreFunctions<State>
+    {
+        let raw_permissions_result = AS::get_all_permissions(self);
         let raw_permissions = match raw_permissions_result {
             Ok(res) => res,
             Err(err) => {
@@ -164,10 +188,15 @@ impl GetUserInfo for State {
             }
         };
 
-        unimplemented!()
+        let permissions = raw_permissions.into_iter()
+            .flat_map(|raw_permission| {
+                raw_permission.as_permission()
+            });
+
+        HashSet::from_iter(permissions)
     }
 
-    fn get_db_user(&self) -> String {
-        "my_user".to_string()
+    fn get_username(&self) -> Option<String> {
+        self.claims.to_owned().map(|x| x.get_username())
     }
 }

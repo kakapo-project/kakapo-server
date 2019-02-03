@@ -1,5 +1,5 @@
 
-mod auth;
+pub mod auth;
 pub mod actions;
 pub mod state;
 

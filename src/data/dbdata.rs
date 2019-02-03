@@ -11,7 +11,7 @@ use std::fmt::Debug;
 use data::conversion::ConvertRaw;
 use data::conversion::GenerateRaw;
 use serde::Serialize;
-
+use model::auth::permissions::Permission;
 
 // Queryables
 pub trait RawEntityTypes
@@ -173,9 +173,18 @@ pub struct RawUser {
     pub email: String,
 }
 
-#[derive(Debug, Queryable, QueryableByName)]
+#[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
 #[table_name = "permission"]
 pub struct RawPermission {
     pub permission_id: i64,
-    pub name: String,
+    pub data: serde_json::Value,
+}
+
+impl RawPermission {
+    pub fn as_permission(self) -> Option<Permission> {
+        match serde_json::from_value(self.data) {
+            Ok(res) => Some(res),
+            Err(err) => None,
+        }
+    }
 }

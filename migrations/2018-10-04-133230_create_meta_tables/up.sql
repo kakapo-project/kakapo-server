@@ -93,7 +93,7 @@ CREATE TABLE "user_role" (
 
 CREATE TABLE "permission" (
     "permission_id"           BIGSERIAL PRIMARY KEY,
-    "name"                    VARCHAR NOT NULL
+    "data"                    JSON NOT NULL
 );
 
 CREATE TABLE "role_permission" (

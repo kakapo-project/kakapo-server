@@ -10,9 +10,9 @@ use diesel::sql_types::Integer;
 use diesel::sql_types::BigInt;
 
 
-pub struct PermissionMgr;
+pub struct AuthStore;
 
-pub trait PermissionMgrFunctions<S>
+pub trait AuthStoreFunctions<S>
     where Self: Send
 {
 
@@ -20,7 +20,7 @@ pub trait PermissionMgrFunctions<S>
     fn get_all_permissions(state: &S) -> Result<Vec<RawPermission>, UserManagementError>;
 }
 
-impl PermissionMgrFunctions<State> for PermissionMgr {
+impl AuthStoreFunctions<State> for AuthStore {
 
     fn get_user_permissions(state: &State, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
         let query = r#"

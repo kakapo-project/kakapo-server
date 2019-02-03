@@ -1,7 +1,7 @@
 
 pub mod permissions;
 pub mod error;
-mod internal;
+pub mod auth_store;
 
 use jsonwebtoken::{decode, encode, Header, Validation};
 use bcrypt::verify;

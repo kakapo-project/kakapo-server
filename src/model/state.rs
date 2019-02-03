@@ -67,6 +67,10 @@ impl AuthClaims {
         self.sub
     }
 
+    pub fn get_username(&self) -> String {
+        self.username.to_owned()
+    }
+
     pub fn is_user_admin(&self) -> bool {
         self.is_admin
     }
