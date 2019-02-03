@@ -21,6 +21,7 @@ use model::state::State;
 use model::state::GetConnection;
 use model::auth::permissions::GetUserInfo;
 
+#[derive(Debug, Clone)]
 pub struct Retriever;
 macro_rules! make_retrievers {
     ($entity:ident, $EntityType:ty) => (
@@ -46,6 +47,7 @@ make_retrievers!(table, data::Table);
 make_retrievers!(query, data::Query);
 make_retrievers!(script, data::Script);
 
+#[derive(Debug, Clone)]
 pub struct Modifier;
 
 fn get_user_id(conn: &State) -> i64 {

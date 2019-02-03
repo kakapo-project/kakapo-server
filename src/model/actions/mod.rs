@@ -50,6 +50,7 @@ impl<R> OkAction<R>
 
 pub type ActionResult<R> = Result<OkAction<R>, Error>;
 
+#[derive(Debug, Clone)]
 pub struct ActionRes;
 impl ActionRes {
     pub fn new<R>(name: &str, data: R) -> ActionResult<R>
@@ -62,7 +63,7 @@ impl ActionRes {
 
 pub trait Action<S = State>
     where
-        Self: Send,
+        Self: Send + Debug,
         Self::Ret: Send + Debug + Serialize,
 {
     type Ret;

@@ -9,15 +9,16 @@ use database::DatabaseFunctions;
 use model::state::GetConnection;
 use database::DbError;
 use std::marker::PhantomData;
+use std::fmt::Debug;
 
 
+#[derive(Debug, Clone)]
 pub struct TableAction<D = Database> {
     phantom_data: PhantomData<D>,
 }
 
-
 pub trait TableActionFunctions<S>
-    where Self: Send,
+    where Self: Send + Debug,
 {
     fn query(conn: &S, table: &data::Table) -> Result<data::RawTableData, TableError>;
 

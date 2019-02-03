@@ -1,5 +1,10 @@
 extern crate kakapo_api;
 extern crate actix_web;
+extern crate serde;
+#[macro_use]
+extern crate serde_json;
+extern crate env_logger;
+extern crate log;
 
 use actix_web::{http, test, App, HttpRequest, HttpResponse};
 use actix_web::test::TestServer;
@@ -12,9 +17,15 @@ use kakapo_api::Channels;
 use kakapo_api::BroadcasterError;
 use kakapo_api::KakapoRouter;
 use actix_web::test::TestServerBuilder;
+use actix_web::HttpMessage;
+use std::str;
+use actix_web::http::Method;
+use log::LevelFilter;
+use env_logger::{Builder, Target};
 
-
+#[derive(Debug)]
 struct TestState(KakapoState);
+#[derive(Debug)]
 struct TestBroadcaster;
 
 impl KakapoBroadcaster for TestBroadcaster {
@@ -24,22 +35,30 @@ impl KakapoBroadcaster for TestBroadcaster {
         action_name: String,
         action_result: serde_json::Value,
     ) -> Result<(), BroadcasterError> {
-        unimplemented!()
+        //do nothing
+        Ok(())
     }
 }
 
 impl GetKakapoState<TestBroadcaster> for TestState {
     fn get_app_state(&self) -> &KakapoState {
-        unimplemented!()
+        &self.0
     }
 
     fn get_broadcaster(&self) -> Arc<KakapoBroadcaster> {
-        unimplemented!()
+        Arc::new(TestBroadcaster)
     }
 }
 
 #[test]
 fn test_start_server() {
+    Builder::new()
+        .target(Target::Stdout)
+        .filter_level(LevelFilter::Warn)
+        .filter_module("kakapo", LevelFilter::Debug)
+        .filter_module("actix_web", LevelFilter::Info)
+        .init();
+
     let server_builder: TestServerBuilder<TestState, _> = TestServer::build_with_state(|| {
         let state = KakapoStateBuilder::new()
             .host("localhost")
@@ -59,5 +78,22 @@ fn test_start_server() {
         .start(|app| {
             app.kakapo_routes();
         });
+
+
+    let json_request = json!({
+        "name": "my_query",
+        "description": "blah blah blah",
+        "statement": "SELECT * FROM a_table"
+    });
+    let request = server
+        .client(Method::POST, "/manage/createQuery")
+        .json(json_request)
+        .unwrap();
+    let response = server.execute(request.send()).unwrap();
+    println!("response: {:?}", &response);
+
+    let bytes = server.execute(response.body()).unwrap();
+    let body = str::from_utf8(&bytes).unwrap();
+    println!("{:?}", &body);
 
 }

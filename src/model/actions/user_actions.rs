@@ -19,6 +19,7 @@ use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 
+#[derive(Debug)]
 pub struct Authenticate<S = State, AF = Auth> {
     user_identifier: String,
     password: String,
@@ -58,6 +59,7 @@ impl<S, AF> Action<S> for Authenticate<S, AF>
 
 
 /// User Auth: Add user
+#[derive(Debug)]
 pub struct AddUser<S = State, AF = Auth> {
     user: data::auth::NewUser,
     phantom_data: PhantomData<(S, AF)>,
@@ -96,6 +98,7 @@ impl<S, AF> Action<S> for AddUser<S, AF>
 }
 
 /// Add User with an invitation token
+#[derive(Debug)]
 pub struct SetupUser<S = State, AF = Auth> {
     user: data::auth::NewUser,
     phantom_data: PhantomData<(S, AF)>,
@@ -135,6 +138,7 @@ impl<S, AF> Action<S> for SetupUser<S, AF>
 }
 
 /// User Auth: Remove User
+#[derive(Debug)]
 pub struct RemoveUser<S = State, AF = Auth> {
     user_identifier: String,
     phantom_data: PhantomData<(S, AF)>,
@@ -174,6 +178,7 @@ impl<S, AF> Action<S> for RemoveUser<S, AF>
 
 
 /// User Auth: Get All users
+#[derive(Debug)]
 pub struct GetAllUsers<S = State, AF = Auth> {
     phantom_data: PhantomData<(S, AF)>,
 }
@@ -211,6 +216,7 @@ impl<S, AF> Action<S> for GetAllUsers<S, AF>
 }
 
 /// User Auth: Set user password
+#[derive(Debug)]
 pub struct SetUserPassword<S = State, AF = Auth> {
     user_identifier: String,
     password: String,
@@ -258,6 +264,7 @@ impl<S, AF> Action<S> for SetUserPassword<S, AF>
 
 
 /// User Auth: Email user for invitation
+#[derive(Debug)]
 pub struct InviteUser<S = State, AF = Auth> {
     email: String,
     phantom_data: PhantomData<(S, AF)>,
@@ -296,6 +303,7 @@ impl<S, AF> Action<S> for InviteUser<S, AF>
 }
 
 /// Role Auth: Add Role
+#[derive(Debug)]
 pub struct AddRole<S = State, AF = Auth> {
     role: data::auth::Role,
     phantom_data: PhantomData<(S, AF)>,
@@ -334,6 +342,7 @@ impl<S, AF> Action<S> for AddRole<S, AF>
 }
 
 /// Role Auth: Remove role
+#[derive(Debug)]
 pub struct RemoveRole<S = State, AF = Auth> {
     rolename: String,
     phantom_data: PhantomData<(S, AF)>,
@@ -372,6 +381,7 @@ impl<S, AF> Action<S> for RemoveRole<S, AF>
 }
 
 /// Role Auth: get all role
+#[derive(Debug)]
 pub struct GetAllRoles<S = State, AF = Auth> {
     phantom_data: PhantomData<(S, AF)>,
 }
@@ -408,6 +418,7 @@ impl<S, AF> Action<S> for GetAllRoles<S, AF>
 }
 
 /// Role Auth: add permission
+#[derive(Debug)]
 pub struct AttachPermissionForRole<S = State, AF = Auth> {
     rolename: String,
     permission: Permission,
@@ -453,6 +464,7 @@ impl<S, AF> Action<S> for AttachPermissionForRole<S, AF>
 }
 
 /// Role Auth: remove permission
+#[derive(Debug)]
 pub struct DetachPermissionForRole<S = State, AF = Auth> {
     rolename: String,
     permission: Permission,
@@ -498,6 +510,7 @@ impl<S, AF> Action<S> for DetachPermissionForRole<S, AF>
 }
 
 /// Role Auth: add role for user
+#[derive(Debug)]
 pub struct AttachRoleForUser<S = State, AF = Auth> {
     rolename: String,
     user_identifier: String,
@@ -542,6 +555,7 @@ impl<S, AF> Action<S> for AttachRoleForUser<S, AF>
 }
 
 /// Role Auth: remove role for user
+#[derive(Debug)]
 pub struct DetachRoleForUser<S = State, AF = Auth> {
     rolename: String,
     user_identifier: String,

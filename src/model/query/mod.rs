@@ -11,13 +11,15 @@ use model::auth::permissions::GetUserInfo;
 use data::Value;
 use data::QueryParams;
 use std::marker::PhantomData;
+use std::fmt::Debug;
 
+#[derive(Debug, Clone)]
 pub struct QueryAction<D = Database> {
     phantom_data: PhantomData<D>,
 }
 
 pub trait QueryActionFunctions<S>
-    where Self: Send,
+    where Self: Send + Debug,
 {
     fn run_query(conn: &S, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError> ;
 }

@@ -5,6 +5,7 @@ use actix::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
 use connection::AppStateBuilder;
+use std::fmt;
 
 pub type Conn = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -12,6 +13,12 @@ pub struct Executor {
     pool: Pool<ConnectionManager<PgConnection>>,
     script_path: String,
     token_secret: String,
+}
+
+impl fmt::Debug for Executor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Executor ...")
+    }
 }
 
 impl Executor {

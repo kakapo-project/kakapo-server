@@ -6,9 +6,10 @@ use actix::sync::SyncArbiter;
 use num_cpus;
 use std::sync::Arc;
 pub use model::state::Channels;
+use std::fmt::Debug;
 
 ///Put this somewhere in your State
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     connections: Addr<executor::Executor>,
 }
@@ -21,7 +22,7 @@ pub enum BroadcasterError {
 
 ///Implement this for your state for broadcasting info
 pub trait Broadcaster
-    where Self: Send + Sync + 'static
+    where Self: Send + Debug + Sync + 'static
 {
     fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError>;
 }

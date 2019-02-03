@@ -27,7 +27,8 @@ use actix_web::http::header;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
-pub type NoQuery = ();
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NoQuery {}
 
 
 /// Build `Action` from an http request

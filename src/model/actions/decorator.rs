@@ -16,9 +16,10 @@ use model::auth::auth_store::AuthStoreFunctions;
 use model::state::GetBroadcaster;
 use model::actions::OkAction;
 use model::state::GetConnection;
+use std::fmt;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Requirements {
     AllOf(Vec<Permission>),
     AnyOf(Vec<Permission>),
@@ -51,6 +52,7 @@ impl Requirements {
 }
 
 ///decorator for permission
+#[derive(Debug, Clone)]
 pub struct WithPermissionRequired<A, S = State>
     where
         A: Action<S>,
@@ -117,6 +119,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
 }
 
 ///decorator for login
+#[derive(Debug, Clone)]
 pub struct WithLoginRequired<A, S = State>
     where
         A: Action<S>,
@@ -172,6 +175,16 @@ pub struct WithPermissionFor<A, S = State>
     action: A,
     required_permission: Box<Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send>,
     phantom_data: PhantomData<(S)>,
+}
+
+impl<A, S> fmt::Debug for WithPermissionFor<A, S>
+    where
+        A: Action<S>,
+        S: GetConnection + GetUserInfo + GetBroadcaster,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "WithPermissionFor ...")
+    }
 }
 
 impl<A, S> WithPermissionFor<A, S>
@@ -268,6 +281,7 @@ impl<A, S> Action<S> for WithTransaction<A, S>
 }
 
 ///decorator for dispatching to channel
+#[derive(Debug, Clone)]
 pub struct WithDispatch<A, S = State>
     where
         A: Action<S>,

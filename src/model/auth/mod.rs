@@ -9,11 +9,13 @@ use model::state::GetConnection;
 use data::auth::Role;
 use model::auth::permissions::Permission;
 use model::auth::permissions::GetUserInfo;
+use std::fmt::Debug;
 
+#[derive(Debug, Clone)]
 pub struct Auth;
 pub trait AuthFunctions<S>
     where
-        Self: Send,
+        Self: Send + Debug,
         S: GetConnection + GetUserInfo,
 {
     fn authenticate(state: &S, user_identifier: &str, password: &str) -> Result<bool, UserManagementError>;

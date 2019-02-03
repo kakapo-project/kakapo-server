@@ -15,6 +15,8 @@ use connection::Broadcaster;
 use std::sync::Arc;
 use serde::Serialize;
 use model::actions::error::Error;
+use std::fmt::Debug;
+use std::fmt;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -80,6 +82,12 @@ pub struct State {
     pub broadcaster: Arc<Broadcaster>,
 }
 
+impl fmt::Debug for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "State")
+    }
+}
+
 impl State {
     pub fn new(
         database: DBConnector,
@@ -97,7 +105,7 @@ impl State {
 }
 
 pub trait GetConnection
-    where Self: Send
+    where Self: Send + Debug
 {
     type Connection;
     fn get_conn(&self) -> &Self::Connection;
@@ -125,7 +133,7 @@ impl GetConnection for State {
 }
 
 pub trait GetScripting
-    where Self: Send
+    where Self: Send + Debug
 {
     fn get_scripting(&self) -> &Scripting;
 }
@@ -137,7 +145,7 @@ impl GetScripting for State {
 }
 
 pub trait GetBroadcaster
-    where Self: Send
+    where Self: Send + Debug
 {
     fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
         where R: Serialize;

@@ -56,8 +56,8 @@ impl<S, ER, QC> RunQuery<S, ER, QC>
 
 impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
     where
-        ER: entity::RetrieverFunctions<data::Query, S> + Send,
-        QC: query::QueryActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Query, S>,
+        QC: query::QueryActionFunctions<S>,
         S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = RunQueryResult;

@@ -34,6 +34,7 @@ use model::state::GetBroadcaster;
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
+#[derive(Debug, Clone)]
 pub struct WithFilterListByPermission<A, T, S = State, ER = entity::Controller>
     where
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
@@ -279,7 +280,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
 }
 
 ///update table
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UpdateEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,
@@ -357,7 +358,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 }
 
 ///delete table
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DeleteEntity<T, S = State, EM = entity::Controller>
     where
         T: RawEntityTypes,

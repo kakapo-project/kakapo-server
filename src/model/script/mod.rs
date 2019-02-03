@@ -4,12 +4,16 @@ pub mod error;
 use model::state::State;
 use data;
 use model::script::error::ScriptError;
+use std::fmt::Debug;
 
 use serde_json;
 use model::state::GetScripting;
 
+#[derive(Debug, Clone)]
 pub struct ScriptAction;
-pub trait ScriptActionFunctions<S> {
+pub trait ScriptActionFunctions<S>
+    where Self: Send + Debug
+{
     fn run_script(conn: &S, script: &data::Script) -> Result<serde_json::Value, ScriptError>;
 }
 

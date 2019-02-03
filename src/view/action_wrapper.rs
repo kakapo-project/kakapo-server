@@ -14,6 +14,7 @@ use connection::Broadcaster;
 use std::sync::Arc;
 
 
+#[derive(Debug)]
 pub struct ActionWrapper<A: Action> {
     action: Result<A, serde_json::Error>,
     broadcaster: Arc<Broadcaster>,
@@ -63,6 +64,7 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
     type Result = ActionResult<A::Ret>;
 
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
+        debug!("handling call : {:?}", &msg);
 
         let auth_claims = msg.decode_token(self.get_token_secret());
         let broadcaster = msg.get_broadcaster();
@@ -74,7 +76,9 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
 
 
         let state = State::new(conn, scripting, auth_claims, broadcaster);
+        debug!("calling action...");
         let result = action_req.call(&state);
+        debug!("action result: {:?}", &result);
         result
     }
 }

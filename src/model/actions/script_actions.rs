@@ -30,8 +30,8 @@ pub struct RunScript<S = State, ER = entity::Controller, SC = script::ScriptActi
 
 impl<S, ER, SC> RunScript<S, ER, SC>
     where
-        ER: entity::RetrieverFunctions<data::Script, S> + Send,
-        SC: script::ScriptActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Script, S>,
+        SC: script::ScriptActionFunctions<S>,
         S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -51,8 +51,8 @@ impl<S, ER, SC> RunScript<S, ER, SC>
 
 impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
     where
-        ER: entity::RetrieverFunctions<data::Script, S> + Send,
-        SC: script::ScriptActionFunctions<S> + Send,
+        ER: entity::RetrieverFunctions<data::Script, S>,
+        SC: script::ScriptActionFunctions<S>,
         S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = RunScriptResult;

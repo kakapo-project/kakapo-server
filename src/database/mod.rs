@@ -1,5 +1,6 @@
 use connection::executor::Conn;
 use data;
+use std::fmt::Debug;
 
 #[derive(Debug, Fail)]
 pub enum DbError {
@@ -11,9 +12,10 @@ pub enum DbError {
     Unknown,
 }
 
+#[derive(Debug, Clone)]
 pub struct Database;
 pub trait DatabaseFunctions
-    where Self: Send,
+    where Self: Send + Debug,
 {
     fn exec(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError>;
 }

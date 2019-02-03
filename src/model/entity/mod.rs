@@ -15,13 +15,15 @@ use self::internals::Modifier;
 use self::update_state::UpdateState;
 use model::entity::update_state::UpdateAction;
 use model::entity::update_state::UpdateActionFunctions;
+use std::fmt::Debug;
 
 
+#[derive(Debug, Clone)]
 pub struct Controller; //TODO: controller should be state agnostic (dependency inject)
 
 pub trait RetrieverFunctions<O, S>
     where
-        Self: Send,
+        Self: Send + Debug,
         O: RawEntityTypes,
         S: GetConnection,
 {
@@ -40,7 +42,7 @@ pub trait RetrieverFunctions<O, S>
 
 pub trait ModifierFunctions<O, S>
     where
-        Self: Send,
+        Self: Send + Debug,
         O: RawEntityTypes,
         S: GetConnection,
 {
