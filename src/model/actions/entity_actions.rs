@@ -466,6 +466,7 @@ mod test {
     use serde_json::from_value;
     use scripting::Scripting;
     use diesel::r2d2::Pool;
+    use model::state::AuthClaims;
 
     fn get_state() -> State {
         let script_path = "./path/to/scripts".to_string();
@@ -473,12 +474,18 @@ mod test {
         let conn_manager = ConnectionManager::new(conn_url);
         let pool = Pool::new(conn_manager).unwrap();
         let pooled_conn = pool.get().unwrap();
-        State::new(pooled_conn, Scripting::new(script_path), None)
+
+        let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
+        let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
+        State::new(pooled_conn, Scripting::new(script_path), Some(claims))
     }
 
     #[test]
     fn test_create_entity() {
         let conn = PgConnection::establish("postgres://test:password@localhost:5432/test").unwrap();
+        conn.execute("TRUNCATE TABLE entity");
+        conn.execute("TRUNCATE TABLE query CASCADE");
+
         let state = get_state();
 
         let new_query: data::Query = from_value(json!({
@@ -489,5 +496,7 @@ mod test {
         let create_action = CreateEntity::<data::Query>::new(new_query);
 
         let result = create_action.call(&state);
+
+        println!("result: {:?}", &result);
     }
 }

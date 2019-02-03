@@ -25,6 +25,7 @@ use serde::Serialize;
 use connection::GetAppState;
 use connection::Broadcaster;
 use actix_web::http::header;
+use std::sync::Arc;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -117,12 +118,15 @@ pub fn procedure_handler_function<S, B, JP, QP, PB, A>(
 
     debug!("Procedure called on {:?} QUERY {:?} JSON {:?}", req.path(), &json_params, &query_params);
     let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());
+    let state = req.state();
+
+    let broadcaster = state.get_broadcaster();
     let auth_header = req.headers().get(header::AUTHORIZATION).map(|x| x.as_bytes());
 
-    req.state()
+    state
         .get_app_state()
         .connect()
-        .send(ActionWrapper::new(auth_header, action))
+        .send(ActionWrapper::new(auth_header, broadcaster, action))
         .from_err()
         .and_then(|res| {
             match res {

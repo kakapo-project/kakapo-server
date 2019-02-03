@@ -10,17 +10,21 @@ use model::state::AuthClaims;
 use model::actions::ActionResult;
 use model::actions::error::Error;
 use scripting::Scripting;
+use connection::Broadcaster;
+use std::sync::Arc;
 
 
 pub struct ActionWrapper<A: Action + Send> {
     action: Result<A, serde_json::Error>,
+    broadcaster: Arc<Broadcaster>,
     auth_header: Option<Vec<u8>>,
 }
 
 impl<A: Action + Send> ActionWrapper<A> {
-    pub fn new(auth_header: Option<&[u8]>, action: Result<A, serde_json::Error>) -> Self {
+    pub fn new(auth_header: Option<&[u8]>, broadcaster: Arc<Broadcaster>, action: Result<A, serde_json::Error>) -> Self {
         Self {
             action,
+            broadcaster,
             auth_header: auth_header.map(|x| x.to_owned()),
         }
     }
@@ -32,6 +36,14 @@ impl<A: Action + Send> ActionWrapper<A> {
                 unimplemented!()
             }
         }
+    }
+
+    fn get_broadcaster(&self) -> Arc<Broadcaster> {
+        self.broadcaster.clone()
+    }
+
+    fn get_action(self) -> Result<A, Error> {
+        self.action.or_else(|err| Err(Error::SerializationError(err)))
     }
 }
 
@@ -53,12 +65,15 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
 
         let auth_claims = msg.decode_token(self.get_token_secret());
-        let action_req = msg.action.or_else(|err| Err(Error::SerializationError(err)))?;
+        let broadcaster = msg.get_broadcaster();
+
+        let action_req = msg.get_action()?;
 
         let conn = self.get_connection();
         let scripting = Scripting::new(self.get_scripts_path());
 
-        let state = State::new(conn, scripting, auth_claims);
+
+        let state = State::new(conn, scripting, auth_claims, broadcaster);
         let result = action_req.call(&state);
         result
     }

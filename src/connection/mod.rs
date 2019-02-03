@@ -10,6 +10,7 @@ use diesel::r2d2::PooledConnection;
 use diesel::r2d2::Pool;
 use actix::sync::SyncArbiter;
 use num_cpus;
+use std::sync::Arc;
 
 ///Put this somewhere in your State
 #[derive(Clone)]
@@ -18,7 +19,9 @@ pub struct AppState {
 }
 
 ///Implement this for your state for broadcasting info
-pub trait Broadcaster {
+pub trait Broadcaster
+    where Self: Send + Sync + 'static
+{
     fn publish(&self, channels: Vec<String>);
 }
 
@@ -41,7 +44,7 @@ pub trait GetAppState<B>
 {
     fn get_app_state(&self) -> &AppState;
 
-    fn get_broadcaster(&self) -> B;
+    fn get_broadcaster(&self) -> Arc<Broadcaster>;
 }
 
 impl AppStateBuilder {

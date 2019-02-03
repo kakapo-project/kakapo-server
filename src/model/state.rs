@@ -18,6 +18,8 @@ use data::dbdata::RawEntityTypes;
 use scripting::Scripting;
 use std::collections::HashSet;
 use std::iter::FromIterator;
+use connection::Broadcaster;
+use std::sync::Arc;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -59,7 +61,7 @@ pub struct AuthClaims {
     exp: i64,
     username: String,
     is_admin: bool,
-    roles: String, //the default role that the user is interacting with
+    role: Option<String>, //the default role that the user is interacting with
 }
 
 impl AuthClaims {
@@ -80,6 +82,7 @@ pub struct State {
     pub database: DBConnector, //TODO: this should be templated
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
+    pub broadcaster: Arc<Broadcaster>,
 }
 
 impl State {
@@ -87,11 +90,13 @@ impl State {
         database: DBConnector,
         scripting: Scripting,
         claims: Option<AuthClaims>,
+        broadcaster: Arc<Broadcaster>
     ) -> Self {
         Self {
             database,
             scripting,
             claims,
+            broadcaster,
         }
     }
 }
