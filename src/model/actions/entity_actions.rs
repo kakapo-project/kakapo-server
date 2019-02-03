@@ -448,6 +448,8 @@ mod test {
     use std::sync::Arc;
     use connection::BroadcasterError;
     use data;
+    use model::actions::results::CreateEntityResult::Created;
+    use model::actions::results::DeleteEntityResult::Deleted;
 
     struct TestBroadcaster;
     impl Broadcaster for TestBroadcaster {
@@ -456,36 +458,102 @@ mod test {
         }
     }
 
-    fn get_state() -> State {
+    fn with_state<F>(f: F)
+        where F: FnOnce(&State) -> ()
+    {
         let script_path = "./path/to/scripts".to_string();
         let conn_url ="postgres://test:password@localhost:5432/test".to_string();
-        let conn_manager = ConnectionManager::new(conn_url);
+        let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
         let pool = Pool::new(conn_manager).unwrap();
         let pooled_conn = pool.get().unwrap();
 
         let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
         let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
         let broadcaster = Arc::new(TestBroadcaster);
-        State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster)
+
+        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster);
+        let conn = state.get_conn();
+
+        conn.test_transaction::<(), Error, _>(|| {
+            f(&state);
+
+            Ok(())
+        });
     }
 
     #[test]
     fn test_create_entity() {
-        let conn = PgConnection::establish("postgres://test:password@localhost:5432/test").unwrap();
-        conn.execute("TRUNCATE TABLE entity");
-        conn.execute("TRUNCATE TABLE query CASCADE");
 
-        let state = get_state();
+        with_state(|state| {
+            let new_query: data::Query = from_value(json!({
+                "name": "my_query",
+                "description": "blah blah blah",
+                "statement": "SELECT * FROM a_table"
+            })).unwrap();
+            let create_action = CreateEntity::<data::Query>::new(new_query);
 
-        let new_query: data::Query = from_value(json!({
-            "name": "my_query",
-            "description": "blah blah blah",
-            "statement": "SELECT * FROM a_table"
-        })).unwrap();
-        let create_action = CreateEntity::<data::Query>::new(new_query);
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
 
-        let result = create_action.call(&state);
+            if let Created(created_data) = data {
+                assert_eq!(created_data.name, "my_query");
+                assert_eq!(created_data.description, "blah blah blah");
+                assert_eq!(created_data.statement, "SELECT * FROM a_table");
+            } else {
+                panic!("expected a created result");
+            }
+        });
+    }
 
-        println!("result: {:?}", &result);
+    #[test]
+    fn test_update_entity() {
+        with_state(|state| {
+            let new_query: data::Query = from_value(json!({
+                "name": "my_query",
+                "description": "blah blah blah",
+                "statement": "SELECT * FROM a_table"
+            })).unwrap();
+            let create_action = CreateEntity::<data::Query>::new(new_query);
+
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
+
+            let read_action = GetEntity::<data::Query>::new("my_query".to_string());
+            let result = read_action.call(&state);
+
+            let data = result.unwrap().get_data();
+            let GetEntityResult(entity_result) = data;
+            assert_eq!(entity_result.name, "my_query");
+            assert_eq!(entity_result.description, "blah blah blah");
+            assert_eq!(entity_result.statement, "SELECT * FROM a_table");
+        });
+    }
+
+    #[test]
+    fn test_delete_entity() {
+        with_state(|state| {
+            let new_query: data::Query = from_value(json!({
+                "name": "my_query",
+                "description": "blah blah blah",
+                "statement": "SELECT * FROM a_table"
+            })).unwrap();
+            let create_action = CreateEntity::<data::Query>::new(new_query);
+
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
+
+            let delete_action = DeleteEntity::<data::Query>::new("my_query".to_string());
+            let result = delete_action.call(&state);
+            let data = result.unwrap().get_data();
+
+            if let Deleted { id, old } = data {
+                assert_eq!(id, "my_query");
+                assert_eq!(old.name, "my_query");
+                assert_eq!(old.description, "blah blah blah");
+                assert_eq!(old.statement, "SELECT * FROM a_table");
+            } else {
+                panic!("expected a deleted result");
+            }
+        });
     }
 }

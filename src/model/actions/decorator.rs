@@ -246,6 +246,7 @@ impl From<diesel::result::Error> for Error {
     // normally return any specific error, it will return the inner error
     // this is needed for the transaction part below
     fn from(diesel_error: diesel::result::Error) -> Self {
+        warn!("diesel_error: {:?}", &diesel_error);
         Error::Unknown
     }
 }
