@@ -115,6 +115,7 @@ mod test {
             .port(5432)
             .user("test")
             .pass("password")
+            .num_threads(1)
             .done()
     }
 

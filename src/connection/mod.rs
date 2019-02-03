@@ -5,7 +5,7 @@ pub mod py;
 use actix::sync::SyncArbiter;
 use num_cpus;
 use std::sync::Arc;
-use model::state::Channels;
+pub use model::state::Channels;
 
 ///Put this somewhere in your State
 #[derive(Clone)]
@@ -36,6 +36,7 @@ pub struct AppStateBuilder {
     db_name: Option<String>,
     script_path_dir: Option<String>,
     secret: Option<String>,
+    threads: usize,
 }
 
 /// Implement this for your state
@@ -48,6 +49,9 @@ pub trait GetAppState<B>
     fn get_broadcaster(&self) -> Arc<Broadcaster>;
 }
 
+
+/// Example Usage
+///
 impl AppStateBuilder {
     pub fn new() -> Self {
         Self {
@@ -58,6 +62,7 @@ impl AppStateBuilder {
             db_name: None,
             script_path_dir: None,
             secret: None,
+            threads: num_cpus::get(),
         }
     }
 
@@ -96,10 +101,15 @@ impl AppStateBuilder {
         self
     }
 
+    pub fn num_threads(mut self, threads: usize) -> Self {
+        self.threads = threads;
+        self
+    }
+
     pub fn done(self) -> AppState {
 
         let connections = SyncArbiter::start(
-            num_cpus::get(),
+            self.threads,
             move || executor::Executor::create(self.clone()));
 
 

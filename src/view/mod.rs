@@ -7,6 +7,7 @@ mod error;
 
 use std::result::Result;
 use std::result::Result::Ok;
+use actix_web::test::TestApp;
 
 // current module
 use model::actions;
@@ -183,42 +184,60 @@ pub mod users {
     }
 }
 
-pub fn router<S, B>(app: &mut CorsBuilder<S>) -> &mut CorsBuilder<S>
+pub trait Router<S, B>
     where
         S: GetAppState<B> + 'static,
         B: Broadcaster,
 {
-    app
-        .procedure("/manage/getAllTables", manage::get_all_tables)
-        .procedure("/manage/getAllQueries", manage::get_all_queries)
-        .procedure("/manage/getAllScripts", manage::get_all_scripts)
-
-        .procedure("/manage/getTable", manage::get_table)
-        .procedure("/manage/getQuery", manage::get_query)
-        .procedure("/manage/getScript", manage::get_script)
-
-        .procedure("/manage/createTable", manage::create_table)
-        .procedure("/manage/createQuery", manage::create_query)
-        .procedure("/manage/createScript", manage::create_script)
-
-        .procedure("/manage/updateTable", manage::update_table)
-        .procedure("/manage/updateQuery", manage::update_query)
-        .procedure("/manage/updateScript", manage::update_script)
-
-        .procedure("/manage/deleteTable", manage::delete_table)
-        .procedure("/manage/deleteQuery", manage::delete_query)
-        .procedure("/manage/deleteScript", manage::delete_script)
-
-        .procedure("/manage/queryTableData", manage::query_table_data)
-        .procedure("/manage/insertTableData", manage::insert_table_data)
-        .procedure("/manage/modifyTableData", manage::modify_table_data)
-        .procedure("/manage/removeTableData", manage::remove_table_data)
-
-        .procedure("/manage/runQuery", manage::run_query)
-        .procedure("/manage/runScript", manage::run_script)
-
-        .procedure("/users/authenticate", users::authenticate)
+    fn router(app: &mut Self) -> &mut Self;
 }
+
+macro_rules! implement_router {
+
+    ($App:ident) => {
+        impl<S, B> Router<S, B> for $App<S>
+            where
+                S: GetAppState<B> + 'static,
+                B: Broadcaster,
+        {
+            fn router(app: &mut Self) -> &mut Self {
+                app
+                    .procedure("/manage/getAllTables", manage::get_all_tables)
+                    .procedure("/manage/getAllQueries", manage::get_all_queries)
+                    .procedure("/manage/getAllScripts", manage::get_all_scripts)
+
+                    .procedure("/manage/getTable", manage::get_table)
+                    .procedure("/manage/getQuery", manage::get_query)
+                    .procedure("/manage/getScript", manage::get_script)
+
+                    .procedure("/manage/createTable", manage::create_table)
+                    .procedure("/manage/createQuery", manage::create_query)
+                    .procedure("/manage/createScript", manage::create_script)
+
+                    .procedure("/manage/updateTable", manage::update_table)
+                    .procedure("/manage/updateQuery", manage::update_query)
+                    .procedure("/manage/updateScript", manage::update_script)
+
+                    .procedure("/manage/deleteTable", manage::delete_table)
+                    .procedure("/manage/deleteQuery", manage::delete_query)
+                    .procedure("/manage/deleteScript", manage::delete_script)
+
+                    .procedure("/manage/queryTableData", manage::query_table_data)
+                    .procedure("/manage/insertTableData", manage::insert_table_data)
+                    .procedure("/manage/modifyTableData", manage::modify_table_data)
+                    .procedure("/manage/removeTableData", manage::remove_table_data)
+
+                    .procedure("/manage/runQuery", manage::run_query)
+                    .procedure("/manage/runScript", manage::run_script)
+
+                    .procedure("/users/authenticate", users::authenticate)
+            }
+        }
+    }
+}
+
+implement_router!(CorsBuilder);
+implement_router!(TestApp);
 
 
 #[cfg(test)]

@@ -49,6 +49,9 @@ pub use connection::AppStateBuilder as KakapoStateBuilder;
 pub use connection::AppState as KakapoState;
 pub use connection::GetAppState as GetKakapoState;
 pub use connection::Broadcaster as KakapoBroadcaster;
+pub use connection::Channels;
+pub use connection::BroadcasterError;
+use actix_web::test::TestApp;
 
 
 pub trait KakapoRouter<S, B>
@@ -64,7 +67,17 @@ impl<S, B> KakapoRouter<S, B> for CorsBuilder<S>
         S: GetKakapoState<B> + 'static,
         B: KakapoBroadcaster,
 {
-    fn kakapo_routes(&mut self) -> &mut CorsBuilder<S> {
-        view::router::<S, B>(self)
+    fn kakapo_routes(&mut self) -> &mut Self {
+        view::Router::<S, B>::router(self)
+    }
+}
+
+impl<S, B> KakapoRouter<S, B> for TestApp<S>
+    where
+        S: GetKakapoState<B> + 'static,
+        B: KakapoBroadcaster,
+{
+    fn kakapo_routes(&mut self) -> &mut Self {
+        view::Router::<S, B>::router(self)
     }
 }

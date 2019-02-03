@@ -23,6 +23,8 @@ use serde::Serialize;
 use connection::GetAppState;
 use connection::Broadcaster;
 use connection::executor::Executor;
+use actix_web::test::TestApp;
+
 // use actix_web::dev::QueryConfig; //TODO: for some reason this can't be imported, probably actix_web issue
 
 
@@ -52,37 +54,43 @@ pub trait ProcedureExt<S, B>
 
 }
 
+macro_rules! implement_router {
 
-impl<S, B> ProcedureExt<S, B> for CorsBuilder<S>
-    where
-        S: GetAppState<B> + 'static,
-        B: Broadcaster,
-{
-    fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut CorsBuilder<S>
-        where
-            Executor: Handler<ActionWrapper<A>>,
-            A: Action + Send + 'static,
-            PB: ProcedureBuilder<S, B, JP, QP, A> + Clone + 'static,
-            JP: Debug + 'static,
-            QP: Debug + 'static,
-            Json<JP>: FromRequest<S, Config = JsonConfig<S>>,
-            Query<QP>: FromRequest<S>,
-            <A as Action>::Ret: Send + Serialize,
-    {
-        self.resource(path, move |r| {
-            r.method(http::Method::POST).with_config(
-                move |(req, json_params, query_params): (HttpRequest<S>, Json<JP>, Query<QP>)| {
-                    let proc = ProcedureHandler::<S, B, JP, QP, PB, A>::setup(&procedure_builder);
-                    procedure_handler_function(proc, req, json_params, query_params)
-                },
-                |((_, json_cfg, query_cfg),)| {
-                    json_cfg
-                        .error_handler(|err, req| {
-                            procedure_bad_request_handler_function(err)
-                        });
-                }
-            );
-        })
+    ($App:ident) => {
+        impl<S, B> ProcedureExt<S, B> for $App<S>
+            where
+                S: GetAppState<B> + 'static,
+                B: Broadcaster,
+        {
+            fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut Self
+                where
+                    Executor: Handler<ActionWrapper<A>>,
+                    A: Action + Send + 'static,
+                    PB: ProcedureBuilder<S, B, JP, QP, A> + Clone + 'static,
+                    JP: Debug + 'static,
+                    QP: Debug + 'static,
+                    Json<JP>: FromRequest<S, Config = JsonConfig<S>>,
+                    Query<QP>: FromRequest<S>,
+                    <A as Action>::Ret: Send + Serialize,
+            {
+                self.resource(path, move |r| {
+                    r.method(http::Method::POST).with_config(
+                        move |(req, json_params, query_params): (HttpRequest<S>, Json<JP>, Query<QP>)| {
+                            let proc = ProcedureHandler::<S, B, JP, QP, PB, A>::setup(&procedure_builder);
+                            procedure_handler_function(proc, req, json_params, query_params)
+                        },
+                        |((_, json_cfg, query_cfg),)| {
+                            json_cfg
+                                .error_handler(|err, req| {
+                                    procedure_bad_request_handler_function(err)
+                                });
+                        }
+                    );
+                })
+            }
+        }
     }
 }
 
+implement_router!(CorsBuilder);
+implement_router!(TestApp);
