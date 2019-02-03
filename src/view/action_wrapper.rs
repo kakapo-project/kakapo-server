@@ -12,13 +12,24 @@ use model::actions::error::Error;
 use scripting::Scripting;
 use connection::Broadcaster;
 use std::sync::Arc;
+use std::str;
+use jsonwebtoken;
+use std::fmt;
 
+const BEARER: &'static str = "Bearer ";
 
-#[derive(Debug)]
 pub struct ActionWrapper<A: Action> {
     action: Result<A, serde_json::Error>,
     broadcaster: Arc<Broadcaster>,
     auth_header: Option<Vec<u8>>,
+}
+
+impl<A> fmt::Debug for ActionWrapper<A>
+    where A: Action,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.action)
+    }
 }
 
 impl<A: Action + Send> ActionWrapper<A> {
@@ -30,13 +41,40 @@ impl<A: Action + Send> ActionWrapper<A> {
         }
     }
 
-    fn decode_token(&self, token_secret: String) -> Option<AuthClaims> {
-        match &self.auth_header {
-            None => None,
-            Some(bytes) => {
-                unimplemented!()
-            }
+    fn parse_bearer_token(data: String) -> Option<String> {
+        let is_bearer = data.starts_with(BEARER);
+        if !is_bearer {
+            error!("must be a Bearer token");
+            None
+        } else {
+            let (_, token_str) = data.split_at(BEARER.len());
+
+            Some(token_str.to_string())
         }
+    }
+
+    fn decode_token(&self, token_secret: String) -> Option<AuthClaims> {
+        let auth_header = self.auth_header.to_owned();
+
+        auth_header
+            .and_then(|bytes| str::from_utf8(&bytes).ok().map(|x| x.to_string()))
+            .and_then(|data| Self::parse_bearer_token(data))
+            .and_then(|auth| {
+                info!("token: {:?}", &token_secret);
+                let decoded = jsonwebtoken::decode::<AuthClaims>(
+                    &auth,
+                    token_secret.as_ref(),
+                    &jsonwebtoken::Validation::default());
+
+                match decoded {
+                    Ok(x) => Some(x),
+                    Err(err) => {
+                        error!("encountered error trying to decode token: {:?}", &err);
+                        None
+                    }
+                }
+            })
+            .and_then(|token_data| Some(token_data.claims))
     }
 
     fn get_broadcaster(&self) -> Arc<Broadcaster> {
@@ -95,6 +133,7 @@ mod test {
     use model::state::Channels;
     use connection::BroadcasterError;
 
+    #[derive(Debug, Clone)]
     struct TestAction;
     impl<S> Action<S> for TestAction
         where S: GetConnection
@@ -106,6 +145,7 @@ mod test {
         }
     }
 
+    #[derive(Debug, Clone)]
     struct TestBroadcaster;
     impl Broadcaster for TestBroadcaster {
         fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
@@ -143,5 +183,23 @@ mod test {
 
             tokio::spawn(f);
         });
+    }
+
+    #[test]
+    fn test_parse_bearer_token() {
+        let input = "Bearer MY_🐻_TOKEN_HERE";
+        let output = ActionWrapper::<TestAction>::parse_bearer_token(input.to_string());
+
+        assert_eq!(output.unwrap(), "MY_🐻_TOKEN_HERE");
+
+        let input = "Basic usename_and_password_here";
+        let output = ActionWrapper::<TestAction>::parse_bearer_token(input.to_string());
+
+        assert_eq!(output, None);
+
+        let input = "..";
+        let output = ActionWrapper::<TestAction>::parse_bearer_token(input.to_string());
+
+        assert_eq!(output, None);
     }
 }

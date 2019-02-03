@@ -22,6 +22,7 @@ use std::str;
 use actix_web::http::Method;
 use log::LevelFilter;
 use env_logger::{Builder, Target};
+use actix_web::http::header;
 
 #[derive(Debug)]
 struct TestState(KakapoState);
@@ -50,6 +51,23 @@ impl GetKakapoState<TestBroadcaster> for TestState {
     }
 }
 
+
+// equivalent to
+// {
+//    "iss": "test",
+//    "sub": 1,
+//    "iat": 0,
+//    "exp": 9223372036854775807,
+//    "username": "AdminTest",
+//    "isAdmin": true,
+//    "role": null
+// }
+// with key "TEST_SECRET_TEST_SECRET"
+
+const TEST_KEY: &'static str = "TEST_SECRET_TEST_SECRET";
+const MASTER_KEY_TOKEN: &'static str = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjkyMjMzNzIwMzY4NTQ3NzU4MDcsImlhdCI6MCwiaXNBZG1pbiI6dHJ1ZSwiaXNzIjoidGVzdCIsInJvbGUiOm51bGwsInN1YiI6MSwidXNlcm5hbWUiOiJBZG1pblRlc3QifQ.pgSE-K4RTaWMhVfny2LwUp3f0TEHS6y-vciDcH1c2y8";
+
+
 #[test]
 fn test_start_server() {
     Builder::new()
@@ -67,7 +85,7 @@ fn test_start_server() {
             .pass("password")
             .db("test")
             .script_path("./local")
-            .token_secret("TEST_SECRET_TEST_SECRET")
+            .token_secret(TEST_KEY)
             .num_threads(1)
             .done();
 
@@ -87,6 +105,7 @@ fn test_start_server() {
     });
     let request = server
         .client(Method::POST, "/manage/createQuery")
+        .header(header::AUTHORIZATION, MASTER_KEY_TOKEN)
         .json(json_request)
         .unwrap();
     let response = server.execute(request.send()).unwrap();

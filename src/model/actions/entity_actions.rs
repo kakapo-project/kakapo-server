@@ -452,6 +452,7 @@ mod test {
     use model::actions::results::CreateEntityResult::Created;
     use model::actions::results::DeleteEntityResult::Deleted;
 
+    #[derive(Debug, Clone)]
     struct TestBroadcaster;
     impl Broadcaster for TestBroadcaster {
         fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {

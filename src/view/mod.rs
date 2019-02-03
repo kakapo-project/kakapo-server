@@ -246,7 +246,7 @@ mod test {
 
     #[test]
     fn test_get_all_entities() {
-        let data = json!(null);
+        let data = json!({});
         let query = json!({
             "showDeleted": true
         });
@@ -257,7 +257,7 @@ mod test {
 
     #[test]
     fn test_get_entity() {
-        let data = json!(null);
+        let data = json!({});
         let query = json!({
             "name": "foo"
         });
@@ -268,7 +268,7 @@ mod test {
 
     #[test]
     fn test_create_entity() {
-        let query = json!(null);
+        let query = json!({});
         let mut data = json!({
             "name": "table_name",
             "description": "this is a really cool table",
@@ -337,7 +337,7 @@ mod test {
 
     #[test]
     fn test_delete_entity() {
-        let data = json!(null);
+        let data = json!({});
         let query = json!({
             "name": "foo"
         });
