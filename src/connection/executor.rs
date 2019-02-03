@@ -4,8 +4,6 @@ use diesel::pg::PgConnection;
 use actix::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
-use actix::sync::SyncArbiter;
-use num_cpus;
 use connection::AppStateBuilder;
 
 pub type Conn = PooledConnection<ConnectionManager<PgConnection>>;

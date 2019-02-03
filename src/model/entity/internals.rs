@@ -1,7 +1,5 @@
-use diesel::prelude::*;
 
 use data::schema;
-use diesel::query_source::Table;
 use data::dbdata;
 use data;
 
@@ -22,8 +20,6 @@ use model::state::State;
 
 use model::state::GetConnection;
 use model::auth::permissions::GetUserInfo;
-
-use std::error::Error;
 
 pub struct Retriever;
 macro_rules! make_retrievers {
@@ -109,6 +105,8 @@ macro_rules! implement_retriever_and_modifier {
     ($DataEntityType:ty, $data_table:ident) => {
 
         use super::*;
+        use diesel::RunQueryDsl;
+        use std::error::Error;
 
         type RD = <$DataEntityType as dbdata::RawEntityTypes>::Data;
         type NRD = <$DataEntityType as dbdata::RawEntityTypes>::NewData;

@@ -41,15 +41,10 @@ mod database;
 mod connection;
 
 // Extenal dependencies
-use actix::prelude::*;
 use actix_web::middleware::cors::CorsBuilder;
 
-use log::LevelFilter;
-use env_logger::{Builder, Target};
 
 // Internal dependencies
-use scripting::ScriptFunctions;
-
 pub use connection::AppStateBuilder as KakapoStateBuilder;
 pub use connection::AppState as KakapoState;
 pub use connection::GetAppState as GetKakapoState;

@@ -3,21 +3,14 @@ use serde_json;
 
 use std::result::Result;
 use std::result::Result::Ok;
-use std::marker::PhantomData;
 
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::pg::PgConnection;
 
-use connection::py::PyRunner;
-
 use connection::executor::Conn;
-
-use model::actions::Action;
 use diesel::Connection;
 use data::dbdata::RawEntityTypes;
 use scripting::Scripting;
-use std::collections::HashSet;
-use std::iter::FromIterator;
 use connection::Broadcaster;
 use std::sync::Arc;
 use serde::Serialize;

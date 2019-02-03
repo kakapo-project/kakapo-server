@@ -87,8 +87,6 @@ mod test {
     use connection::AppStateBuilder;
     use connection::AppState;
     use futures::Future;
-    use actix_web::HttpResponse;
-    use actix_web::AsyncResponder;
     use model::actions::ActionRes;
     use model::state::Channels;
     use connection::BroadcasterError;

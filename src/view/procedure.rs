@@ -14,7 +14,6 @@ use connection::executor::Executor;
 use futures::Future;
 
 
-use connection::AppState;
 use model::actions::Action;
 use view::action_wrapper::ActionWrapper;
 
@@ -25,7 +24,6 @@ use serde::Serialize;
 use connection::GetAppState;
 use connection::Broadcaster;
 use actix_web::http::header;
-use std::sync::Arc;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 

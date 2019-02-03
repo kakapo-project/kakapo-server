@@ -1,16 +1,6 @@
 
 
-use actix::prelude::*;
-
 use data;
-use connection::py::PyRunner;
-
-use model::entity;
-use model::entity::RetrieverFunctions;
-use model::entity::ModifierFunctions;
-use model::entity::error::EntityError;
-
-use data::schema;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Serialize)]

@@ -1,10 +1,6 @@
-use diesel::prelude::*;
 
-use data::schema;
 use data::dbdata;
 use data;
-
-
 
 pub trait ConvertRaw<T> {
     fn convert(&self) -> T;

@@ -5,29 +5,11 @@ mod extensions;
 mod procedure;
 mod error;
 
-use actix::prelude::*;
-
-use actix_web::{
-    App, Error as ActixError,
-    http, http::NormalizePath,
-    fs, fs::{NamedFile},
-    State,
-};
-
-use actix_web::middleware::Logger;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
-
-use chrono::Duration;
-
 use std::result::Result;
 use std::result::Result::Ok;
-use std::path::Path as fsPath;
 
-use connection;
 // current module
 use model::actions;
-
-use connection::AppState;
 use connection::GetAppState;
 
 use view::procedure::NoQuery;

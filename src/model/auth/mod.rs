@@ -2,17 +2,6 @@
 pub mod permissions;
 pub mod error;
 pub mod auth_store;
-
-use jsonwebtoken::{decode, encode, Header, Validation};
-use bcrypt::verify;
-
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-
-
-use data::dbdata::RawUser;
-use data::dbdata::NewRawUser;
-
-use chrono::{Duration, Local};
 use data::auth::User;
 use data::auth::NewUser;
 use model::auth::error::UserManagementError;

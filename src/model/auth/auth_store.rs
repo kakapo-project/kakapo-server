@@ -1,12 +1,9 @@
-use connection::executor::Conn;
 use diesel::RunQueryDsl;
 use model::state::State;
 use model::state::GetConnection;
 use data::dbdata::RawPermission;
 use model::auth::error::UserManagementError;
 use std::error::Error;
-use diesel::query_builder::SqlQuery;
-use diesel::sql_types::Integer;
 use diesel::sql_types::BigInt;
 
 

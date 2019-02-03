@@ -1,9 +1,7 @@
 use std::collections::HashSet;
 
-use model::auth::auth_store::AuthStore;
 use model::auth::auth_store::AuthStoreFunctions;
 use model::state::State;
-use std::marker::PhantomData;
 use model::state::GetConnection;
 use std::iter::FromIterator;
 

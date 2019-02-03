@@ -2,15 +2,14 @@
 use actix::prelude::*;
 
 use actix_web::{
-    App, http,
+    http,
     FromRequest, Json, Query,
-    HttpRequest, Scope,
+    HttpRequest,
 };
 
 use actix_web::middleware::cors::CorsBuilder;
+use actix_web::dev::JsonConfig;
 
-
-use connection::AppState;
 use super::action_wrapper::ActionWrapper;
 
 use super::procedure::ProcedureBuilder;
@@ -19,7 +18,6 @@ use super::procedure::procedure_handler_function;
 use super::procedure::procedure_bad_request_handler_function;
 
 use model::actions::Action;
-use actix_web::dev::JsonConfig;
 use std::fmt::Debug;
 use serde::Serialize;
 use connection::GetAppState;

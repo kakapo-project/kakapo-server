@@ -1,8 +1,6 @@
 
-use tokio::prelude::{Future, Stream};
 use std::path::PathBuf;
 use std::fs;
-use std::env;
 use std::process::Command;
 use scripting::error::ScriptError;
 

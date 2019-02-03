@@ -4,12 +4,9 @@ use data;
 use model::state::State;
 
 use std::error::Error;
-use model::table::error::TableError;
 
 use diesel::RunQueryDsl;
 use model::state::GetConnection;
-use scripting::Scripting;
-use scripting::ScriptFunctions;
 use model::state::GetScripting;
 
 /// This trait does something action specific after the database updates

@@ -2,12 +2,6 @@ use actix::Addr;
 
 pub mod executor;
 pub mod py;
-
-use actix::prelude::*;
-use diesel::pg::PgConnection;
-use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::PooledConnection;
-use diesel::r2d2::Pool;
 use actix::sync::SyncArbiter;
 use num_cpus;
 use std::sync::Arc;

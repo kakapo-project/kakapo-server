@@ -3,10 +3,8 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, user, role, permission};
-use data::schema;
+use data::schema::{entity, table_schema, query, script, user, permission};
 use data;
-use std::iter::FromIterator;
 use std::fmt::Debug;
 use data::conversion::ConvertRaw;
 use data::conversion::GenerateRaw;

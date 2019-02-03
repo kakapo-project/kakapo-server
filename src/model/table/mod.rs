@@ -1,13 +1,9 @@
-use connection::executor::Conn;
-use data;
 
 pub mod error;
 
+use data;
 use model::table::error::TableError;
-
 use model::state::State;
-use model::entity::error::EntityError;
-
 use database::Database;
 use database::DatabaseFunctions;
 use model::state::GetConnection;
