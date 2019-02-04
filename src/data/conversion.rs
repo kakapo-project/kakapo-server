@@ -2,19 +2,20 @@
 use data::dbdata;
 use data;
 
+use serde_json;
+
 pub trait ConvertRaw<T> {
     fn convert(&self) -> T;
 }
 
 impl ConvertRaw<data::Table> for dbdata::RawTable {
     fn convert(&self) -> data::Table {
+        let schema: data::SchemaState = serde_json::from_value(self.table_data.to_owned())
+            .unwrap_or_default(); //TODO: return serialization error!
         data::Table {
             name: self.name.to_owned(),
             description: self.description.to_owned(),
-            schema: data::SchemaState {
-                columns: vec![],
-                constraint: vec![],
-            },
+            schema,
         }
     }
 }

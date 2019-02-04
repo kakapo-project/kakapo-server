@@ -103,21 +103,33 @@ impl<O> ModifierFunctions<O, State> for Controller
 {
     fn create(conn: &State, object: O) -> Result<Created<O>, EntityError> {
         Modifier::create(conn, object)
-            .and_then(|res| res.update_state(conn))
+            .and_then(|res| {
+                debug!("result in table, now updating state: {:?}", res);
+                res.update_state(conn)
+            })
     }
 
     fn upsert(conn: &State, object: O) -> Result<Upserted<O>, EntityError> {
         Modifier::upsert(conn, object)
-            .and_then(|res| res.update_state(conn))
+            .and_then(|res| {
+                debug!("result in table, now updating state: {:?}", res);
+                res.update_state(conn)
+            })
     }
 
     fn update(conn: &State, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
         Modifier::update(conn, name_object)
-            .and_then(|res| res.update_state(conn))
+            .and_then(|res| {
+                debug!("result in table, now updating state: {:?}", res);
+                res.update_state(conn)
+            })
     }
 
     fn delete(conn: &State, name: &str) -> Result<Deleted<O>, EntityError> {
         Modifier::delete(conn, name)
-            .and_then(|res| res.update_state(conn))
+            .and_then(|res| {
+                debug!("result in table, now updating state: {:?}", res);
+                res.update_state(conn)
+            })
     }
 }

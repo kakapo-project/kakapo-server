@@ -70,6 +70,7 @@ macro_rules! make_modifiers {
                 conn: &State,
                 object: $EntityType,
             ) -> Result<Created<$EntityType>, EntityError> {
+                info!("create object: {:?}", &object);
                 $entity::Modifier::create::<$EntityType>(conn.get_conn(), get_user_id(conn), object)
             }
 
@@ -77,6 +78,7 @@ macro_rules! make_modifiers {
                 conn: &State,
                 object: $EntityType,
             ) -> Result<Upserted<$EntityType>, EntityError> {
+                info!("upsert object: {:?}", &object);
                 $entity::Modifier::upsert::<$EntityType>(conn.get_conn(), get_user_id(conn), object)
             }
 
@@ -84,6 +86,7 @@ macro_rules! make_modifiers {
                 conn: &State,
                 name_object: (&str, $EntityType),
             ) -> Result<Updated<$EntityType>, EntityError> {
+                info!("update object: {:?}", &name_object);
                 $entity::Modifier::update::<$EntityType>(conn.get_conn(), get_user_id(conn), name_object)
             }
 
@@ -91,6 +94,7 @@ macro_rules! make_modifiers {
                 conn: &State,
                 name: &str,
             ) -> Result<Deleted<$EntityType>, EntityError> {
+                info!("delete object: {:?}", &name);
                 $entity::Modifier::delete::<$EntityType>(conn.get_conn(), get_user_id(conn), name)
             }
         }
@@ -204,18 +208,18 @@ macro_rules! implement_retriever_and_modifier {
                     NRD: GenerateRaw<O>,
                     RD: ConvertRaw<O>,
             {
-                debug!("creating entity");
+                let new_raw_entity = NewRawEntity {
+                    scope_id: 1, //TODO: right now scopes haven't been implemented
+                    created_by: user_id,
+                };
                 let entity: RawEntity = diesel::insert_into(schema::entity::table)
-                    .values(&NewRawEntity {
-                        scope_id: 1, //TODO: right now scopes haven't been implemented
-                        created_by: user_id,
-                    })
+                    .values(&new_raw_entity)
                     .get_result(conn)
                     .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
-                debug!("creating entity history");
+                let new_raw_data = NRD::new(&object, entity.entity_id, user_id);
                 let new_val: RD = diesel::insert_into(schema::$data_table::table)
-                    .values(NRD::new(&object, entity.entity_id, user_id))
+                    .values(&new_raw_data)
                     .get_result(conn)
                     .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
@@ -273,18 +277,22 @@ macro_rules! implement_retriever_and_modifier {
                 NRD: GenerateRaw<O>,
                 RD: ConvertRaw<O>,
             {
-                debug!("string to create entity: name => {}", object.get_name());
+                debug!("string to create entity: \"name\": {}", object.get_name());
                 let entities: Option<RD> = query_entities_by_name(conn, object.get_name())?;
 
                 match entities {
-                    Some(entity) => Ok(Created::Fail {
-                        existing: entity.convert()
-                    }),
+                    Some(entity) => {
+                        debug!("object already exists, old entity: {:?}", &entity);
+                        Ok(Created::Fail {
+                            existing: entity.convert()
+                        })
+                    },
                     None => {
-                        debug!("no object found");
+                        debug!("no object found, putting object: {:?}", &object);
                         let new_val = Modifier::create_internal(conn, user_id, object)?;
+                        let converted = new_val.convert();
                         Ok(Created::Success {
-                            new: new_val.convert(),
+                            new: converted,
                         })
                     }
                 }

@@ -79,9 +79,9 @@ macro_rules! implement_router {
                             let proc = ProcedureHandler::<S, B, JP, QP, PB, A>::setup(&procedure_builder);
                             procedure_handler_function(proc, req, json_params, query_params)
                         },
-                        |((_, json_cfg, query_cfg),)| {
+                        |((_, json_cfg, _query_cfg),)| {
                             json_cfg
-                                .error_handler(|err, req| {
+                                .error_handler(|err, _req| {
                                     procedure_bad_request_handler_function(err)
                                 });
                         }

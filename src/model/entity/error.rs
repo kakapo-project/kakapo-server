@@ -9,6 +9,8 @@ pub enum EntityError {
     SerializationError,
     #[fail(display = "Invalid state, something is really weird with the database")]
     InvalidState,
+    #[fail(display = "No Columns found, every table must have at least one column")]
+    NoColumns,
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }

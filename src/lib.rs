@@ -16,7 +16,6 @@ extern crate env_logger;
 #[macro_use]
 extern crate failure;
 extern crate futures;
-extern crate http;
 extern crate json;
 extern crate jsonwebtoken;
 extern crate linked_hash_map;
@@ -31,6 +30,7 @@ extern crate serde_derive;
 extern crate openssl;
 extern crate tokio;
 extern crate tokio_core;
+extern crate uuid;
 
 // Mods
 mod view;

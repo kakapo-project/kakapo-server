@@ -1,5 +1,7 @@
+use std::fmt::Debug;
 
-pub enum Upserted<T> {
+#[derive(Debug)]
+pub enum Upserted<T: Debug> {
     Update {
         old: T,
         new: T,
@@ -8,7 +10,9 @@ pub enum Upserted<T> {
         new: T,
     },
 }
-pub enum Created<T> {
+
+#[derive(Debug)]
+pub enum Created<T: Debug> {
     Success {
         new: T,
     },
@@ -17,7 +21,8 @@ pub enum Created<T> {
     }
 }
 
-pub enum Updated<T> {
+#[derive(Debug)]
+pub enum Updated<T: Debug> {
     Success {
         old: T,
         new: T,
@@ -25,7 +30,8 @@ pub enum Updated<T> {
     Fail
 }
 
-pub enum Deleted<T> {
+#[derive(Debug)]
+pub enum Deleted<T: Debug> {
     Success {
         old: T,
     },

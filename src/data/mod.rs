@@ -12,25 +12,36 @@ pub mod methods;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DataType {
-    SmallInteger,
-    Integer,
-    BigInteger,
-    //Decimal { precision: u32, scale: u32 },
+    SmallInteger, //TODO: + Serial
+    Integer, //TODO: + Serial
+    BigInteger, //TODO: + Serial
+    //TODO: Decimal { precision: u32, scale: u32 },
     Float,
     DoubleFloat,
 
+    //TODO: Monetary
+
     String,
     VarChar { length: u32 },
+    //Char is not going to be supported
 
     Byte,
 
-    Timestamp { with_tz: bool },
+    Timestamp { //TODO: precision?
+        #[serde(default, rename = "withTZ")]
+        with_tz: bool
+    },
     Date,
-    Time { with_tz: bool },
-    //TimeInterval,
+    Time { //TODO: precision?
+        #[serde(default, rename = "withTZ")]
+        with_tz: bool
+    },
+    //TODO: TimeInterval,
 
     Boolean,
-    Json,
+    //TODO: enum + geometric + net address + bit string + uuid +  ...
+    Json, //TODO: binary?
+    //TODO: arrays
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
@@ -218,8 +229,10 @@ pub struct ObjectKeys(Vec<LinkedHashMap<String, IndexableValue>>);
 pub struct Column {
     pub name: String,
     pub data_type: DataType,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub default: Option<Value>,
+    #[serde(default)]
+    pub nullable: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -278,7 +291,7 @@ pub enum Constraint {
 
 
 // This is the same as SchemaModification::Create
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SchemaState {
     pub columns: Vec<Column>,

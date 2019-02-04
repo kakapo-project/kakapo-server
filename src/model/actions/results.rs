@@ -10,12 +10,16 @@ pub struct GetAllEntitiesResult<T>(pub Vec<T>);
 pub struct GetEntityResult<T>(pub T);
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "result")]
 pub enum CreateEntityResult<T> {
     Updated {
         old: T,
         new: T,
     },
-    Created(T),
+    Created {
+        new: T,
+    },
     AlreadyExists {
         existing: T,
         requested: T,
@@ -23,6 +27,8 @@ pub enum CreateEntityResult<T> {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "result")]
 pub enum UpdateEntityResult<T> {
     Updated {
         id: String,
@@ -36,13 +42,16 @@ pub enum UpdateEntityResult<T> {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "result")]
 pub enum DeleteEntityResult<T> {
     Deleted {
         id: String,
         old: T,
     },
-    NotFound(String),
-    _PhantomData(PhantomData<T>),
+    NotFound {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize)]

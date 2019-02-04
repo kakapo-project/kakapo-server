@@ -183,7 +183,7 @@ impl<A, S> fmt::Debug for WithPermissionFor<A, S>
         S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "WithPermissionFor ...")
+        write!(f, "WithPermissionFor({:?})", &self.action)
     }
 }
 
@@ -230,7 +230,7 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
 }
 
 ///decorator for transactions
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WithTransaction<A, S = State>
     where
         A: Action<S>,
@@ -240,11 +240,20 @@ pub struct WithTransaction<A, S = State>
     phantom_data: PhantomData<S>,
 }
 
+impl<A, S> fmt::Debug for WithTransaction<A, S>
+    where
+        A: Action<S>,
+        S: GetConnection,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "WithTransaction({:?})", &self.action)
+    }
+}
+
 impl<A, S> WithTransaction<A, S>
     where
         A: Action<S>,
         S: GetConnection,
-        Self: Action<S>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -281,7 +290,7 @@ impl<A, S> Action<S> for WithTransaction<A, S>
 }
 
 ///decorator for dispatching to channel
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WithDispatch<A, S = State>
     where
         A: Action<S>,
@@ -291,10 +300,20 @@ pub struct WithDispatch<A, S = State>
     phantom_data: PhantomData<S>,
 }
 
+impl<A, S> fmt::Debug for WithDispatch<A, S>
+    where
+        A: Action<S>,
+        S: GetConnection + GetBroadcaster,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "WithDispatch({:?})", &self.action)
+    }
+}
+
 impl<A, S> WithDispatch<A, S>
     where
         A: Action<S>,
-        S: GetConnection + GetBroadcaster + GetBroadcaster,
+        S: GetConnection + GetBroadcaster,
 {
     pub fn new(action: A, channel: Channels) -> Self {
         Self {
@@ -316,7 +335,7 @@ impl<A, S> WithDispatch<A, S>
 impl<A, S> Action<S> for WithDispatch<A, S>
     where
         A: Action<S>,
-        S: GetConnection + GetBroadcaster + GetBroadcaster,
+        S: GetConnection + GetBroadcaster,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

@@ -248,9 +248,10 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                 EM::upsert(state, self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("upsert result: {:?}", &res);
                         match res {
                             Upserted::Update { old, new } => ActionRes::new("CreateEntity", CreateEntityResult::Updated { old, new }),
-                            Upserted::Create { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created(new)),
+                            Upserted::Create { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created { new }),
                         }
                     })
             },
@@ -258,8 +259,9 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                 EM::create(state, self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("create result: {:?}", &res);
                         match res {
-                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created(new)),
+                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created { new }),
                             Created::Fail { existing } => ActionRes::new("CreateEntity", CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
                         }
                     })
@@ -269,8 +271,9 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                 EM::create(state, self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("create result: {:?}", &res);
                         match res {
-                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created(new)),
+                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created { new }),
                             Created::Fail { .. } => Err(Error::AlreadyExists),
                         }
                     })
@@ -333,6 +336,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
                 EM::update(state, (&self.name, self.data.clone()))
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("update result: {:?}", &res);
                         match res {
                             Updated::Success { old, new } =>
                                 ActionRes::new("UpdateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
@@ -346,6 +350,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
                 EM::update(state, (&self.name, self.data.clone()))
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("update result: {:?}", &res);
                         match res {
                             Updated::Success { old, new } =>
                                 ActionRes::new("UpdateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
@@ -409,10 +414,11 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
                 EM::delete(state, &self.name)
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("delete result: {:?}", &res);
                         match res {
                             Deleted::Success { old } =>
                                 ActionRes::new("DeleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
-                            Deleted::Fail => ActionRes::new("DeleteEntity", DeleteEntityResult::NotFound(self.name.to_owned())),
+                            Deleted::Fail => ActionRes::new("DeleteEntity", DeleteEntityResult::NotFound { id: self.name.to_owned() }),
                         }
                     })
 
@@ -421,6 +427,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
                 EM::delete(state, &self.name)
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
+                        info!("delete result: {:?}", &res);
                         match res {
                             Deleted::Success { old } =>
                                 ActionRes::new("DeleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
@@ -451,6 +458,7 @@ mod test {
     use data;
     use model::actions::results::CreateEntityResult::Created;
     use model::actions::results::DeleteEntityResult::Deleted;
+    use uuid::Uuid;
 
     #[derive(Debug, Clone)]
     struct TestBroadcaster;
@@ -458,6 +466,13 @@ mod test {
         fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
             Ok(())
         }
+    }
+
+    fn random_identifier() -> String {
+        let uuid = Uuid::new_v4();
+        let res = base64::encode_config(&uuid.as_bytes(), base64::STANDARD_NO_PAD);
+
+        res.replace("/", "_").replace("+", "$")
     }
 
     fn with_state<F>(f: F)
@@ -487,8 +502,9 @@ mod test {
     fn test_create_entity() {
 
         with_state(|state| {
+            let name = format!("my_query_{}", random_identifier());
             let new_query: data::Query = from_value(json!({
-                "name": "my_query",
+                "name": name,
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
@@ -496,11 +512,12 @@ mod test {
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
+            println!("data: {:?}", &data);
 
-            if let Created(created_data) = data {
-                assert_eq!(created_data.name, "my_query");
-                assert_eq!(created_data.description, "blah blah blah");
-                assert_eq!(created_data.statement, "SELECT * FROM a_table");
+            if let Created { new } = data {
+                assert_eq!(new.name, name);
+                assert_eq!(new.description, "blah blah blah");
+                assert_eq!(new.statement, "SELECT * FROM a_table");
             } else {
                 panic!("expected a created result");
             }
@@ -510,8 +527,9 @@ mod test {
     #[test]
     fn test_update_entity() {
         with_state(|state| {
+            let name = format!("my_query_{}", random_identifier());
             let new_query: data::Query = from_value(json!({
-                "name": "my_query",
+                "name": name,
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
@@ -520,12 +538,12 @@ mod test {
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let read_action = GetEntity::<data::Query>::new("my_query".to_string());
+            let read_action = GetEntity::<data::Query>::new(name.to_owned());
             let result = read_action.call(&state);
 
             let data = result.unwrap().get_data();
             let GetEntityResult(entity_result) = data;
-            assert_eq!(entity_result.name, "my_query");
+            assert_eq!(entity_result.name, name);
             assert_eq!(entity_result.description, "blah blah blah");
             assert_eq!(entity_result.statement, "SELECT * FROM a_table");
         });
@@ -534,8 +552,9 @@ mod test {
     #[test]
     fn test_delete_entity() {
         with_state(|state| {
+            let name = format!("my_query_{}", random_identifier());
             let new_query: data::Query = from_value(json!({
-                "name": "my_query",
+                "name": name,
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
@@ -544,13 +563,13 @@ mod test {
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let delete_action = DeleteEntity::<data::Query>::new("my_query".to_string());
+            let delete_action = DeleteEntity::<data::Query>::new(name.to_owned());
             let result = delete_action.call(&state);
             let data = result.unwrap().get_data();
 
             if let Deleted { id, old } = data {
-                assert_eq!(id, "my_query");
-                assert_eq!(old.name, "my_query");
+                assert_eq!(id, name);
+                assert_eq!(old.name, name);
                 assert_eq!(old.description, "blah blah blah");
                 assert_eq!(old.statement, "SELECT * FROM a_table");
             } else {

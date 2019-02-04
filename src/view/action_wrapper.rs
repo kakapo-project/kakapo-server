@@ -60,7 +60,6 @@ impl<A: Action + Send> ActionWrapper<A> {
             .and_then(|bytes| str::from_utf8(&bytes).ok().map(|x| x.to_string()))
             .and_then(|data| Self::parse_bearer_token(data))
             .and_then(|auth| {
-                info!("token: {:?}", &token_secret);
                 let decoded = jsonwebtoken::decode::<AuthClaims>(
                     &auth,
                     token_secret.as_ref(),
@@ -114,7 +113,6 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
 
 
         let state = State::new(conn, scripting, auth_claims, broadcaster);
-        debug!("calling action...");
         let result = action_req.call(&state);
         debug!("action result: {:?}", &result);
         result
