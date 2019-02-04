@@ -58,7 +58,47 @@ impl<S, AF> Action<S> for Authenticate<S, AF>
 }
 
 
-/// User Auth: Add user
+
+/// User Auth: Get All users
+#[derive(Debug)]
+pub struct GetAllUsers<S = State, AF = Auth> {
+    phantom_data: PhantomData<(S, AF)>,
+}
+
+impl<S, AF> GetAllUsers<S, AF>
+    where
+        S: GetConnection + GetUserInfo + GetBroadcaster,
+        AF: AuthFunctions<S>,
+{
+    pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
+        let action = Self {
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+
+        /* everyone who is logged in can access to the users */
+        let action_with_permission = WithLoginRequired::new(action_with_transaction);
+
+        action_with_permission
+    }
+}
+
+impl<S, AF> Action<S> for GetAllUsers<S, AF>
+    where
+        S: GetConnection + GetUserInfo + GetBroadcaster,
+        AF: AuthFunctions<S>,
+{
+    type Ret = AllUsersResult;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        AF::get_all_users(state)
+            .or_else(|err| Err(Error::UserManagement(err)))
+            .and_then(|res| ActionRes::new("GetAllUsers", AllUsersResult(res)))
+    }
+}
+
+/// User Auth: Add user with password
+/// Usually, this isn't used, instead use invitation
 #[derive(Debug)]
 pub struct AddUser<S = State, AF = Auth> {
     user: data::auth::NewUser,
@@ -94,6 +134,84 @@ impl<S, AF> Action<S> for AddUser<S, AF>
         AF::add_user(state, &self.user)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("AddUser", UserResult(res)))
+    }
+}
+
+/// User Auth: Remove User
+#[derive(Debug)]
+pub struct RemoveUser<S = State, AF = Auth> {
+    user_identifier: String,
+    phantom_data: PhantomData<(S, AF)>,
+}
+
+impl<S, AF> RemoveUser<S, AF>
+    where
+        S: GetConnection + GetUserInfo + GetBroadcaster,
+        AF: AuthFunctions<S>,
+{
+    pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+        let action = Self {
+            user_identifier,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
+
+        action_with_permission
+    }
+}
+
+impl<S, AF> Action<S> for RemoveUser<S, AF>
+    where
+        S: GetConnection + GetUserInfo + GetBroadcaster,
+        AF: AuthFunctions<S>,
+{
+    type Ret = UserResult;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        AF::remove_user(state, &self.user_identifier)
+            .or_else(|err| Err(Error::UserManagement(err)))
+            .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
+    }
+}
+
+/// User Auth: Email user for invitation
+#[derive(Debug)]
+pub struct InviteUser<S = State, AF = Auth> {
+    email: String,
+    phantom_data: PhantomData<(S, AF)>,
+}
+
+impl<S, AF> InviteUser<S, AF>
+    where
+        S: GetConnection + GetUserInfo + GetBroadcaster,
+        AF: AuthFunctions<S>,
+{
+    pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+        let action = Self {
+            email,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
+
+        action_with_permission
+    }
+}
+
+impl<S, AF> Action<S> for InviteUser<S, AF>
+    where
+        S: GetConnection + GetUserInfo,
+        AF: AuthFunctions<S>,
+{
+    type Ret = InvitationToken;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        AF::invite_user(state, &self.email)
+            .or_else(|err| Err(Error::UserManagement(err)))
+            .and_then(|res| ActionRes::new("InviteUser", InvitationToken(res)))
     }
 }
 
@@ -137,83 +255,6 @@ impl<S, AF> Action<S> for SetupUser<S, AF>
     }
 }
 
-/// User Auth: Remove User
-#[derive(Debug)]
-pub struct RemoveUser<S = State, AF = Auth> {
-    user_identifier: String,
-    phantom_data: PhantomData<(S, AF)>,
-}
-
-impl<S, AF> RemoveUser<S, AF>
-    where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
-        AF: AuthFunctions<S>,
-{
-    pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
-        let action = Self {
-            user_identifier,
-            phantom_data: PhantomData,
-        };
-
-        let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
-
-        action_with_permission
-    }
-}
-
-impl<S, AF> Action<S> for RemoveUser<S, AF>
-    where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
-        AF: AuthFunctions<S>,
-{
-    type Ret = UserResult;
-    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        AF::remove_user(state, &self.user_identifier)
-            .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
-    }
-}
-
-
-/// User Auth: Get All users
-#[derive(Debug)]
-pub struct GetAllUsers<S = State, AF = Auth> {
-    phantom_data: PhantomData<(S, AF)>,
-}
-
-impl<S, AF> GetAllUsers<S, AF>
-    where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
-        AF: AuthFunctions<S>,
-{
-    pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
-        let action = Self {
-            phantom_data: PhantomData,
-        };
-
-        let action_with_transaction = WithTransaction::new(action);
-
-        /* everyone who is logged in can access to the users */
-        let action_with_permission = WithLoginRequired::new(action_with_transaction);
-
-        action_with_permission
-    }
-}
-
-impl<S, AF> Action<S> for GetAllUsers<S, AF>
-    where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
-        AF: AuthFunctions<S>,
-{
-    type Ret = AllUsersResult;
-    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        AF::get_all_users(state)
-            .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("GetAllUsers", AllUsersResult(res)))
-    }
-}
 
 /// User Auth: Set user password
 #[derive(Debug)]
@@ -259,46 +300,6 @@ impl<S, AF> Action<S> for SetUserPassword<S, AF>
         AF::modify_user_password(state, &self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("SetUserPassword", UserResult(res)))
-    }
-}
-
-
-/// User Auth: Email user for invitation
-#[derive(Debug)]
-pub struct InviteUser<S = State, AF = Auth> {
-    email: String,
-    phantom_data: PhantomData<(S, AF)>,
-}
-
-impl<S, AF> InviteUser<S, AF>
-    where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
-        AF: AuthFunctions<S>,
-{
-    pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
-        let action = Self {
-            email,
-            phantom_data: PhantomData,
-        };
-
-        let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, Permission::user_admin());
-
-        action_with_permission
-    }
-}
-
-impl<S, AF> Action<S> for InviteUser<S, AF>
-    where
-        S: GetConnection + GetUserInfo,
-        AF: AuthFunctions<S>,
-{
-    type Ret = InvitationToken;
-    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        AF::invite_user(state, &self.email)
-            .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("InviteUser", InvitationToken(res)))
     }
 }
 
@@ -512,7 +513,7 @@ impl<S, AF> Action<S> for DetachPermissionForRole<S, AF>
 /// Role Auth: add role for user
 #[derive(Debug)]
 pub struct AttachRoleForUser<S = State, AF = Auth> {
-    rolename: String,
+    role: data::auth::Role,
     user_identifier: String,
     phantom_data: PhantomData<(S, AF)>,
 }
@@ -522,13 +523,13 @@ impl<S, AF> AttachRoleForUser<S, AF>
         S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
-    pub fn new(rolename: String, user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
             Permission::user_admin(),
-            Permission::has_role(rolename.to_owned()),
+            Permission::has_role(role.get_name()),
         ];
         let action = Self {
-            rolename,
+            role,
             user_identifier,
             phantom_data: PhantomData,
         };
@@ -548,7 +549,7 @@ impl<S, AF> Action<S> for AttachRoleForUser<S, AF>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        AF::attach_role_for_user(state, &self.rolename, &self.user_identifier)
+        AF::attach_role_for_user(state, &self.role, &self.user_identifier)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("AttachRoleForUser", UserResult(res)))
     }
@@ -557,7 +558,7 @@ impl<S, AF> Action<S> for AttachRoleForUser<S, AF>
 /// Role Auth: remove role for user
 #[derive(Debug)]
 pub struct DetachRoleForUser<S = State, AF = Auth> {
-    rolename: String,
+    role: data::auth::Role,
     user_identifier: String,
     phantom_data: PhantomData<(S, AF)>,
 }
@@ -567,13 +568,13 @@ impl<S, AF> DetachRoleForUser<S, AF>
         S: GetConnection + GetUserInfo + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
-    pub fn new(rolename: String, user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
             Permission::user_admin(),
-            Permission::has_role(rolename.to_owned()),
+            Permission::has_role(role.get_name()),
         ];
         let action = Self {
-            rolename,
+            role,
             user_identifier,
             phantom_data: PhantomData,
         };
@@ -593,28 +594,79 @@ impl<S, AF> Action<S> for DetachRoleForUser<S, AF>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        AF::detach_role_for_user(state, &self.rolename, &self.user_identifier)
+        AF::detach_role_for_user(state, &self.role, &self.user_identifier)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))
     }
 }
 
-//Other utitlies
-#[derive(Debug)]
-pub struct Nothing;
+#[cfg(test)]
+mod test {
+    use super::*;
 
-impl Nothing {
-    pub fn new() -> Self {
-        Nothing
+
+    use diesel::r2d2::ConnectionManager;
+    use diesel::pg::PgConnection;
+    use diesel::Connection;
+
+    use serde_json::from_value;
+    use scripting::Scripting;
+    use diesel::r2d2::Pool;
+    use model::state::AuthClaims;
+    use connection::Broadcaster;
+    use std::sync::Arc;
+    use connection::BroadcasterError;
+    use data;
+    use model::actions::results::CreateEntityResult::Created;
+    use model::actions::results::DeleteEntityResult::Deleted;
+    use uuid::Uuid;
+
+    #[derive(Debug, Clone)]
+    struct TestBroadcaster;
+
+    impl Broadcaster for TestBroadcaster {
+        fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
+            Ok(())
+        }
     }
-}
 
-impl<S> Action<S> for Nothing
-    where
-        S: GetConnection,
-{
-    type Ret = ();
-    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ActionRes::new("Nothing", ())
+    fn random_identifier() -> String {
+        let uuid = Uuid::new_v4();
+        let res = base64::encode_config(&uuid.as_bytes(), base64::STANDARD_NO_PAD);
+
+        res.replace("/", "_").replace("+", "$")
+    }
+
+    fn with_state<F>(f: F)
+        where F: FnOnce(&State) -> ()
+    {
+        let script_path = "./path/to/scripts".to_string();
+        let conn_url = "postgres://test:password@localhost:5432/test".to_string();
+        let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
+        let pool = Pool::new(conn_manager).unwrap();
+        let pooled_conn = pool.get().unwrap();
+
+        let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
+        let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
+        let broadcaster = Arc::new(TestBroadcaster);
+
+        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster);
+        let conn = state.get_conn();
+
+        conn.test_transaction::<(), Error, _>(|| {
+            f(&state);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_add_user() {
+
+    }
+
+    #[test]
+    fn test_invite_user() {
+
     }
 }

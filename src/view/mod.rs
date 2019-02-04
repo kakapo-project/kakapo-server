@@ -36,12 +36,30 @@ pub struct GetEntity {
     pub name: String,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetUser {
+    #[serde(rename = "username")]
+    pub user_identifier: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetRole {
+    pub rolename: String,
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthData {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Invite {
+    pub email: String,
 }
 
 pub mod manage {
@@ -182,6 +200,85 @@ pub mod users {
         let _: NoQuery = from_value(query)?;
         Ok(actions::Authenticate::<_>::new(auth_data.username, auth_data.password))
     }
+
+    pub fn get_all_users(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::GetAllUsers::<_>::new())
+    }
+
+    pub fn add_user(data: Value, query: Value) -> Result<impl Action, Error> {
+        let new_user: data::auth::NewUser = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::AddUser::<_>::new(new_user))
+    }
+
+    pub fn remove_user(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let get_user: GetUser = from_value(query)?;
+        Ok(actions::RemoveUser::<_>::new(get_user.user_identifier))
+    }
+
+    pub fn invite_user(data: Value, query: Value) -> Result<impl Action, Error> {
+        let invite: Invite = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::InviteUser::<_>::new(invite.email))
+    }
+
+    pub fn setup_user(data: Value, query: Value) -> Result<impl Action, Error> {
+        let new_user: data::auth::NewUser = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::SetupUser::<_>::new(new_user))
+    }
+
+    pub fn set_user_password(data: Value, query: Value) -> Result<impl Action, Error> {
+        let data: AuthData = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::SetUserPassword::<_>::new(data.username, data.password)) //TODO: add old password too
+    }
+
+    pub fn add_role(data: Value, query: Value) -> Result<impl Action, Error> {
+        let role: data::auth::Role = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::AddRole::<_>::new(role))
+    }
+
+    pub fn remove_role(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let role_id: GetRole = from_value(query)?;
+        Ok(actions::RemoveRole::<_>::new(role_id.rolename))
+    }
+
+    pub fn get_all_roles(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::GetAllRoles::<_>::new())
+    }
+
+    pub fn attach_permission_for_role(data: Value, query: Value) -> Result<impl Action, Error> {
+        let permission: data::auth::Permission = from_value(data)?;
+        let role_id: GetRole = from_value(query)?;
+        Ok(actions::AttachPermissionForRole::<_>::new(role_id.rolename, permission))
+    }
+
+    pub fn detach_permission_for_role(data: Value, query: Value) -> Result<impl Action, Error> {
+        let permission: data::auth::Permission = from_value(data)?;
+        let role_id: GetRole = from_value(query)?;
+        Ok(actions::DetachPermissionForRole::<_>::new(role_id.rolename, permission))
+    }
+
+    pub fn attach_role_for_user(data: Value, query: Value) -> Result<impl Action, Error> {
+        let role: data::auth::Role = from_value(data)?;
+        let get_user: GetUser = from_value(query)?;
+        Ok(actions::AttachRoleForUser::<_>::new(get_user.user_identifier, role))
+    }
+
+    pub fn detach_role_for_user(data: Value, query: Value) -> Result<impl Action, Error> {
+        let role: data::auth::Role = from_value(data)?;
+        let get_user: GetUser = from_value(query)?;
+        Ok(actions::DetachRoleForUser::<_>::new(get_user.user_identifier, role))
+    }
+
 }
 
 pub trait Router<S, B>
@@ -231,6 +328,25 @@ macro_rules! implement_router {
                     .procedure("/manage/runScript", manage::run_script)
 
                     .procedure("/users/authenticate", users::authenticate)
+                    .procedure("/users/getAllUsers", users::get_all_users)
+
+                    .procedure("/users/addUser", users::add_user)
+                    .procedure("/users/removeUser", users::remove_user)
+                    .procedure("/users/inviteUser", users::invite_user)
+                    .procedure("/users/setupUser", users::setup_user)
+                    .procedure("/users/setUserPassword", users::set_user_password)
+
+                    .procedure("/users/addRole", users::add_role)
+                    .procedure("/users/removeRole", users::remove_role)
+                    .procedure("/users/getAllRoles", users::get_all_roles)
+
+                    .procedure("/users/attachPermissionForRole", users::attach_permission_for_role)
+                    .procedure("/users/detachPermissionForRole", users::detach_permission_for_role)
+
+                    .procedure("/users/attachRoleForUser", users::attach_role_for_user)
+                    .procedure("/users/detachRoleForUser", users::detach_role_for_user)
+
+
             }
         }
     }

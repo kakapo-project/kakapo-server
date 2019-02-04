@@ -40,6 +40,10 @@ mod data;
 mod database;
 mod connection;
 
+//#[cfg(test)]
+pub mod test_common;
+
+
 // Extenal dependencies
 use actix_web::middleware::cors::CorsBuilder;
 

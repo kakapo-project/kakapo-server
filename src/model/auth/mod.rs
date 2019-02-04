@@ -34,8 +34,8 @@ pub trait AuthFunctions<S>
     fn attach_permission_for_role(state: &S, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError>;
     fn detach_permission_for_role(state: &S, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError>;
 
-    fn attach_role_for_user(state: &S, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError>;
-    fn detach_role_for_user(state: &S, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError>;
+    fn attach_role_for_user(state: &S, role: &Role, user_identifier: &str) -> Result<User, UserManagementError>;
+    fn detach_role_for_user(state: &S, role: &Role, user_identifier: &str) -> Result<User, UserManagementError>;
 }
 
 impl<S> AuthFunctions<S> for Auth
@@ -80,10 +80,10 @@ impl<S> AuthFunctions<S> for Auth
         unimplemented!()
     }
 
-    fn attach_role_for_user(state: &S, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError> {
+    fn attach_role_for_user(state: &S, role: &Role, user_identifier: &str) -> Result<User, UserManagementError> {
         unimplemented!()
     }
-    fn detach_role_for_user(state: &S, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError> {
+    fn detach_role_for_user(state: &S, role: &Role, user_identifier: &str) -> Result<User, UserManagementError> {
         unimplemented!()
     }
 }
