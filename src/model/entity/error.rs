@@ -1,5 +1,5 @@
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum EntityError {
     #[fail(display = "Internal error")]
     InternalError(String), //returns back the DatabaseError variant of diesel::result::Error

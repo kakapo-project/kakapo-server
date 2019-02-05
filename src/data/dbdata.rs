@@ -161,14 +161,18 @@ pub struct NewRawUser {
     pub username: String,
     pub password: String,
     pub email: String,
+    pub display_name: String,
 }
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Identifiable, Queryable, QueryableByName)]
+#[primary_key(user_id)]
+#[table_name = "user"]
 pub struct RawUser {
     pub user_id: i64,
     pub username: String,
     pub password: String,
     pub email: String,
+    pub display_name: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]

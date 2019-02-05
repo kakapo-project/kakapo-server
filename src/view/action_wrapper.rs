@@ -81,7 +81,7 @@ impl<A: Action + Send> ActionWrapper<A> {
     }
 
     fn get_action(self) -> Result<A, Error> {
-        self.action.or_else(|err| Err(Error::SerializationError(err)))
+        self.action.or_else(|err| Err(Error::SerializationError(err.to_string())))
     }
 }
 
@@ -110,9 +110,10 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
 
         let conn = self.get_connection();
         let scripting = Scripting::new(self.get_scripts_path());
+        let secrets = self.get_secrets();
 
 
-        let state = State::new(conn, scripting, auth_claims, broadcaster);
+        let state = State::new(conn, scripting, auth_claims, broadcaster, secrets);
         let result = action_req.call(&state);
         debug!("action result: {:?}", &result);
         result

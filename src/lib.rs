@@ -4,6 +4,7 @@
 extern crate actix;
 extern crate actix_broker;
 extern crate actix_web;
+extern crate argonautica;
 extern crate base64;
 extern crate bcrypt;
 extern crate bigdecimal;

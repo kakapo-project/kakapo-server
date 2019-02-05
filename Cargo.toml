@@ -8,6 +8,7 @@ path = "src/lib.rs"
 actix = "0.7.7"
 actix-broker = "0.1.4"
 actix-web = { version = "0.7.14", features = ["alpn"] }
+argonautica = "0.1.5"
 base64 = "0.10.0"
 bcrypt = "0.2.1"
 bigdecimal = "0.0.14"

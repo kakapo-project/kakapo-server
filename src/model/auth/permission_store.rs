@@ -7,9 +7,9 @@ use std::error::Error;
 use diesel::sql_types::BigInt;
 
 
-pub struct AuthStore;
+pub struct PermissionStore;
 
-pub trait AuthStoreFunctions<S>
+pub trait PermissionStoreFunctions<S>
     where Self: Send
 {
 
@@ -17,7 +17,7 @@ pub trait AuthStoreFunctions<S>
     fn get_all_permissions(state: &S) -> Result<Vec<RawPermission>, UserManagementError>;
 }
 
-impl AuthStoreFunctions<State> for AuthStore {
+impl PermissionStoreFunctions<State> for PermissionStore {
 
     fn get_user_permissions(state: &State, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
         let query = r#"

@@ -11,13 +11,14 @@ use model::state::GetConnection;
 use model::auth::permissions::*;
 use model::actions::decorator::*;
 
-use model::auth::Auth;
-use model::auth::AuthFunctions;
+use model::auth::auth_modifier::Auth;
+use model::auth::auth_modifier::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
+use model::state::GetSecrets;
 
 #[derive(Debug)]
 pub struct Authenticate<S = State, AF = Auth> {
@@ -28,7 +29,7 @@ pub struct Authenticate<S = State, AF = Auth> {
 
 impl<S, AF> Authenticate<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetSecrets,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, password: String) -> WithTransaction<Self, S> {
@@ -46,7 +47,7 @@ impl<S, AF> Authenticate<S, AF>
 
 impl<S, AF> Action<S> for Authenticate<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetSecrets,
         AF: AuthFunctions<S>,
 {
     type Ret = Option<()>;
@@ -67,7 +68,7 @@ pub struct GetAllUsers<S = State, AF = Auth> {
 
 impl<S, AF> GetAllUsers<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
@@ -86,7 +87,7 @@ impl<S, AF> GetAllUsers<S, AF>
 
 impl<S, AF> Action<S> for GetAllUsers<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = AllUsersResult;
@@ -107,7 +108,7 @@ pub struct AddUser<S = State, AF = Auth> {
 
 impl<S, AF> AddUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -126,7 +127,7 @@ impl<S, AF> AddUser<S, AF>
 
 impl<S, AF> Action<S> for AddUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -146,7 +147,7 @@ pub struct RemoveUser<S = State, AF = Auth> {
 
 impl<S, AF> RemoveUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -165,7 +166,7 @@ impl<S, AF> RemoveUser<S, AF>
 
 impl<S, AF> Action<S> for RemoveUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -185,7 +186,7 @@ pub struct InviteUser<S = State, AF = Auth> {
 
 impl<S, AF> InviteUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -204,7 +205,7 @@ impl<S, AF> InviteUser<S, AF>
 
 impl<S, AF> Action<S> for InviteUser<S, AF>
     where
-        S: GetConnection + GetUserInfo,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = InvitationToken;
@@ -224,7 +225,7 @@ pub struct SetupUser<S = State, AF = Auth> {
 
 impl<S, AF> SetupUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -244,7 +245,7 @@ impl<S, AF> SetupUser<S, AF>
 
 impl<S, AF> Action<S> for SetupUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -266,7 +267,7 @@ pub struct SetUserPassword<S = State, AF = Auth> {
 
 impl<S, AF> SetUserPassword<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, password: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -292,7 +293,7 @@ impl<S, AF> SetUserPassword<S, AF>
 
 impl<S, AF> Action<S> for SetUserPassword<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -312,7 +313,7 @@ pub struct AddRole<S = State, AF = Auth> {
 
 impl<S, AF> AddRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -331,7 +332,7 @@ impl<S, AF> AddRole<S, AF>
 
 impl<S, AF> Action<S> for AddRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -351,7 +352,7 @@ pub struct RemoveRole<S = State, AF = Auth> {
 
 impl<S, AF> RemoveRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -370,7 +371,7 @@ impl<S, AF> RemoveRole<S, AF>
 
 impl<S, AF> Action<S> for RemoveRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -389,7 +390,7 @@ pub struct GetAllRoles<S = State, AF = Auth> {
 
 impl<S, AF> GetAllRoles<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new() -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -407,7 +408,7 @@ impl<S, AF> GetAllRoles<S, AF>
 
 impl<S, AF> Action<S> for GetAllRoles<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = AllRolesResult;
@@ -428,7 +429,7 @@ pub struct AttachPermissionForRole<S = State, AF = Auth> {
 
 impl<S, AF> AttachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -453,7 +454,7 @@ impl<S, AF> AttachPermissionForRole<S, AF>
 
 impl<S, AF> Action<S> for AttachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -474,7 +475,7 @@ pub struct DetachPermissionForRole<S = State, AF = Auth> {
 
 impl<S, AF> DetachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -499,7 +500,7 @@ impl<S, AF> DetachPermissionForRole<S, AF>
 
 impl<S, AF> Action<S> for DetachPermissionForRole<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = RoleResult;
@@ -520,7 +521,7 @@ pub struct AttachRoleForUser<S = State, AF = Auth> {
 
 impl<S, AF> AttachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -544,7 +545,7 @@ impl<S, AF> AttachRoleForUser<S, AF>
 
 impl<S, AF> Action<S> for AttachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -565,7 +566,7 @@ pub struct DetachRoleForUser<S = State, AF = Auth> {
 
 impl<S, AF> DetachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -589,7 +590,7 @@ impl<S, AF> DetachRoleForUser<S, AF>
 
 impl<S, AF> Action<S> for DetachRoleForUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
         AF: AuthFunctions<S>,
 {
     type Ret = UserResult;
@@ -620,6 +621,9 @@ mod test {
     use model::actions::results::CreateEntityResult::Created;
     use model::actions::results::DeleteEntityResult::Deleted;
     use uuid::Uuid;
+    use Channels;
+    use connection::executor::Secrets;
+    use model::auth::error::UserManagementError;
 
     #[derive(Debug, Clone)]
     struct TestBroadcaster;
@@ -649,8 +653,12 @@ mod test {
         let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
         let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
         let broadcaster = Arc::new(TestBroadcaster);
+        let secrets = Secrets {
+            token_secret: "A".to_string(),
+            password_secret: "B".to_string(),
+        };
 
-        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster);
+        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
         let conn = state.get_conn();
 
         conn.test_transaction::<(), Error, _>(|| {
@@ -662,7 +670,140 @@ mod test {
 
     #[test]
     fn test_add_user() {
+        with_state(|state| {
+            let name = format!("bob_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
 
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
+
+            let name = format!("bob_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                "username": name,
+                "email": email,
+                "password": "hunter2",
+                "displayName": "Bob"
+            })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
+
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, "Bob");
+        });
+    }
+
+    #[test]
+    fn test_add_user_already_exists() {
+        with_state(|state| {
+            let name = format!("bob_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                    "username": name,
+                    "email": email,
+                    "password": "hunter2"
+                })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
+
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
+
+            let another_name = format!("bob_{}", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                    "username": another_name,
+                    "email": email,
+                    "password": "hunter2"
+                })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
+
+            let result = create_action.call(&state).unwrap_err();
+            assert_eq!(result, Error::UserManagement(UserManagementError::AlreadyExists));
+
+            let another_email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                    "username": name,
+                    "email": another_email,
+                    "password": "hunter2"
+                })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
+
+            let result = create_action.call(&state).unwrap_err();
+            assert_eq!(result, Error::UserManagement(UserManagementError::AlreadyExists));
+        });
+    }
+
+    #[test]
+    fn test_add_user_remove_username() {
+        with_state(|state| {
+            let name = format!("bob_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                    "username": name,
+                    "email": email,
+                    "password": "hunter2"
+                })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
+
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
+
+            let create_action = RemoveUser::<_>::new(name.to_owned());
+
+            let UserResult(result) = create_action.call(&state).unwrap().get_data();
+            assert_eq!(result.email, email.to_owned());
+            assert_eq!(result.username, name.to_owned());
+            assert_eq!(result.display_name, name.to_owned());
+
+            let create_action = RemoveUser::<_>::new(name.to_owned());
+
+            let result= create_action.call(&state).unwrap_err();
+            assert_eq!(result, Error::UserManagement(UserManagementError::NotFound));
+            println!("result: {:?}", &result);
+        });
+    }
+
+    #[test]
+    fn test_add_user_remove_email() {
+        with_state(|state| {
+            let name = format!("bob_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                        "username": name,
+                        "email": email,
+                        "password": "hunter2"
+                    })).unwrap();
+            let create_action = AddUser::<_>::new(new_query);
+
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
+
+            let create_action = RemoveUser::<_>::new(email.to_owned());
+
+            let UserResult(result) = create_action.call(&state).unwrap().get_data();
+            assert_eq!(result.email, email.to_owned());
+            assert_eq!(result.username, name.to_owned());
+            assert_eq!(result.display_name, name.to_owned());
+        });
     }
 
     #[test]

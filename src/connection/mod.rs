@@ -14,7 +14,7 @@ pub struct AppState {
     connections: Addr<executor::Executor>,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum BroadcasterError {
     #[fail(display = "An unknown error occurred")]
     Unknown,
@@ -36,7 +36,8 @@ pub struct AppStateBuilder {
     pass_name: Option<String>,
     db_name: Option<String>,
     script_path_dir: Option<String>,
-    secret: Option<String>,
+    token_secret_key: Option<String>,
+    password_secret_key: Option<String>,
     threads: usize,
 }
 
@@ -62,7 +63,8 @@ impl AppStateBuilder {
             pass_name: None,
             db_name: None,
             script_path_dir: None,
-            secret: None,
+            token_secret_key: None,
+            password_secret_key: None,
             threads: num_cpus::get(),
         }
     }
@@ -98,7 +100,12 @@ impl AppStateBuilder {
     }
 
     pub fn token_secret(mut self, secret: &str) -> Self {
-        self.secret = Some(secret.to_string());
+        self.token_secret_key = Some(secret.to_string());
+        self
+    }
+
+    pub fn password_secret(mut self, secret: &str) -> Self {
+        self.password_secret_key = Some(secret.to_string());
         self
     }
 

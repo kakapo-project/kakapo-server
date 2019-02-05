@@ -1,6 +1,6 @@
 use database::DbError;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum TableError {
     #[fail(display = "Already exists")]
     AlreadyExists,

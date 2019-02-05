@@ -17,6 +17,7 @@ use serde::Serialize;
 use model::actions::error::Error;
 use std::fmt::Debug;
 use std::fmt;
+use connection::executor::Secrets;
 
 type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -80,6 +81,7 @@ pub struct State {
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub broadcaster: Arc<Broadcaster>,
+    pub secrets: Secrets,
 }
 
 impl fmt::Debug for State {
@@ -89,17 +91,20 @@ impl fmt::Debug for State {
 }
 
 impl State {
+    //TODO: this has too many parameters
     pub fn new(
         database: DBConnector,
         scripting: Scripting,
         claims: Option<AuthClaims>,
-        broadcaster: Arc<Broadcaster>
+        broadcaster: Arc<Broadcaster>,
+        secrets: Secrets,
     ) -> Self {
         Self {
             database,
             scripting,
             claims,
             broadcaster,
+            secrets,
         }
     }
 }
@@ -156,12 +161,30 @@ impl GetBroadcaster for State {
         where R: Serialize
     {
         let payload = serde_json::to_value(action_result)
-            .or_else(|err| Err(Error::SerializationError(err)))?;
+            .or_else(|err| Err(Error::SerializationError(err.to_string())))?;
 
 
         self.broadcaster.publish(channels, action_name, payload)
             .or_else(|err| Err(Error::PublishError(err)))?;
 
         Ok(())
+    }
+}
+
+pub trait GetSecrets
+    where Self: Send + Debug
+{
+    fn get_token_secret(&self) -> String;
+    fn get_password_secret(&self) -> String;
+}
+
+impl GetSecrets for State {
+    fn get_token_secret(&self) -> String {
+        self.secrets.token_secret.to_owned()
+    }
+
+    fn get_password_secret(&self) -> String {
+        self.secrets.password_secret.to_owned()
+
     }
 }

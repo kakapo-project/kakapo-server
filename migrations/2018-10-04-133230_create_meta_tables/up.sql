@@ -5,7 +5,9 @@ CREATE TABLE "user" (
     "username"                VARCHAR NOT NULL UNIQUE,
     "password"                VARCHAR NOT NULL,
     "email"                   VARCHAR NOT NULL UNIQUE,
-    "display_name"            VARCHAR NOT NULL
+    "display_name"            VARCHAR NOT NULL,
+    CHECK ("email" LIKE '%_@__%.__%'), -- has false positives but no false negatives
+    CHECK ("username" NOT LIKE '%@%') -- username can't have @ sign otherwise it might conflict with email
 );
 
 CREATE TABLE "scope" (

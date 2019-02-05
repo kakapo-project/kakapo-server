@@ -6,7 +6,7 @@ use model::script::error::ScriptError;
 use model::auth::error::UserManagementError;
 use connection::BroadcasterError;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {
     #[fail(display = "{:?}", 0)]
     Entity(EntityError),
@@ -25,7 +25,7 @@ pub enum Error {
     #[fail(display = "Already exists")]
     AlreadyExists,
     #[fail(display = "{:?}", 0)]
-    SerializationError(serde_json::Error),
+    SerializationError(String),
     #[fail(display = "Could not publish {:?}", 0)]
     PublishError(BroadcasterError),
     #[fail(display = "An unknown error occurred")]

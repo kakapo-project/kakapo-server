@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use model::auth::auth_store::AuthStoreFunctions;
+use model::auth::permission_store::PermissionStoreFunctions;
 use model::state::State;
 use model::state::GetConnection;
 use std::iter::FromIterator;
@@ -130,10 +130,10 @@ pub trait GetUserInfo
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
     fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-        where AS: AuthStoreFunctions<Self>;
+        where AS: PermissionStoreFunctions<Self>;
 
     fn get_all_permissions<AS>(&self) -> HashSet<Permission>
-        where AS: AuthStoreFunctions<Self>;
+        where AS: PermissionStoreFunctions<Self>;
 
     fn get_username(&self) -> Option<String>;
 
@@ -153,7 +153,7 @@ impl GetUserInfo for State {
     }
 
     fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-        where AS: AuthStoreFunctions<Self>
+        where AS: PermissionStoreFunctions<Self>
     {
         self.get_user_id().map(|user_id| {
             let raw_permissions_result = AS::get_user_permissions(self, user_id);
@@ -175,7 +175,7 @@ impl GetUserInfo for State {
     }
 
     fn get_all_permissions<AS>(&self) -> HashSet<Permission>
-        where AS: AuthStoreFunctions<State>
+        where AS: PermissionStoreFunctions<State>
     {
         let raw_permissions_result = AS::get_all_permissions(self);
         let raw_permissions = match raw_permissions_result {

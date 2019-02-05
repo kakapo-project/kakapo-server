@@ -11,8 +11,8 @@ use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
 use model::auth::permissions::GetUserInfo;
-use model::auth::auth_store::AuthStore;
-use model::auth::auth_store::AuthStoreFunctions;
+use model::auth::permission_store::PermissionStore;
+use model::auth::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::actions::OkAction;
 use model::state::GetConnection;
@@ -96,7 +96,7 @@ impl<A, S> WithPermissionRequired<A, S>
 impl<A, S> Action<S> for WithPermissionRequired<A, S>
     where
         A: Action<S>,
-        AuthStore: AuthStoreFunctions<S>,
+        PermissionStore: PermissionStoreFunctions<S>,
         S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = A::Ret;
@@ -105,7 +105,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions::<AuthStore>(state).unwrap_or_default();
+        let user_permissions = S::get_permissions::<PermissionStore>(state).unwrap_or_default();
         let is_permitted = self.permissions.is_permitted(&user_permissions);
 
         if is_permitted {
@@ -145,7 +145,7 @@ impl<A, S> WithLoginRequired<A, S>
 impl<A, S> Action<S> for WithLoginRequired<A, S>
     where
         A: Action<S>,
-        AuthStore: AuthStoreFunctions<S>,
+        PermissionStore: PermissionStoreFunctions<S>,
         S: GetConnection + GetUserInfo + GetBroadcaster,
 {
     type Ret = A::Ret;
@@ -154,7 +154,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions::<AuthStore>(state);
+        let user_permissions = S::get_permissions::<PermissionStore>(state);
         match user_permissions {
             None => {
                 debug!("Permission denied, required login");
@@ -208,7 +208,7 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
     where
         A: Action<S>,
         S: GetConnection + GetUserInfo + GetBroadcaster,
-        AuthStore: AuthStoreFunctions<S>,
+        PermissionStore: PermissionStoreFunctions<S>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -216,8 +216,8 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions::<AuthStore>(state).unwrap_or_default();
-        let all_permissions = S::get_all_permissions::<AuthStore>(state);
+        let user_permissions = S::get_permissions::<PermissionStore>(state).unwrap_or_default();
+        let all_permissions = S::get_all_permissions::<PermissionStore>(state);
 
         let is_permitted = (self.required_permission)(&user_permissions, &all_permissions);
 

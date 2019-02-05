@@ -9,10 +9,16 @@ use std::fmt;
 
 pub type Conn = PooledConnection<ConnectionManager<PgConnection>>;
 
+#[derive(Clone)]
+pub struct Secrets {
+    pub token_secret: String,
+    pub password_secret: String,
+}
+
 pub struct Executor {
     pool: Pool<ConnectionManager<PgConnection>>,
     script_path: String,
-    token_secret: String,
+    secrets: Secrets,
 }
 
 impl fmt::Debug for Executor {
@@ -22,6 +28,11 @@ impl fmt::Debug for Executor {
 }
 
 impl Executor {
+    pub fn get_connection(&self) -> Conn {
+        self.pool.get()
+            .expect("Could not get connection")
+    }
+
     pub fn create(info: AppStateBuilder) -> Self {
 
         let database_url = format!(
@@ -37,18 +48,16 @@ impl Executor {
             .expect("Could not start connection");
 
         let script_path = info.script_path_dir.unwrap_or_default(); //TODO: should fallback to home
-        let token_secret = info.secret.unwrap_or("HELLO_WORLD_HELLO_WORLD".to_string()); //TODO: should fallback to randomly generated
+        let secrets = Secrets {
+            token_secret: info.token_secret_key.unwrap_or_default(),
+            password_secret: info.password_secret_key.unwrap_or_default(),
+        };
 
         Self {
             pool,
             script_path,
-            token_secret,
+            secrets,
         }
-    }
-
-    pub fn get_connection(&self) -> Conn {
-        self.pool.get()
-            .expect("Could not get connection")
     }
 
     pub fn get_scripts_path(&self) -> String {
@@ -56,7 +65,11 @@ impl Executor {
     }
 
     pub fn get_token_secret(&self) -> String {
-        self.token_secret.to_owned()
+        self.secrets.token_secret.to_owned()
+    }
+
+    pub fn get_secrets(&self) -> Secrets {
+        self.secrets.to_owned()
     }
 }
 

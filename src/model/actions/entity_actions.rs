@@ -27,8 +27,8 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
-use model::auth::auth_store::AuthStore;
-use model::auth::auth_store::AuthStoreFunctions;
+use model::auth::permission_store::PermissionStore;
+use model::auth::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 
 
@@ -66,12 +66,12 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        AuthStore: AuthStoreFunctions<S>,
+        PermissionStore: PermissionStoreFunctions<S>,
         S: GetConnection + GetUserInfo,
 {
     type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        let user_permissions = S::get_permissions::<AuthStore>(state).unwrap_or_default();
+        let user_permissions = S::get_permissions::<PermissionStore>(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
         let raw_results_name = raw_results.get_name();
 
@@ -459,6 +459,7 @@ mod test {
     use model::actions::results::CreateEntityResult::Created;
     use model::actions::results::DeleteEntityResult::Deleted;
     use uuid::Uuid;
+    use connection::executor::Secrets;
 
     #[derive(Debug, Clone)]
     struct TestBroadcaster;
@@ -488,7 +489,12 @@ mod test {
         let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
         let broadcaster = Arc::new(TestBroadcaster);
 
-        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster);
+        let secrets = Secrets {
+            token_secret: "A".to_string(),
+            password_secret: "B".to_string(),
+        };
+
+        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
         let conn = state.get_conn();
 
         conn.test_transaction::<(), Error, _>(|| {
