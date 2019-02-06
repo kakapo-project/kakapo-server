@@ -1,6 +1,7 @@
 
 use serde_json;
 use linked_hash_map::LinkedHashMap;
+use std::fmt;
 
 pub mod utils;
 pub mod auth;
@@ -52,17 +53,91 @@ pub enum IndexableValue {
     String(String),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+
+
+mod date_time_serde {
+    use super::*;
+    use serde::{Deserializer, Deserialize, Serializer, Serialize};
+
+    #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+    struct DateTimeSerde {
+        #[serde(rename = "$timestamp")]
+        datetime: chrono::NaiveDateTime
+    }
+
+    pub fn serialize<S: Serializer>(data: &chrono::NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error> {
+        let input = DateTimeSerde { datetime: *data };
+        input.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<chrono::NaiveDateTime, D::Error> {
+        let res = DateTimeSerde::deserialize(deserializer)?;
+        Ok(res.datetime)
+    }
+}
+
+mod date_serde {
+    use super::*;
+    use serde::{Deserializer, Deserialize, Serializer, Serialize};
+
+    #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+    struct DateSerde {
+        #[serde(rename = "$date")]
+        date: chrono::NaiveDate
+    }
+
+    pub fn serialize<S: Serializer>(data: &chrono::NaiveDate, serializer: S) -> Result<S::Ok, S::Error> {
+        let input = DateSerde { date: *data };
+        input.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<chrono::NaiveDate, D::Error> {
+        let res = DateSerde::deserialize(deserializer)?;
+        Ok(res.date)
+    }
+}
+
+mod binary_serde {
+    use super::*;
+    use base64;
+    use serde::{Deserializer, Deserialize, Serializer, Serialize};
+    use serde::de::Error;
+
+    #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+    struct BinarySerde {
+        #[serde(rename = "$binary")]
+        base64: String
+    }
+
+    pub fn serialize<S: Serializer>(data: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error> {
+        let input = BinarySerde { base64: base64::encode(data) };
+        input.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
+        let res = BinarySerde::deserialize(deserializer)?;
+        let res = base64::decode(&res.base64)
+            .map_err(|err| D::Error::custom(err))?;
+        Ok(res)
+    }
+}
+
+
+/// Using a modified MongoDB Format https://docs.mongodb.com/manual/reference/mongodb-extended-json/
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum Value {
     Null,
     String(String),
-    Integer(i64),
-    Float(f64),
+    Integer(i64), //TODO: should be bigdecimal?
+    Float(f64), //TODO: should be bigdecimal?
     Boolean(bool),
-    DateTime(chrono::NaiveDateTime), //TODO: serialize
+    #[serde(with = "date_time_serde")]
+    DateTime(chrono::NaiveDateTime),
+    #[serde(with = "date_serde")]
     Date(chrono::NaiveDate),
+    #[serde(with = "binary_serde")]
     Binary(Vec<u8>),
     Json(serde_json::Value),
 }
@@ -416,3 +491,65 @@ impl Table {
     }
 }
 */
+
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use serde_json::from_value;
+
+    #[test]
+    fn test_deserialize_value() {
+        let val: Value = from_value(json!(null)).unwrap();
+        assert_eq!(val, Value::Null);
+
+        let val: Value = from_value(json!("Hello World")).unwrap();
+        assert_eq!(val, Value::String("Hello World".to_string()));
+
+        let val: Value = from_value(json!(42)).unwrap();
+        assert_eq!(val, Value::Integer(42));
+
+        let val: Value = from_value(json!(3.141592)).unwrap();
+        assert_eq!(val, Value::Float(3.141592));
+
+        let val: Value = from_value(json!(true)).unwrap();
+        assert_eq!(val, Value::Boolean(true));
+
+        let date = chrono::NaiveDate::from_ymd(2019, 04, 20).and_hms(16, 20, 00);
+        let val: Value = from_value(json!({"$timestamp" : "2019-04-20T16:20:00"})).unwrap();
+        assert_eq!(val, Value::DateTime(date));
+
+        let date = chrono::NaiveDate::from_ymd(2019, 04, 20);
+        let val: Value = from_value(json!({"$date" : "2019-04-20"})).unwrap();
+        assert_eq!(val, Value::Date(date));
+
+        let data = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let val: Value = from_value(json!({"$binary" : "3q2+7w=="})).unwrap();
+        assert_eq!(val, Value::Binary(data));
+
+        let data = json!({"hello" : "world"});
+        let val: Value = from_value(json!({"hello" : "world"})).unwrap();
+        assert_eq!(val, Value::Json(data));
+    }
+
+    #[test]
+    fn test_serialize_value() {
+        let date = Value::DateTime(chrono::NaiveDate::from_ymd(2019, 04, 20).and_hms(16, 20, 00));
+        let val = serde_json::to_value(&date).unwrap();
+        assert_eq!(val, json!({"$timestamp" : "2019-04-20T16:20:00"}));
+
+        let date = Value::Date(chrono::NaiveDate::from_ymd(2019, 04, 20));
+        let val = serde_json::to_value(&date).unwrap();
+        assert_eq!(val, json!({"$date" : "2019-04-20"}));
+
+        let data = Value::Binary(vec![0xDE, 0xAD, 0xBE, 0xEF]);
+        let val = serde_json::to_value(&data).unwrap();
+        assert_eq!(val, json!({"$binary" : "3q2+7w=="}));
+
+        let data = Value::Json(json!({"hello" : "world"}));
+        let val = serde_json::to_value(&data).unwrap();
+        assert_eq!(val, json!({"hello" : "world"}));
+    }
+}
