@@ -20,6 +20,10 @@ use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::GetSecrets;
 
+use std::io::Cursor;
+use byteorder::{BigEndian, ReadBytesExt};
+use model::auth::send_mail::EmailSender;
+
 #[derive(Debug)]
 pub struct Authenticate<S = State, AF = Auth> {
     user_identifier: String,
@@ -186,7 +190,7 @@ pub struct InviteUser<S = State, AF = Auth> {
 
 impl<S, AF> InviteUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster + EmailSender,
         AF: AuthFunctions<S>,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -205,14 +209,14 @@ impl<S, AF> InviteUser<S, AF>
 
 impl<S, AF> Action<S> for InviteUser<S, AF>
     where
-        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster,
+        S: GetConnection + GetUserInfo + GetSecrets + GetBroadcaster + EmailSender,
         AF: AuthFunctions<S>,
 {
-    type Ret = InvitationToken;
+    type Ret = InvitationResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        AF::invite_user(state, &self.email)
-            .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("InviteUser", InvitationToken(res)))
+        let invitation_token = AF::create_user_token(state, &self.email).map_err(Error::UserManagement)?;
+        let invitation = state.send_email(invitation_token).map_err(Error::EmailError)?;
+        ActionRes::new("InviteUser", InvitationResult(invitation))
     }
 }
 
@@ -624,6 +628,17 @@ mod test {
     use Channels;
     use connection::executor::Secrets;
     use model::auth::error::UserManagementError;
+    use data::auth::Invitation;
+    use model::auth::send_mail::EmailError;
+    use data::auth::InvitationToken;
+    use model::auth::permission_store::PermissionStoreFunctions;
+    use std::collections::HashSet;
+    use serde::Serialize;
+    use data::auth::Role;
+    use data::auth::User;
+    use data::auth::NewUser;
+    use model::auth::permission_store::PermissionStore;
+    use data::dbdata::RawPermission;
 
     #[derive(Debug, Clone)]
     struct TestBroadcaster;
@@ -641,8 +656,127 @@ mod test {
         res.replace("/", "_").replace("+", "$")
     }
 
+    #[derive(Debug)]
+    struct MockState(State);
+    impl GetConnection for MockState {
+        type Connection = <State as GetConnection>::Connection;
+        fn get_conn(&self) -> &Self::Connection {
+            self.0.get_conn()
+        }
+
+        fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
+            where
+                F: FnOnce() -> Result<G, E>,
+                E: From<diesel::result::Error>
+        { self.0.transaction(f) }
+    }
+
+    impl GetUserInfo for MockState {
+        const ADMIN_USER_ID: i64 = State::ADMIN_USER_ID;
+
+        fn get_user_id(&self) -> Option<i64> { self.0.get_user_id() }
+
+        fn is_admin(&self) -> bool { self.0.is_admin() }
+
+        fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
+            where AS: PermissionStoreFunctions<State>
+        { self.0.get_permissions::<AS>() }
+
+        fn get_all_permissions<AS>(&self) -> HashSet<Permission>
+            where AS: PermissionStoreFunctions<State>
+        { self.0.get_all_permissions::<AS>() }
+
+        fn get_username(&self) -> Option<String> { self.0.get_username() }
+    }
+
+    impl GetSecrets for MockState {
+        fn get_token_secret(&self) -> String { self.0.get_token_secret() }
+
+        fn get_password_secret(&self) -> String { self.0.get_password_secret() }
+    }
+
+    impl GetBroadcaster for MockState {
+        fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
+            where R: Serialize
+        {
+            self.0.publish(channels, action_name, action_result)
+        }
+    }
+
+    //TODO: remove this!!
+    impl AuthFunctions<MockState> for Auth<MockState> {
+        fn authenticate(state: &MockState, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
+            Auth::authenticate(&state.0, user_identifier, password)
+        }
+
+        fn add_user(state: &MockState, user: &NewUser) -> Result<User, UserManagementError> {
+            Auth::add_user(&state.0, user)
+        }
+
+        fn remove_user(state: &MockState, user_identifier: &str) -> Result<User, UserManagementError> {
+            Auth::remove_user(&state.0, user_identifier)
+        }
+
+        fn create_user_token(state: &MockState, email: &str) -> Result<InvitationToken, UserManagementError> {
+            Auth::create_user_token(&state.0, email)
+        }
+
+        fn modify_user_password(state: &MockState, user_identifier: &str, password: &str) -> Result<User, UserManagementError> {
+            Auth::modify_user_password(&state.0, user_identifier, password)
+        }
+
+        fn get_all_users(state: &MockState) -> Result<Vec<User>, UserManagementError> {
+            Auth::get_all_users(&state.0)
+        }
+
+        fn add_role(state: &MockState, rolename: &Role) -> Result<Role, UserManagementError> {
+            Auth::add_role(&state.0, rolename)
+        }
+
+        fn remove_role(state: &MockState, rolename: &str) -> Result<Role, UserManagementError> {
+            Auth::remove_role(&state.0, rolename)
+        }
+
+        fn get_all_roles(state: &MockState) -> Result<Vec<Role>, UserManagementError> {
+            Auth::get_all_roles(&state.0)
+        }
+
+        fn attach_permission_for_role(state: &MockState, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {
+            Auth::attach_permission_for_role(&state.0, permission, rolename)
+        }
+
+        fn detach_permission_for_role(state: &MockState, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {
+            Auth::detach_permission_for_role(&state.0, permission, rolename)
+        }
+
+        fn attach_role_for_user(state: &MockState, role: &Role, user_identifier: &str) -> Result<User, UserManagementError> {
+            Auth::attach_role_for_user(&state.0, role, user_identifier)
+        }
+
+        fn detach_role_for_user(state: &MockState, role: &Role, user_identifier: &str) -> Result<User, UserManagementError> {
+            Auth::detach_role_for_user(&state.0, role, user_identifier)
+        }
+    }
+
+    impl PermissionStoreFunctions<MockState> for PermissionStore {
+        fn get_user_permissions(state: &MockState, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
+            PermissionStore::get_user_permissions(&state.0, user_id)
+        }
+
+        fn get_all_permissions(state: &MockState) -> Result<Vec<RawPermission>, UserManagementError> {
+            PermissionStore::get_all_permissions(&state.0)
+        }
+    }
+
+    impl EmailSender for MockState {
+        fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError> {
+            self.0.send_email(invitation_token)
+        }
+    }
+
+
     fn with_state<F>(f: F)
-        where F: FnOnce(&State) -> ()
+        where F: FnOnce(&MockState) -> ()
     {
         let script_path = "./path/to/scripts".to_string();
         let conn_url = "postgres://test:password@localhost:5432/test".to_string();
@@ -659,10 +793,12 @@ mod test {
         };
 
         let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
-        let conn = state.get_conn();
+
+        let mock_state = MockState(state);
+        let conn = mock_state.0.get_conn();
 
         conn.test_transaction::<(), Error, _>(|| {
-            f(&state);
+            f(&mock_state);
 
             Ok(())
         });
@@ -678,7 +814,7 @@ mod test {
                 "email": email,
                 "password": "hunter2"
             })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state);
             let UserResult(data) = result.unwrap().get_data();
@@ -694,7 +830,7 @@ mod test {
                 "password": "hunter2",
                 "displayName": "Bob"
             })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state);
             let UserResult(data) = result.unwrap().get_data();
@@ -710,11 +846,11 @@ mod test {
             let name = format!("bob_{}", random_identifier());
             let email = format!("stuff{}@example.com", random_identifier());
             let new_query: data::auth::NewUser = from_value(json!({
-                    "username": name,
-                    "email": email,
-                    "password": "hunter2"
-                })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state);
             let UserResult(data) = result.unwrap().get_data();
@@ -724,22 +860,22 @@ mod test {
 
             let another_name = format!("bob_{}", random_identifier());
             let new_query: data::auth::NewUser = from_value(json!({
-                    "username": another_name,
-                    "email": email,
-                    "password": "hunter2"
-                })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+                "username": another_name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state).unwrap_err();
             assert_eq!(result, Error::UserManagement(UserManagementError::AlreadyExists));
 
             let another_email = format!("stuff{}@example.com", random_identifier());
             let new_query: data::auth::NewUser = from_value(json!({
-                    "username": name,
-                    "email": another_email,
-                    "password": "hunter2"
-                })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+                "username": name,
+                "email": another_email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state).unwrap_err();
             assert_eq!(result, Error::UserManagement(UserManagementError::AlreadyExists));
@@ -752,11 +888,11 @@ mod test {
             let name = format!("bob_{}", random_identifier());
             let email = format!("stuff{}@example.com", random_identifier());
             let new_query: data::auth::NewUser = from_value(json!({
-                    "username": name,
-                    "email": email,
-                    "password": "hunter2"
-                })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state);
             let UserResult(data) = result.unwrap().get_data();
@@ -764,14 +900,14 @@ mod test {
             assert_eq!(data.username, name);
             assert_eq!(data.display_name, name);
 
-            let create_action = RemoveUser::<_>::new(name.to_owned());
+            let create_action = RemoveUser::<MockState, Auth<MockState>>::new(name.to_owned());
 
             let UserResult(result) = create_action.call(&state).unwrap().get_data();
             assert_eq!(result.email, email.to_owned());
             assert_eq!(result.username, name.to_owned());
             assert_eq!(result.display_name, name.to_owned());
 
-            let create_action = RemoveUser::<_>::new(name.to_owned());
+            let create_action = RemoveUser::<MockState, Auth<MockState>>::new(name.to_owned());
 
             let result= create_action.call(&state).unwrap_err();
             assert_eq!(result, Error::UserManagement(UserManagementError::NotFound));
@@ -785,11 +921,11 @@ mod test {
             let name = format!("bob_{}", random_identifier());
             let email = format!("stuff{}@example.com", random_identifier());
             let new_query: data::auth::NewUser = from_value(json!({
-                        "username": name,
-                        "email": email,
-                        "password": "hunter2"
-                    })).unwrap();
-            let create_action = AddUser::<_>::new(new_query);
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState, Auth<MockState>>::new(new_query);
 
             let result = create_action.call(&state);
             let UserResult(data) = result.unwrap().get_data();
@@ -797,7 +933,7 @@ mod test {
             assert_eq!(data.username, name);
             assert_eq!(data.display_name, name);
 
-            let create_action = RemoveUser::<_>::new(email.to_owned());
+            let create_action = RemoveUser::<MockState, Auth<MockState>>::new(email.to_owned());
 
             let UserResult(result) = create_action.call(&state).unwrap().get_data();
             assert_eq!(result.email, email.to_owned());
@@ -806,8 +942,27 @@ mod test {
         });
     }
 
+    #[derive(Debug, Clone)]
+    struct MockEmailer;
+    impl EmailSender for MockEmailer {
+        fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError> {
+            unimplemented!()
+        }
+    }
+
     #[test]
     fn test_invite_user() {
+        with_state(|state| {
 
+            let email = format!("stuff{}@example.com", random_identifier());
+            let emailer = MockEmailer;
+            let create_action = InviteUser::<MockState, Auth<MockState>>::new(email);
+
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
+
+            println!("data: {:?}", &data);
+
+        });
     }
 }

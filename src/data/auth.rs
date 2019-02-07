@@ -1,4 +1,7 @@
 
+use chrono;
+use serde_json;
+
 pub use model::auth::permissions::Permission;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -18,6 +21,23 @@ pub struct NewUser {
     pub password: String,
     pub display_name: Option<String>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Invitation {
+    pub email: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InvitationToken {
+    pub email: String,
+    pub token: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

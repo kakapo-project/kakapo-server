@@ -23,6 +23,7 @@ extern crate linked_hash_map;
 #[macro_use]
 extern crate log;
 extern crate num_cpus;
+extern crate rand;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;

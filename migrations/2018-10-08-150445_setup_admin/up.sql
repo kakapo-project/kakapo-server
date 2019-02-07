@@ -2,11 +2,11 @@
 TRUNCATE "scope" CASCADE;
 TRUNCATE "user" CASCADE;
 
-INSERT INTO "scope" ("scope_id", "name", "description", "scope_info")
-VALUES (1, 'main', '', '{}');
+INSERT INTO "scope" ("name", "description", "scope_info")
+VALUES ('main', '', '{}');
 
-INSERT INTO "user" ("user_id", "username", "password", "email", "display_name")
-VALUES (1, 'admin', 'password', 'admin@example.com', 'Admin');
+INSERT INTO "user" ("username", "password", "email", "display_name")
+VALUES ('admin', 'password', 'admin@example.com', 'Admin');
 
 
 ALTER TABLE "scope" ADD CONSTRAINT "scope_main_is_0_check" CHECK (

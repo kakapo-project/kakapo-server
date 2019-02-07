@@ -56,7 +56,6 @@ pub enum IndexableValue {
 
 
 mod date_time_serde {
-    use super::*;
     use serde::{Deserializer, Deserialize, Serializer, Serialize};
 
     #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -77,7 +76,6 @@ mod date_time_serde {
 }
 
 mod date_serde {
-    use super::*;
     use serde::{Deserializer, Deserialize, Serializer, Serialize};
 
     #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -98,7 +96,6 @@ mod date_serde {
 }
 
 mod binary_serde {
-    use super::*;
     use base64;
     use serde::{Deserializer, Deserialize, Serializer, Serialize};
     use serde::de::Error;

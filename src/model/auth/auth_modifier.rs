@@ -1,5 +1,8 @@
 
 use data::auth::User;
+use data::auth::InvitationToken;
+use data::auth::Invitation;
+
 use data::auth::NewUser;
 use model::auth::error::UserManagementError;
 use model::state::GetConnection;
@@ -17,10 +20,18 @@ use diesel::prelude::*;
 use diesel;
 use diesel::result::Error as DbError;
 use diesel::result::DatabaseErrorKind as DbErrKind;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use std::io::Cursor;
+use model::auth::tokens::Token;
+use std::marker::PhantomData;
 
 
 #[derive(Debug, Clone)]
-pub struct Auth;
+pub struct Auth<S = State> {
+    phantom_data: PhantomData<(S)>,
+}
+
 pub trait AuthFunctions<S>
     where
         Self: Send + Debug,
@@ -29,7 +40,8 @@ pub trait AuthFunctions<S>
     fn authenticate(state: &S, user_identifier: &str, password: &str) -> Result<bool, UserManagementError>;
     fn add_user(state: &S, user: &NewUser) -> Result<User, UserManagementError>;
     fn remove_user(state: &S, user_identifier: &str) -> Result<User, UserManagementError>;
-    fn invite_user(state: &S, email: &str) -> Result<String, UserManagementError>;
+
+    fn create_user_token(state: &S, email: &str) -> Result<InvitationToken, UserManagementError>;
     //TODO: all modifications
     fn modify_user_password(state: &S, user_identifier: &str, password: &str) -> Result<User, UserManagementError>;
     fn get_all_users(state: &S) -> Result<Vec<User>, UserManagementError>;
@@ -45,7 +57,7 @@ pub trait AuthFunctions<S>
     fn detach_role_for_user(state: &S, role: &Role, user_identifier: &str) -> Result<User, UserManagementError>;
 }
 
-impl AuthFunctions<State> for Auth {
+impl AuthFunctions<State> for Auth<State> {
     fn authenticate(state: &State, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
         unimplemented!()
     }
@@ -129,8 +141,34 @@ impl AuthFunctions<State> for Auth {
         }
     }
 
-    fn invite_user(state: &State, email: &str) -> Result<String, UserManagementError> {
-        unimplemented!()
+    fn create_user_token(state: &State, email: &str) -> Result<InvitationToken, UserManagementError> {
+        info!("Creating token for: {}", email);
+        let token = Token::new()
+            .map_err(|err| UserManagementError::InternalError(err.to_string()))?;
+
+        let delete_result = diesel::delete(schema::invitation::table)
+            .filter(schema::invitation::columns::email.eq(email))
+            .execute(state.get_conn());
+        if delete_result.is_ok() {
+            warn!("Old data exists for {}, pushing that row out", email);
+        }
+
+        let token_result = diesel::insert_into(schema::invitation::table)
+            .values(dbdata::NewRawInvitation::new(email.to_string(), token.as_string()))
+            .get_result::<dbdata::RawInvitation>(state.get_conn())
+            .map_err(|err| {
+                error!("Encountered error: {:?}", &err);
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+        info!("created token for {:?}[{:?}]", token_result.email, token_result.invitation_id);
+        let token = InvitationToken {
+            email: token_result.email,
+            token: token_result.token,
+            expires_at: token_result.expires_at,
+        };
+
+        Ok(token)
     }
 
     fn modify_user_password(state: &State, user_identifier: &str, password: &str) -> Result<User, UserManagementError> {

@@ -2,6 +2,7 @@
 
 use data;
 use std::marker::PhantomData;
+use data::auth::Invitation;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct GetAllEntitiesResult<T>(pub Vec<T>);
@@ -80,7 +81,7 @@ pub struct UserResult(pub data::auth::User);
 pub struct AllUsersResult(pub Vec<data::auth::User>);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct InvitationToken(pub String);
+pub struct InvitationResult(pub Invitation);
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RoleResult(pub data::auth::Role);

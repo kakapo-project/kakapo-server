@@ -27,5 +27,7 @@ DROP TABLE "entity";
 
 DROP TABLE "scope";
 
+DROP TABLE "invitation";
+
 DROP TABLE "user";
 

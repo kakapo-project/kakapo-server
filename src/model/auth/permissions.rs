@@ -130,10 +130,10 @@ pub trait GetUserInfo
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
     fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-        where AS: PermissionStoreFunctions<Self>;
+        where AS: PermissionStoreFunctions<State>;
 
     fn get_all_permissions<AS>(&self) -> HashSet<Permission>
-        where AS: PermissionStoreFunctions<Self>;
+        where AS: PermissionStoreFunctions<State>;
 
     fn get_username(&self) -> Option<String>;
 
@@ -153,7 +153,7 @@ impl GetUserInfo for State {
     }
 
     fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-        where AS: PermissionStoreFunctions<Self>
+        where AS: PermissionStoreFunctions<State>
     {
         self.get_user_id().map(|user_id| {
             let raw_permissions_result = AS::get_user_permissions(self, user_id);

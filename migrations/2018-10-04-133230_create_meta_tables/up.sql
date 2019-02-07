@@ -3,11 +3,23 @@
 CREATE TABLE "user" (
     "user_id"                 BIGSERIAL PRIMARY KEY,
     "username"                VARCHAR NOT NULL UNIQUE,
-    "password"                VARCHAR NOT NULL,
     "email"                   VARCHAR NOT NULL UNIQUE,
+    "password"                VARCHAR NOT NULL,
     "display_name"            VARCHAR NOT NULL,
+    "user_info"               JSON NOT NULL DEFAULT '{}',
+    "joined_at"               TIMESTAMP NOT NULL DEFAULT NOW(),
     CHECK ("email" LIKE '%_@__%.__%'), -- has false positives but no false negatives
     CHECK ("username" NOT LIKE '%@%') -- username can't have @ sign otherwise it might conflict with email
+);
+
+CREATE TABLE "invitation" (
+    "invitation_id"           BIGSERIAL PRIMARY KEY,
+    "email"                   VARCHAR NOT NULL UNIQUE,
+    "token"                   VARCHAR NOT NULL,
+    "token_info"              JSON NOT NULL DEFAULT '{}',
+    "sent_at"                 TIMESTAMP NOT NULL DEFAULT NOW(),
+    "expires_at"              TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '1 DAY'),
+    CHECK ("email" LIKE '%_@__%.__%') -- has false positives but no false negatives
 );
 
 CREATE TABLE "scope" (

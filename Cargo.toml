@@ -25,6 +25,7 @@ log = "0.4"
 num_cpus = "1.8.0"
 openssl = "0.10.16"
 pq-sys = { version = ">=0.3.0, <0.5.0" }
+rand = "0.6"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"

@@ -24,6 +24,17 @@ table! {
 }
 
 table! {
+    invitation (invitation_id) {
+        invitation_id -> Int8,
+        email -> Varchar,
+        token -> Varchar,
+        token_info -> Json,
+        sent_at -> Timestamp,
+        expires_at -> Timestamp,
+    }
+}
+
+table! {
     permission (permission_id) {
         permission_id -> Int8,
         data -> Json,
@@ -122,9 +133,11 @@ table! {
     user (user_id) {
         user_id -> Int8,
         username -> Varchar,
-        password -> Varchar,
         email -> Varchar,
+        password -> Varchar,
         display_name -> Varchar,
+        user_info -> Json,
+        joined_at -> Timestamp,
     }
 }
 
@@ -166,6 +179,7 @@ allow_tables_to_appear_in_same_query!(
     entity,
     entity_tag,
     entity_usage,
+    invitation,
     permission,
     query,
     role,

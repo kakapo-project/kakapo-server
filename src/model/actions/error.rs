@@ -5,6 +5,7 @@ use model::query::error::QueryError;
 use model::script::error::ScriptError;
 use model::auth::error::UserManagementError;
 use connection::BroadcasterError;
+use model::auth::send_mail::EmailError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {
@@ -16,6 +17,8 @@ pub enum Error {
     Script(ScriptError),
     #[fail(display = "{:?}", 0)]
     Query(QueryError),
+    #[fail(display = "{:?}", 0)]
+    EmailError(EmailError),
     #[fail(display = "{:?}", 0)]
     UserManagement(UserManagementError),
     #[fail(display = "Not authorized")]

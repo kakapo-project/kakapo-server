@@ -3,7 +3,7 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, user, permission};
+use data::schema::{entity, table_schema, query, script, user, permission, invitation};
 use data;
 use std::fmt::Debug;
 use data::conversion::ConvertRaw;
@@ -159,8 +159,8 @@ impl RawEntityTypes for data::Script {
 #[table_name = "user"]
 pub struct NewRawUser {
     pub username: String,
-    pub password: String,
     pub email: String,
+    pub password: String,
     pub display_name: String,
 }
 
@@ -170,10 +170,38 @@ pub struct NewRawUser {
 pub struct RawUser {
     pub user_id: i64,
     pub username: String,
-    pub password: String,
     pub email: String,
+    pub password: String,
     pub display_name: String,
+    pub user_info: serde_json::Value,
+    pub joined_at: chrono::NaiveDateTime,
 }
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "invitation"]
+pub struct NewRawInvitation {
+    pub email: String,
+    pub token: String,
+}
+
+impl NewRawInvitation {
+    pub fn new(email: String, token: String) -> Self {
+        Self { email, token }
+    }
+}
+
+#[derive(Debug, Identifiable, Queryable, QueryableByName)]
+#[primary_key(invitation_id)]
+#[table_name = "invitation"]
+pub struct RawInvitation {
+    pub invitation_id: i64,
+    pub email: String,
+    pub token: String,
+    pub token_info: serde_json::Value,
+    pub sent_at: chrono::NaiveDateTime,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
 
 #[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
 #[table_name = "permission"]
