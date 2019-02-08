@@ -3,6 +3,30 @@ use data::dbdata;
 use data;
 
 use serde_json;
+use model::entity::internals::InternalRetrieverFunctions;
+use model::entity::internals::InternalModifierFunctions;
+use model::entity::update_state::UpdateActionFunctions;
+use serde::Serialize;
+use std::fmt::Debug;
+use data::dbdata::RawTable;
+use data::dbdata::NewRawTable;
+use data::dbdata::RawQuery;
+use data::dbdata::NewRawQuery;
+use data::dbdata::RawScript;
+use data::dbdata::NewRawScript;
+
+pub trait RawEntityTypes
+    where
+        Self: Clone + Send + Debug + Serialize,
+        Self::Data: ConvertRaw<Self>,
+        Self::NewData: GenerateRaw<Self>,
+        Self: InternalRetrieverFunctions + InternalModifierFunctions + UpdateActionFunctions,
+{
+    type Data;
+    type NewData;
+
+    fn get_name(&self) -> String;
+}
 
 pub trait ConvertRaw<T> {
     fn convert(&self) -> T;
@@ -120,5 +144,32 @@ impl GenerateRaw<data::Script> for dbdata::NewRawScript {
             is_deleted: true,
             modified_by,
         }
+    }
+}
+
+impl RawEntityTypes for data::Table {
+    type Data = RawTable;
+    type NewData = NewRawTable;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
+}
+
+impl RawEntityTypes for data::Query {
+    type Data = RawQuery;
+    type NewData = NewRawQuery;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
+}
+
+impl RawEntityTypes for data::Script {
+    type Data = RawScript;
+    type NewData = NewRawScript;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
     }
 }

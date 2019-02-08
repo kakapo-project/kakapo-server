@@ -7,7 +7,6 @@ pub mod utils;
 pub mod auth;
 pub mod dbdata;
 pub mod schema;
-pub mod conversion;
 pub mod methods;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

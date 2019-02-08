@@ -5,8 +5,7 @@ use data;
 
 use connection::executor::Conn;
 
-use data::conversion::*;
-use data::dbdata::RawEntityTypes;
+use model::entity::conversion::*;
 use data::dbdata::RawEntity;
 use data::dbdata::NewRawEntity;
 
@@ -117,8 +116,8 @@ macro_rules! implement_retriever_and_modifier {
         use diesel::RunQueryDsl;
         use std::error::Error;
 
-        type RD = <$DataEntityType as dbdata::RawEntityTypes>::Data;
-        type NRD = <$DataEntityType as dbdata::RawEntityTypes>::NewData;
+        type RD = <$DataEntityType as RawEntityTypes>::Data;
+        type NRD = <$DataEntityType as RawEntityTypes>::NewData;
 
         fn query_entities_by_name(conn: &Conn, name: String) -> Result<Option<RD>, EntityError> {
             let query = format!(r#"

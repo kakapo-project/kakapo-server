@@ -9,7 +9,7 @@ use diesel::pg::PgConnection;
 
 use connection::executor::Conn;
 use diesel::Connection;
-use data::dbdata::RawEntityTypes;
+use model::entity::RawEntityTypes;
 use scripting::Scripting;
 use connection::Broadcaster;
 use std::sync::Arc;

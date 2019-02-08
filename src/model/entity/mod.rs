@@ -1,9 +1,10 @@
-use data::dbdata::RawEntityTypes;
 
-pub mod internals; //TODO: make private
 pub mod error;
 pub mod results;
-pub mod update_state; //TODO: make private
+
+mod conversion;
+mod update_state;
+mod internals;
 
 use self::error::EntityError;
 use self::results::*;
@@ -18,6 +19,7 @@ use model::entity::internals::InternalRetrieverFunctions;
 use connection::executor::Conn;
 use model::state::AuthClaims;
 
+pub use model::entity::conversion::RawEntityTypes;
 
 pub struct Controller<'a> {
     pub conn: &'a Conn,

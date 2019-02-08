@@ -11,7 +11,7 @@ use model::state::GetScripting;
 use data::DataType;
 use std::fmt::Debug;
 use model::entity::Controller;
-use data::dbdata::RawEntityTypes;
+use model::entity::conversion::RawEntityTypes;
 
 /// This trait does something action specific after the database updates
 /// The name is a little bit confusing because the database store is also modification

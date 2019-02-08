@@ -10,7 +10,7 @@ use model::actions::error::Error;
 use data::utils::OnDuplicate;
 
 use data::utils::OnNotFound;
-use data::dbdata::RawEntityTypes;
+use model::entity::RawEntityTypes;
 
 use model::entity::results::Upserted;
 use model::entity::results::Created;

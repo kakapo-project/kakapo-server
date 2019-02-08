@@ -6,28 +6,8 @@ use serde_json;
 use data::schema::{entity, table_schema, query, script, user, permission, invitation};
 use data;
 use std::fmt::Debug;
-use data::conversion::ConvertRaw;
-use data::conversion::GenerateRaw;
 use serde::Serialize;
 use model::auth::permissions::Permission;
-
-use model::entity::internals::InternalRetrieverFunctions;
-use model::entity::internals::InternalModifierFunctions;
-use model::entity::update_state::UpdateActionFunctions;
-
-// Queryables
-pub trait RawEntityTypes
-    where
-        Self: Clone + Send + Debug + Serialize,
-        Self::Data: ConvertRaw<Self>,
-        Self::NewData: GenerateRaw<Self>,
-        Self: InternalRetrieverFunctions + InternalModifierFunctions + UpdateActionFunctions,
-{
-    type Data;
-    type NewData;
-
-    fn get_name(&self) -> String;
-}
 
 #[derive(Identifiable, Debug, Queryable, Clone)]
 #[primary_key(entity_id)]
@@ -73,16 +53,6 @@ pub struct NewRawTable {
     pub modified_by: i64,
 }
 
-impl RawEntityTypes for data::Table {
-    type Data = RawTable;
-    type NewData = NewRawTable;
-
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
-}
-
-
 #[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
 #[primary_key(query_id)]
 #[table_name = "query"]
@@ -109,15 +79,6 @@ pub struct NewRawQuery {
     pub query_info: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
-}
-
-impl RawEntityTypes for data::Query {
-    type Data = RawQuery;
-    type NewData = NewRawQuery;
-
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
 }
 
 #[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
@@ -148,15 +109,6 @@ pub struct NewRawScript {
     pub script_info: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
-}
-
-impl RawEntityTypes for data::Script {
-    type Data = RawScript;
-    type NewData = NewRawScript;
-
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
 }
 
 
