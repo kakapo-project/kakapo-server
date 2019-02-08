@@ -1,7 +1,7 @@
 use model::entity::results::*;
 use model::entity::error::EntityError;
 use data;
-use model::state::State;
+use model::state::ActionState;
 
 use std::error::Error;
 
@@ -19,18 +19,18 @@ pub trait UpdateState<T>
         Self: Sized,
         T: Debug,
 {
-    fn update_state(self, state: &State) -> Result<Self, EntityError>
+    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
         where
-            UpdateAction: UpdateActionFunctions<T, State>;
+            UpdateAction: UpdateActionFunctions<T, ActionState>;
 }
 
 //Created
 impl<T> UpdateState<T> for Created<T>
     where T: Debug
 {
-    fn update_state(self, state: &State) -> Result<Self, EntityError>
+    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
         where
-            UpdateAction: UpdateActionFunctions<T, State>,
+            UpdateAction: UpdateActionFunctions<T, ActionState>,
     {
         info!("new: {:?}", &self);
         let res = match &self {
@@ -48,9 +48,9 @@ impl<T> UpdateState<T> for Created<T>
 impl<T> UpdateState<T> for Upserted<T>
     where T: Debug
 {
-    fn update_state(self, state: &State) -> Result<Self, EntityError>
+    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
         where
-            UpdateAction: UpdateActionFunctions<T, State>,
+            UpdateAction: UpdateActionFunctions<T, ActionState>,
     {
         let res = match &self {
             Upserted::Update { old, new } => UpdateAction::update_entity(&state, &old, &new),
@@ -67,9 +67,9 @@ impl<T> UpdateState<T> for Upserted<T>
 impl<T> UpdateState<T> for Updated<T>
     where T: Debug
 {
-    fn update_state(self, state: &State) -> Result<Self, EntityError>
+    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
         where
-            UpdateAction: UpdateActionFunctions<T, State>,
+            UpdateAction: UpdateActionFunctions<T, ActionState>,
     {
         let res = match &self {
             Updated::Success { old, new } => UpdateAction::update_entity(&state, &old, &new),
@@ -84,9 +84,9 @@ impl<T> UpdateState<T> for Updated<T>
 impl<T> UpdateState<T> for Deleted<T>
     where T: Debug
 {
-    fn update_state(self, state: &State) -> Result<Self, EntityError>
+    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
         where
-            UpdateAction: UpdateActionFunctions<T, State>,
+            UpdateAction: UpdateActionFunctions<T, ActionState>,
     {
         let res = match &self {
             Deleted::Success { old } => UpdateAction::delete_entity(&state, &old),
@@ -136,8 +136,8 @@ fn get_sql_data_type(data_type: &DataType) -> String {
 }
 
 ///mdodify table in database here
-impl UpdateActionFunctions<data::Table, State> for UpdateAction {
-    fn create_entity(conn: &State, new: &data::Table) -> Result<(), EntityError> {
+impl UpdateActionFunctions<data::Table, ActionState> for UpdateAction {
+    fn create_entity(conn: &ActionState, new: &data::Table) -> Result<(), EntityError> {
 
         let schema = &new.schema;
         let columns = &schema.columns;
@@ -163,7 +163,7 @@ impl UpdateActionFunctions<data::Table, State> for UpdateAction {
         Ok(())
     }
 
-    fn update_entity(conn: &State, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
+    fn update_entity(conn: &ActionState, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
         unimplemented!();
         let command = format!("ALTER TABLE \"{}\";", old.name);
         diesel::sql_query(command)
@@ -174,7 +174,7 @@ impl UpdateActionFunctions<data::Table, State> for UpdateAction {
         Ok(())
     }
 
-    fn delete_entity(conn: &State, old: &data::Table) -> Result<(), EntityError> {
+    fn delete_entity(conn: &ActionState, old: &data::Table) -> Result<(), EntityError> {
         let command = format!("DROP TABLE \"{}\";", old.name);
         diesel::sql_query(command)
             .execute(conn.get_conn())
@@ -187,30 +187,30 @@ impl UpdateActionFunctions<data::Table, State> for UpdateAction {
 
 ///Nothing needed here
 /// TODO: maybe have stored procedures here
-impl UpdateActionFunctions<data::Query, State> for UpdateAction {
-    fn create_entity(conn: &State, new: &data::Query) -> Result<(), EntityError> {
+impl UpdateActionFunctions<data::Query, ActionState> for UpdateAction {
+    fn create_entity(conn: &ActionState, new: &data::Query) -> Result<(), EntityError> {
         Ok(())
     }
 
-    fn update_entity(conn: &State, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
+    fn update_entity(conn: &ActionState, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
         Ok(())
     }
 
-    fn delete_entity(conn: &State, old: &data::Query) -> Result<(), EntityError> {
+    fn delete_entity(conn: &ActionState, old: &data::Query) -> Result<(), EntityError> {
         Ok(())
     }
 }
 
 ///Nothing needed here
-impl UpdateActionFunctions<data::Script, State> for UpdateAction {
-    fn create_entity(conn: &State, new: &data::Script) -> Result<(), EntityError> {
+impl UpdateActionFunctions<data::Script, ActionState> for UpdateAction {
+    fn create_entity(conn: &ActionState, new: &data::Script) -> Result<(), EntityError> {
         unimplemented!();
         let scripting = conn.get_scripting();
         //Scripting::build();
         Ok(())
     }
 
-    fn update_entity(conn: &State, old: &data::Script, new: &data::Script) -> Result<(), EntityError> {
+    fn update_entity(conn: &ActionState, old: &data::Script, new: &data::Script) -> Result<(), EntityError> {
         unimplemented!();
         let scripting = conn.get_scripting();
         //TODO: this should be debounced so that docker doesn't get called all the time
@@ -218,7 +218,7 @@ impl UpdateActionFunctions<data::Script, State> for UpdateAction {
         Ok(())
     }
 
-    fn delete_entity(conn: &State, old: &data::Script) -> Result<(), EntityError> {
+    fn delete_entity(conn: &ActionState, old: &data::Script) -> Result<(), EntityError> {
         unimplemented!();
         let scripting = conn.get_scripting();
         //Scripting::delete();

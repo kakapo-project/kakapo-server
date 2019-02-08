@@ -1,7 +1,7 @@
 
 pub mod error;
 
-use model::state::State;
+use model::state::ActionState;
 use data;
 use model::script::error::ScriptError;
 use std::fmt::Debug;
@@ -17,11 +17,11 @@ pub trait ScriptActionFunctions<S>
     fn run_script(conn: &S, script: &data::Script) -> Result<serde_json::Value, ScriptError>;
 }
 
-impl ScriptActionFunctions<State> for ScriptAction {
+impl ScriptActionFunctions<ActionState> for ScriptAction {
     /// runs the given script
     /// NOTE: this doesn't have a timeout it probably should
     /// Warning: if you have access to the script you may have access to anything stored in that container, potential vulnerability?
-    fn run_script(conn: &State, script: &data::Script) -> Result<serde_json::Value, ScriptError>  {
+    fn run_script(conn: &ActionState, script: &data::Script) -> Result<serde_json::Value, ScriptError>  {
         //TODO: debug mode for state
 
         let scripting = conn.get_scripting();

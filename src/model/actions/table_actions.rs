@@ -13,7 +13,7 @@ use data::utils::OnNotFound;
 use data::utils::TableDataFormat;
 
 use model::table;
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 use model::state::Channels;
 use model::auth::permissions::*;
@@ -25,11 +25,12 @@ use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
+use model::state::StateFunctions;
 
 
 // Table Actions
 #[derive(Debug)]
-pub struct QueryTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
+pub struct QueryTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
     pub format: TableDataFormat,
     pub phantom_data: PhantomData<(S, ER, TC)>,
@@ -39,7 +40,7 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -60,7 +61,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -85,7 +86,7 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
 
 
 #[derive(Debug)]
-pub struct InsertTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
+pub struct InsertTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
     pub data: data::TableData, //payload
     pub format: TableDataFormat,
@@ -97,7 +98,7 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -122,7 +123,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -150,7 +151,7 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
 }
 
 #[derive(Debug)]
-pub struct ModifyTableData<S = State, ER = entity::Controller, TC = table::TableAction> {
+pub struct ModifyTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction> {
     pub table_name: String,
     pub keyed_data: data::KeyedTableData,
     pub format: TableDataFormat,
@@ -162,7 +163,7 @@ impl<S, ER, TC> ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -187,7 +188,7 @@ impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -214,7 +215,7 @@ impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
 }
 
 #[derive(Debug)]
-pub struct RemoveTableData<S = State, ER = entity::Controller, TC = table::TableAction>  {
+pub struct RemoveTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction>  {
     pub table_name: String,
     pub keys: data::KeyData,
     pub format: TableDataFormat,
@@ -226,7 +227,7 @@ impl<S, ER, TC> RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -251,7 +252,7 @@ impl<S, ER, TC> Action<S> for RemoveTableData<S, ER, TC>
     where
         ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

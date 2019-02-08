@@ -10,7 +10,7 @@ use model::actions::error::Error;
 use data::utils::TableDataFormat;
 use model::query;
 
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 use model::auth::permissions::*;
 
@@ -21,11 +21,12 @@ use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
+use model::state::StateFunctions;
 
 
 // Query Action
 #[derive(Debug)]
-pub struct RunQuery<S = State, ER = entity::Controller, QC = query::QueryAction>  {
+pub struct RunQuery<S = ActionState, ER = entity::Controller, QC = query::QueryAction>  {
     pub query_name: String,
     pub params: data::QueryParams,
     pub format: TableDataFormat,
@@ -36,7 +37,7 @@ impl<S, ER, QC> RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S>,
         QC: query::QueryActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -58,7 +59,7 @@ impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
     where
         ER: entity::RetrieverFunctions<data::Query, S>,
         QC: query::QueryActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

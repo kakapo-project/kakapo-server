@@ -17,7 +17,7 @@ use model::entity::results::Created;
 use model::entity::results::Updated;
 use model::entity::results::Deleted;
 
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 use model::state::Channels;
 use model::auth::permissions::*;
@@ -30,17 +30,18 @@ use model::auth::permissions::GetUserInfo;
 use model::auth::permission_store::PermissionStore;
 use model::auth::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
+use model::state::StateFunctions;
 
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
 #[derive(Debug, Clone)]
-pub struct WithFilterListByPermission<A, T, S = State, ER = entity::Controller>
+pub struct WithFilterListByPermission<A, T, S = ActionState, ER = entity::Controller>
     where
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     action: A,
     phantom_data: PhantomData<(T, S, ER)>,
@@ -51,7 +52,7 @@ impl<A, T, S, ER> WithFilterListByPermission<A, T, S, ER>
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -67,7 +68,7 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
         PermissionStore: PermissionStoreFunctions<S>,
-        S: GetConnection + GetUserInfo,
+        for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -91,7 +92,7 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
 
 ///get all tables
 #[derive(Debug, Clone)]
-pub struct GetAllEntities<T, S = State, ER = entity::Controller>
+pub struct GetAllEntities<T, S = ActionState, ER = entity::Controller>
     where
         T: RawEntityTypes,
 {
@@ -103,7 +104,7 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo,
+        for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     pub fn new(show_deleted: bool) -> WithFilterListByPermission<WithTransaction<Self, S>, T, S, ER> {
         let action = Self {
@@ -122,7 +123,7 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S> + Send,
-        S: GetConnection + GetUserInfo,
+        for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     type Ret = GetAllEntitiesResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -134,7 +135,7 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
 
 ///get one table
 #[derive(Debug, Clone)]
-pub struct GetEntity<T, S = State, ER = entity::Controller>
+pub struct GetEntity<T, S = ActionState, ER = entity::Controller>
     where
         T: RawEntityTypes,
 {
@@ -146,7 +147,7 @@ impl<T, S, ER> GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
         let action = Self {
@@ -165,7 +166,7 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
     where
         T: RawEntityTypes,
         ER: RetrieverFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = GetEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -181,11 +182,11 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 
 ///create one table
 #[derive(Debug, Clone)]
-pub struct CreateEntity<T, S = State, EM = entity::Controller>
+pub struct CreateEntity<T, S = ActionState, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
@@ -196,7 +197,7 @@ impl<T, S, EM> CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
         <Self as Action<S>>::Ret: Clone,
 {
     pub fn new(data: T) -> WithPermissionFor<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -239,7 +240,7 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = CreateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -284,11 +285,11 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
 
 ///update table
 #[derive(Debug, Clone)]
-pub struct UpdateEntity<T, S = State, EM = entity::Controller>
+pub struct UpdateEntity<T, S = ActionState, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub name: String,
     pub data: T,
@@ -300,7 +301,7 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![
@@ -327,7 +328,7 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UpdateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -364,11 +365,11 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 
 ///delete table
 #[derive(Debug, Clone)]
-pub struct DeleteEntity<T, S = State, EM = entity::Controller>
+pub struct DeleteEntity<T, S = ActionState, EM = entity::Controller>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub name: String,
     pub on_not_found: OnNotFound,
@@ -379,7 +380,7 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![
@@ -405,7 +406,7 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
     where
         T: RawEntityTypes,
         EM: ModifierFunctions<T, S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = DeleteEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -477,7 +478,7 @@ mod test {
     }
 
     fn with_state<F>(f: F)
-        where F: FnOnce(&State) -> ()
+        where F: FnOnce(&ActionState) -> ()
     {
         let script_path = "./path/to/scripts".to_string();
         let conn_url ="postgres://test:password@localhost:5432/test".to_string();
@@ -494,7 +495,7 @@ mod test {
             password_secret: "B".to_string(),
         };
 
-        let state = State::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
+        let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
         let conn = state.get_conn();
 
         conn.test_transaction::<(), Error, _>(|| {

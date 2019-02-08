@@ -1,7 +1,7 @@
 
 pub mod error;
 
-use model::state::State;
+use model::state::ActionState;
 use data;
 use model::query::error::QueryError;
 use database::Database;
@@ -24,10 +24,10 @@ pub trait QueryActionFunctions<S>
     fn run_query(conn: &S, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError> ;
 }
 
-impl<D> QueryActionFunctions<State> for QueryAction<D>
+impl<D> QueryActionFunctions<ActionState> for QueryAction<D>
     where D: DatabaseFunctions,
 {
-    fn run_query(conn: &State, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError>  {
+    fn run_query(conn: &ActionState, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError>  {
         let username = conn.get_username();
         let db_params = params.value_list();
 

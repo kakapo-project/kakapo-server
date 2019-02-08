@@ -7,7 +7,7 @@ use model::actions::results::*;
 use model::actions::error::Error;
 use model::script;
 
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 use model::auth::permissions::*;
 
@@ -18,11 +18,12 @@ use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
+use model::state::StateFunctions;
 
 
 // Query Action
 #[derive(Debug)]
-pub struct RunScript<S = State, ER = entity::Controller, SC = script::ScriptAction>  {
+pub struct RunScript<S = ActionState, ER = entity::Controller, SC = script::ScriptAction>  {
     pub script_name: String,
     pub param: data::ScriptParam,
     pub phantom_data: PhantomData<(S, ER, SC)>,
@@ -32,7 +33,7 @@ impl<S, ER, SC> RunScript<S, ER, SC>
     where
         ER: entity::RetrieverFunctions<data::Script, S>,
         SC: script::ScriptActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -53,7 +54,7 @@ impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
     where
         ER: entity::RetrieverFunctions<data::Script, S>,
         SC: script::ScriptActionFunctions<S>,
-        S: GetConnection + GetUserInfo + GetBroadcaster,
+        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

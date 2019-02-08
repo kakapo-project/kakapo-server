@@ -19,7 +19,7 @@ mod decorator;
 use std::result::Result;
 use std::result::Result::Ok;
 use model::actions::error::Error;
-use model::state::State;
+use model::state::ActionState;
 use std::fmt::Debug;
 
 use serde::Serialize;
@@ -61,7 +61,7 @@ impl ActionRes {
 
 }
 
-pub trait Action<S = State>
+pub trait Action<S = ActionState>
     where
         Self: Send + Debug,
         Self::Ret: Send + Debug + Serialize,

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use model::auth::permission_store::PermissionStoreFunctions;
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 use std::iter::FromIterator;
 
@@ -130,10 +130,10 @@ pub trait GetUserInfo
     /// returns a hashset of permissions if the user is logged in
     /// otherwise returns none
     fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-        where AS: PermissionStoreFunctions<State>;
+        where AS: PermissionStoreFunctions<ActionState>;
 
     fn get_all_permissions<AS>(&self) -> HashSet<Permission>
-        where AS: PermissionStoreFunctions<State>;
+        where AS: PermissionStoreFunctions<ActionState>;
 
     fn get_username(&self) -> Option<String>;
 
@@ -141,7 +141,7 @@ pub trait GetUserInfo
 
 /// Note that the permissions here are grabbed from either the jwt, or the
 /// database
-impl GetUserInfo for State {
+impl GetUserInfo for ActionState {
     const ADMIN_USER_ID: i64 = 1;
 
     fn get_user_id(&self) -> Option<i64> {
@@ -153,7 +153,7 @@ impl GetUserInfo for State {
     }
 
     fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-        where AS: PermissionStoreFunctions<State>
+        where AS: PermissionStoreFunctions<ActionState>
     {
         self.get_user_id().map(|user_id| {
             let raw_permissions_result = AS::get_user_permissions(self, user_id);
@@ -175,7 +175,7 @@ impl GetUserInfo for State {
     }
 
     fn get_all_permissions<AS>(&self) -> HashSet<Permission>
-        where AS: PermissionStoreFunctions<State>
+        where AS: PermissionStoreFunctions<ActionState>
     {
         let raw_permissions_result = AS::get_all_permissions(self);
         let raw_permissions = match raw_permissions_result {

@@ -7,7 +7,7 @@ mod update_state;
 
 use self::error::EntityError;
 use self::results::*;
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 
 use self::internals::Retriever;
@@ -77,31 +77,31 @@ pub trait ModifierFunctions<O, S>
 }
 
 
-impl<O> RetrieverFunctions<O, State> for Controller
+impl<O> RetrieverFunctions<O, ActionState> for Controller
     where
         O: RawEntityTypes,
-        Retriever: RetrieverFunctions<O, State>,
+        Retriever: RetrieverFunctions<O, ActionState>,
 {
-    fn get_all(conn: &State) -> Result<Vec<O>, EntityError> {
+    fn get_all(conn: &ActionState) -> Result<Vec<O>, EntityError> {
         Retriever::get_all(conn)
     }
 
-    fn get_one(conn: &State, name: &str) -> Result<Option<O>, EntityError> {
+    fn get_one(conn: &ActionState, name: &str) -> Result<Option<O>, EntityError> {
         Retriever::get_one(conn, name)
     }
 }
 
-impl<O> ModifierFunctions<O, State> for Controller
+impl<O> ModifierFunctions<O, ActionState> for Controller
     where
         O: RawEntityTypes,
         Created<O>: UpdateState<O>,
         Upserted<O>: UpdateState<O>,
         Updated<O>: UpdateState<O>,
         Deleted<O>: UpdateState<O>,
-        UpdateAction: UpdateActionFunctions<O, State>,
-        Modifier: ModifierFunctions<O, State>,
+        UpdateAction: UpdateActionFunctions<O, ActionState>,
+        Modifier: ModifierFunctions<O, ActionState>,
 {
-    fn create(conn: &State, object: O) -> Result<Created<O>, EntityError> {
+    fn create(conn: &ActionState, object: O) -> Result<Created<O>, EntityError> {
         Modifier::create(conn, object)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
@@ -109,7 +109,7 @@ impl<O> ModifierFunctions<O, State> for Controller
             })
     }
 
-    fn upsert(conn: &State, object: O) -> Result<Upserted<O>, EntityError> {
+    fn upsert(conn: &ActionState, object: O) -> Result<Upserted<O>, EntityError> {
         Modifier::upsert(conn, object)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
@@ -117,7 +117,7 @@ impl<O> ModifierFunctions<O, State> for Controller
             })
     }
 
-    fn update(conn: &State, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
+    fn update(conn: &ActionState, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
         Modifier::update(conn, name_object)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
@@ -125,7 +125,7 @@ impl<O> ModifierFunctions<O, State> for Controller
             })
     }
 
-    fn delete(conn: &State, name: &str) -> Result<Deleted<O>, EntityError> {
+    fn delete(conn: &ActionState, name: &str) -> Result<Deleted<O>, EntityError> {
         Modifier::delete(conn, name)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);

@@ -16,7 +16,7 @@ use model::entity::results::*;
 
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
-use model::state::State;
+use model::state::ActionState;
 
 use model::state::GetConnection;
 use model::auth::permissions::GetUserInfo;
@@ -26,15 +26,15 @@ pub struct Retriever;
 macro_rules! make_retrievers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl RetrieverFunctions<$EntityType, State> for Retriever {
+        impl RetrieverFunctions<$EntityType, ActionState> for Retriever {
             fn get_all(
-                conn: &State
+                conn: &ActionState
             ) -> Result<Vec<$EntityType>, EntityError> {
                 $entity::Retriever::get_all::<$EntityType>(conn.get_conn())
             }
 
             fn get_one(
-                conn: &State,
+                conn: &ActionState,
                 name: &str,
             ) -> Result<Option<$EntityType>, EntityError> {
                 $entity::Retriever::get_one::<$EntityType>(conn.get_conn(), name)
@@ -50,12 +50,12 @@ make_retrievers!(script, data::Script);
 #[derive(Debug, Clone)]
 pub struct Modifier;
 
-fn get_user_id(conn: &State) -> i64 {
+fn get_user_id(conn: &ActionState) -> i64 {
     let id = conn.get_user_id();
     match id {
         None => {
             warn!("This user does not have any id, however, the user is authorized. Setting content as admin");
-            State::ADMIN_USER_ID
+            ActionState::ADMIN_USER_ID
         },
         Some(user_id) => user_id
     }
@@ -64,10 +64,10 @@ fn get_user_id(conn: &State) -> i64 {
 macro_rules! make_modifiers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl ModifierFunctions<$EntityType, State> for Modifier {
+        impl ModifierFunctions<$EntityType, ActionState> for Modifier {
 
             fn create(
-                conn: &State,
+                conn: &ActionState,
                 object: $EntityType,
             ) -> Result<Created<$EntityType>, EntityError> {
                 info!("create object: {:?}", &object);
@@ -75,7 +75,7 @@ macro_rules! make_modifiers {
             }
 
             fn upsert(
-                conn: &State,
+                conn: &ActionState,
                 object: $EntityType,
             ) -> Result<Upserted<$EntityType>, EntityError> {
                 info!("upsert object: {:?}", &object);
@@ -83,7 +83,7 @@ macro_rules! make_modifiers {
             }
 
             fn update(
-                conn: &State,
+                conn: &ActionState,
                 name_object: (&str, $EntityType),
             ) -> Result<Updated<$EntityType>, EntityError> {
                 info!("update object: {:?}", &name_object);
@@ -91,7 +91,7 @@ macro_rules! make_modifiers {
             }
 
             fn delete(
-                conn: &State,
+                conn: &ActionState,
                 name: &str,
             ) -> Result<Deleted<$EntityType>, EntityError> {
                 info!("delete object: {:?}", &name);

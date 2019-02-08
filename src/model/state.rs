@@ -18,8 +18,50 @@ use model::actions::error::Error;
 use std::fmt::Debug;
 use std::fmt;
 use connection::executor::Secrets;
+use model::auth::auth_modifier::AuthFunctions;
 
-type DBConnector = PooledConnection<ConnectionManager<PgConnection>>;
+pub struct ActionState {
+    pub database: Conn, //TODO: this should be templated
+    pub scripting: Scripting,
+    pub claims: Option<AuthClaims>,
+    pub broadcaster: Arc<Broadcaster>,
+    pub secrets: Secrets,
+}
+
+pub trait StateFunctions<'a>
+    where
+        Self::AuthFunctions: AuthFunctions,
+{
+    type AuthFunctions;
+    fn get_auth_functions(&'a self) -> Self::AuthFunctions;
+}
+
+pub trait GetConnection
+    where Self: Send + Debug
+{
+    type Connection;
+    fn get_conn(&self) -> &Self::Connection;
+
+    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
+        where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
+}
+
+impl GetConnection for ActionState {
+    type Connection = Conn;
+    fn get_conn(&self) -> &Conn {
+        &self.database
+    }
+
+    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
+        where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error> {
+        let conn = self.get_conn();
+        conn.transaction::<G, E, _>(f)
+    }
+}
+
+
+
+/// OLD
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Channels {
@@ -76,24 +118,16 @@ impl AuthClaims {
     }
 }
 
-pub struct State {
-    pub database: DBConnector, //TODO: this should be templated
-    pub scripting: Scripting,
-    pub claims: Option<AuthClaims>,
-    pub broadcaster: Arc<Broadcaster>,
-    pub secrets: Secrets,
-}
-
-impl fmt::Debug for State {
+impl fmt::Debug for ActionState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "State")
     }
 }
 
-impl State {
+impl ActionState {
     //TODO: this has too many parameters
     pub fn new(
-        database: DBConnector,
+        database: Conn,
         scripting: Scripting,
         claims: Option<AuthClaims>,
         broadcaster: Arc<Broadcaster>,
@@ -109,41 +143,13 @@ impl State {
     }
 }
 
-pub trait GetConnection
-    where Self: Send + Debug
-{
-    type Connection;
-    fn get_conn(&self) -> &Self::Connection;
-
-    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
-        where
-            F: FnOnce() -> Result<G, E>,
-            E: From<diesel::result::Error>;
-}
-
-impl GetConnection for State {
-    type Connection = Conn;
-    fn get_conn(&self) -> &Conn {
-        &self.database
-    }
-
-    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
-        where
-            F: FnOnce() -> Result<G, E>,
-            E: From<diesel::result::Error>,
-    {
-        let conn = self.get_conn();
-        conn.transaction::<G, E, _>(f)
-    }
-}
-
 pub trait GetScripting
     where Self: Send + Debug
 {
     fn get_scripting(&self) -> &Scripting;
 }
 
-impl GetScripting for State {
+impl GetScripting for ActionState {
     fn get_scripting(&self) -> &Scripting {
         &self.scripting
     }
@@ -156,7 +162,7 @@ pub trait GetBroadcaster
         where R: Serialize;
 }
 
-impl GetBroadcaster for State {
+impl GetBroadcaster for ActionState {
     fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
         where R: Serialize
     {
@@ -178,7 +184,7 @@ pub trait GetSecrets
     fn get_password_secret(&self) -> String;
 }
 
-impl GetSecrets for State {
+impl GetSecrets for ActionState {
     fn get_token_secret(&self) -> String {
         self.secrets.token_secret.to_owned()
     }

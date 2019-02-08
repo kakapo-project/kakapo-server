@@ -3,7 +3,7 @@ pub mod error;
 
 use data;
 use model::table::error::TableError;
-use model::state::State;
+use model::state::ActionState;
 use database::Database;
 use database::DatabaseFunctions;
 use model::state::GetConnection;
@@ -31,18 +31,18 @@ pub trait TableActionFunctions<S>
     fn delete_row(conn: &S, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError>;
 }
 
-impl<D> TableActionFunctions<State> for TableAction<D>
+impl<D> TableActionFunctions<ActionState> for TableAction<D>
     where
         D: DatabaseFunctions,
 {
-    fn query(conn: &State, table: &data::Table) -> Result<data::RawTableData, TableError> {
+    fn query(conn: &ActionState, table: &data::Table) -> Result<data::RawTableData, TableError> {
 
         let query = format!("SELECT * FROM {}", &table.name);
         D::exec(conn.get_conn(), &query, vec![])
             .or_else(|err| Err(TableError::db_error(err)))
     }
 
-    fn insert_row(conn: &State, table: &data::Table, data: &data::ObjectValues, fail_on_duplicate: bool) -> Result<data::RawTableData, TableError> {
+    fn insert_row(conn: &ActionState, table: &data::Table, data: &data::ObjectValues, fail_on_duplicate: bool) -> Result<data::RawTableData, TableError> {
 
         let table_column_names = table.get_column_names();
         let raw_data = data.as_list();
@@ -83,7 +83,7 @@ impl<D> TableActionFunctions<State> for TableAction<D>
         Ok(results)
     }
 
-    fn upsert_row(conn: &State, table: &data::Table, data: &data::ObjectValues) -> Result<data::RawTableData, TableError> {
+    fn upsert_row(conn: &ActionState, table: &data::Table, data: &data::ObjectValues) -> Result<data::RawTableData, TableError> {
         //TODO: doing this because I want to know whether it was an insert or update so that I can put in the correct data in the transactions table
         // otherise, maybe ON CONFLICT with triggers would have been the proper choice
         D::exec(conn.get_conn(), "SELECT id FROM table WHERE id = my_id", vec![]);
@@ -92,7 +92,7 @@ impl<D> TableActionFunctions<State> for TableAction<D>
         unimplemented!()
     }
 
-    fn update_row(conn: &State, table: &data::Table, keys: &data::ObjectKeys, data: &data::ObjectValues, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
+    fn update_row(conn: &ActionState, table: &data::Table, keys: &data::ObjectKeys, data: &data::ObjectValues, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
 
         let table_column_names = table.get_column_names();
         let raw_keys = keys.as_list();
@@ -146,7 +146,7 @@ impl<D> TableActionFunctions<State> for TableAction<D>
 
     }
 
-    fn delete_row(conn: &State, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
+    fn delete_row(conn: &ActionState, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
 
         let table_column_names = table.get_column_names();
         let raw_keys = keys.as_list();

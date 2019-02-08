@@ -5,7 +5,7 @@ use connection::executor::Executor;
 use actix::dev::MessageResponse;
 
 use model::actions::Action;
-use model::state::State;
+use model::state::ActionState;
 use model::state::AuthClaims;
 use model::actions::ActionResult;
 use model::actions::error::Error;
@@ -113,7 +113,7 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         let secrets = self.get_secrets();
 
 
-        let state = State::new(conn, scripting, auth_claims, broadcaster, secrets);
+        let state = ActionState::new(conn, scripting, auth_claims, broadcaster, secrets);
         let result = action_req.call(&state);
         debug!("action result: {:?}", &result);
         result

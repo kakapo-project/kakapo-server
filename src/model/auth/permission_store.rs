@@ -1,5 +1,5 @@
 use diesel::RunQueryDsl;
-use model::state::State;
+use model::state::ActionState;
 use model::state::GetConnection;
 use data::dbdata::RawPermission;
 use model::auth::error::UserManagementError;
@@ -17,9 +17,9 @@ pub trait PermissionStoreFunctions<S>
     fn get_all_permissions(state: &S) -> Result<Vec<RawPermission>, UserManagementError>;
 }
 
-impl PermissionStoreFunctions<State> for PermissionStore {
+impl PermissionStoreFunctions<ActionState> for PermissionStore {
 
-    fn get_user_permissions(state: &State, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
+    fn get_user_permissions(state: &ActionState, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
         let query = r#"
         SELECT
             DISTINCT ON("permission"."permission_id")
@@ -44,7 +44,7 @@ impl PermissionStoreFunctions<State> for PermissionStore {
         Ok(result)
     }
 
-    fn get_all_permissions(state: &State) -> Result<Vec<RawPermission>, UserManagementError> {
+    fn get_all_permissions(state: &ActionState) -> Result<Vec<RawPermission>, UserManagementError> {
 
         let query = r#"
         SELECT
