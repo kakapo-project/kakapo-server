@@ -1,135 +1,120 @@
 use data::dbdata::RawEntityTypes;
 
-mod internals;
+pub mod internals; //TODO: make private
 pub mod error;
 pub mod results;
-mod update_state;
+pub mod update_state; //TODO: make private
 
 use self::error::EntityError;
 use self::results::*;
 use model::state::ActionState;
 use model::state::GetConnection;
 
-use self::internals::Retriever;
-use self::internals::Modifier;
+use self::internals::InternalModifierFunctions;
 use self::update_state::UpdateState;
-use model::entity::update_state::UpdateAction;
 use model::entity::update_state::UpdateActionFunctions;
 use std::fmt::Debug;
+use model::entity::internals::InternalRetrieverFunctions;
+use connection::executor::Conn;
+use model::state::AuthClaims;
 
 
-#[derive(Debug, Clone)]
-pub struct Controller; //TODO: controller should be state agnostic (dependency inject)
+pub struct Controller<'a> {
+    pub conn: &'a Conn,
+    pub claims: &'a Option<AuthClaims>,
+}
 
-pub trait RetrieverFunctions<O, S>
-    where
-        Self: Send + Debug,
-        O: RawEntityTypes,
-        S: GetConnection,
-{
+pub trait RetrieverFunctions {
     /// get all values and returns a list of all database values
-    fn get_all(
-        conn: &S,
-    ) -> Result<Vec<O>, EntityError>;
+    fn get_all<O>(&self) -> Result<Vec<O>, EntityError>
+        where
+            O: RawEntityTypes;
 
     /// filters the values by the name, and returns the value if it exists
     /// if it doesn't exist it retuns none
-    fn get_one(
-        conn: &S,
-        name: &str,
-    ) -> Result<Option<O>, EntityError>;
+    fn get_one<O>(&self, name: &str) -> Result<Option<O>, EntityError>
+        where
+            O: RawEntityTypes;
 }
 
-pub trait ModifierFunctions<O, S>
-    where
-        Self: Send + Debug,
-        O: RawEntityTypes,
-        S: GetConnection,
-{
+pub trait ModifierFunctions {
     ///creates the object if creation succeeded
     /// if name conflict, return the old value, creates nothing
     /// if value is created, returns nothing
-    fn create(
-        conn: &S,
-        object: O,
-    ) -> Result<Created<O>, EntityError>;
+    fn create<O>(&self, object: O) -> Result<Created<O>, EntityError>
+        where O: RawEntityTypes;
 
     /// if value is updated, return the old value
     /// if value is created, returns nothing
-    fn upsert(
-        conn: &S,
-        object: O,
-    ) -> Result<Upserted<O>, EntityError>;
+    fn upsert<O>(&self, object: O) -> Result<Upserted<O>, EntityError>
+        where O: RawEntityTypes;
 
     /// if value is updated, return the old value
     /// if name not found, returns nothing, updates nothing
-    fn update(
-        conn: &S,
-        name_object: (&str, O),
-    ) -> Result<Updated<O>, EntityError>;
+    fn update<O>(&self, name_object: (&str, O)) -> Result<Updated<O>, EntityError>
+        where O: RawEntityTypes;
 
     /// if value is deleted, return the old value
     /// if name not found, returns nothing
-    fn delete(
-        conn: &S,
-        name: &str,
-    ) -> Result<Deleted<O>, EntityError>;
+    fn delete<O>(&self, name: &str) -> Result<Deleted<O>, EntityError>
+        where O: RawEntityTypes;
 }
 
 
-impl<O> RetrieverFunctions<O, ActionState> for Controller
-    where
-        O: RawEntityTypes,
-        Retriever: RetrieverFunctions<O, ActionState>,
-{
-    fn get_all(conn: &ActionState) -> Result<Vec<O>, EntityError> {
-        Retriever::get_all(conn)
+impl<'a> RetrieverFunctions for Controller<'a> {
+    fn get_all<O>(&self) -> Result<Vec<O>, EntityError>
+        where
+            O: RawEntityTypes,
+    {
+        O::get_all(self)
     }
 
-    fn get_one(conn: &ActionState, name: &str) -> Result<Option<O>, EntityError> {
-        Retriever::get_one(conn, name)
+    fn get_one<O>(&self, name: &str) -> Result<Option<O>, EntityError>
+        where
+            O: RawEntityTypes,
+    {
+        O::get_one(self, name)
     }
 }
 
-impl<O> ModifierFunctions<O, ActionState> for Controller
-    where
-        O: RawEntityTypes,
-        Created<O>: UpdateState<O>,
-        Upserted<O>: UpdateState<O>,
-        Updated<O>: UpdateState<O>,
-        Deleted<O>: UpdateState<O>,
-        UpdateAction: UpdateActionFunctions<O, ActionState>,
-        Modifier: ModifierFunctions<O, ActionState>,
-{
-    fn create(conn: &ActionState, object: O) -> Result<Created<O>, EntityError> {
-        Modifier::create(conn, object)
+impl<'a> ModifierFunctions for Controller<'a> {
+    fn create<O>(&self, object: O) -> Result<Created<O>, EntityError>
+        where O: RawEntityTypes,
+    {
+        O::create(self, object)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
-                res.update_state(conn)
+                res.update_state(self)
             })
     }
 
-    fn upsert(conn: &ActionState, object: O) -> Result<Upserted<O>, EntityError> {
-        Modifier::upsert(conn, object)
+    fn upsert<O>(&self, object: O) -> Result<Upserted<O>, EntityError>
+        where O: RawEntityTypes
+    {
+        O::upsert(self, object)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
-                res.update_state(conn)
+                res.update_state(self)
             })
     }
 
-    fn update(conn: &ActionState, name_object: (&str, O)) -> Result<Updated<O>, EntityError> {
-        Modifier::update(conn, name_object)
+    fn update<O>(&self, name_object: (&str, O)) -> Result<Updated<O>, EntityError>
+        where O: RawEntityTypes
+    {
+        O::update(self, name_object)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
-                res.update_state(conn)
+                res.update_state(self)
             })
     }
 
-    fn delete(conn: &ActionState, name: &str) -> Result<Deleted<O>, EntityError> {
-        Modifier::delete(conn, name)
+    fn delete<O>(&self, name: &str) -> Result<Deleted<O>, EntityError>
+        where O: RawEntityTypes
+    {
+        O::delete(self, name)
             .and_then(|res| {
                 debug!("result in table, now updating state: {:?}", res);
-                res.update_state(conn)
+                res.update_state(self)
             })
     }
 }

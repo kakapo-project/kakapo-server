@@ -19,6 +19,10 @@ use std::fmt::Debug;
 use std::fmt;
 use connection::executor::Secrets;
 use model::auth::auth_modifier::AuthFunctions;
+use model::auth::auth_modifier::Auth;
+use model::entity::Controller;
+use model::entity::RetrieverFunctions;
+use model::entity::ModifierFunctions;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -31,10 +35,46 @@ pub struct ActionState {
 pub trait StateFunctions<'a>
     where
         Self::AuthFunctions: AuthFunctions,
+        Self::EntityRetrieverFunctions: RetrieverFunctions,
+        Self::EntityModifierFunctions: ModifierFunctions,
 {
     type AuthFunctions;
     fn get_auth_functions(&'a self) -> Self::AuthFunctions;
+
+    type EntityRetrieverFunctions;
+    fn get_entity_retreiver_functions(&'a self) -> Self::EntityRetrieverFunctions;
+
+    type EntityModifierFunctions;
+    fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions;
 }
+
+impl<'a> StateFunctions<'a> for ActionState {
+    type AuthFunctions = Auth<'a>;
+    fn get_auth_functions(&'a self) -> Auth<'a> {
+        let password_secret = self.get_password_secret();
+        Auth::new(
+            self.get_conn(),
+            password_secret.to_owned(),
+        )
+    }
+
+    type EntityRetrieverFunctions = Controller<'a>;
+    fn get_entity_retreiver_functions(&'a self) -> Self::EntityRetrieverFunctions {
+        Controller {
+            conn: &self.database,
+            claims: &self.claims,
+        }
+    }
+
+    type EntityModifierFunctions = Controller<'a>;
+    fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions {
+        Controller {
+            conn: &self.database,
+            claims: &self.claims,
+        }
+    }
+}
+
 
 pub trait GetConnection
     where Self: Send + Debug

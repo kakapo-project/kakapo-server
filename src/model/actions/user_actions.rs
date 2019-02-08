@@ -623,6 +623,16 @@ mod test {
         fn get_auth_functions(&'a self) -> <Self as StateFunctions<'a>>::AuthFunctions {
             self.0.get_auth_functions()
         }
+
+        type EntityRetrieverFunctions = <ActionState as StateFunctions<'a>>::EntityRetrieverFunctions;
+        fn get_entity_retreiver_functions(&'a self) -> <Self as StateFunctions<'a>>::EntityRetrieverFunctions {
+            self.0.get_entity_retreiver_functions()
+        }
+
+        type EntityModifierFunctions = <ActionState as StateFunctions<'a>>::EntityModifierFunctions;
+        fn get_entity_modifier_function(&'a self) -> <Self as StateFunctions<'a>>::EntityModifierFunctions {
+            self.0.get_entity_modifier_function()
+        }
     }
     impl GetConnection for MockState {
         type Connection = <ActionState as GetConnection>::Connection;

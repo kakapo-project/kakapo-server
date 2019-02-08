@@ -22,20 +22,19 @@ use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
-
+use model::entity::RetrieverFunctions;
 
 // Query Action
 #[derive(Debug)]
-pub struct RunQuery<S = ActionState, ER = entity::Controller, QC = query::QueryAction>  {
+pub struct RunQuery<S = ActionState, QC = query::QueryAction>  {
     pub query_name: String,
     pub params: data::QueryParams,
     pub format: TableDataFormat,
-    pub phantom_data: PhantomData<(S, ER, QC)>,
+    pub phantom_data: PhantomData<(S, QC)>,
 }
 
-impl<S, ER, QC> RunQuery<S, ER, QC>
+impl<S, QC> RunQuery<S, QC>
     where
-        ER: entity::RetrieverFunctions<data::Query, S>,
         QC: query::QueryActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
@@ -55,15 +54,16 @@ impl<S, ER, QC> RunQuery<S, ER, QC>
     }
 }
 
-impl<S, ER, QC> Action<S> for RunQuery<S, ER, QC>
+impl<S, QC> Action<S> for RunQuery<S, QC>
     where
-        ER: entity::RetrieverFunctions<data::Query, S>,
         QC: query::QueryActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ER::get_one(state, &self.query_name)
+        state
+            .get_entity_retreiver_functions()
+            .get_one(&self.query_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Query>| {
                 match res {

@@ -26,19 +26,18 @@ use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
-
+use model::entity::RetrieverFunctions;
 
 // Table Actions
 #[derive(Debug)]
-pub struct QueryTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction> {
+pub struct QueryTableData<S = ActionState, TC = table::TableAction> {
     pub table_name: String,
     pub format: TableDataFormat,
-    pub phantom_data: PhantomData<(S, ER, TC)>,
+    pub phantom_data: PhantomData<(S, TC)>,
 }
 
-impl<S, ER, TC> QueryTableData<S, ER, TC>
+impl<S, TC> QueryTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
@@ -57,15 +56,16 @@ impl<S, ER, TC> QueryTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
+impl<S, TC> Action<S> for QueryTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ER::get_one(state, &self.table_name)
+        state
+            .get_entity_retreiver_functions()
+            .get_one( &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
                 match res {
@@ -86,17 +86,16 @@ impl<S, ER, TC> Action<S> for QueryTableData<S, ER, TC>
 
 
 #[derive(Debug)]
-pub struct InsertTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction> {
+pub struct InsertTableData<S = ActionState, TC = table::TableAction> {
     pub table_name: String,
     pub data: data::TableData, //payload
     pub format: TableDataFormat,
     pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<(S, ER, TC)>,
+    pub phantom_data: PhantomData<(S, TC)>,
 }
 
-impl<S, ER, TC> InsertTableData<S, ER, TC>
+impl<S, TC> InsertTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
@@ -119,15 +118,16 @@ impl<S, ER, TC> InsertTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
+impl<S, TC> Action<S> for InsertTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ER::get_one(state, &self.table_name)
+        state
+            .get_entity_retreiver_functions()
+            .get_one(&self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
                 match res {
@@ -151,17 +151,16 @@ impl<S, ER, TC> Action<S> for InsertTableData<S, ER, TC>
 }
 
 #[derive(Debug)]
-pub struct ModifyTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction> {
+pub struct ModifyTableData<S = ActionState, TC = table::TableAction> {
     pub table_name: String,
     pub keyed_data: data::KeyedTableData,
     pub format: TableDataFormat,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(S, ER, TC)>,
+    pub phantom_data: PhantomData<(S, TC)>,
 }
 
-impl<S, ER, TC> ModifyTableData<S, ER, TC>
+impl<S, TC> ModifyTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
@@ -184,15 +183,16 @@ impl<S, ER, TC> ModifyTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
+impl<S, TC> Action<S> for ModifyTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ER::get_one(state, &self.table_name)
+        state
+            .get_entity_retreiver_functions()
+            .get_one(&self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
                 match res {
@@ -215,17 +215,16 @@ impl<S, ER, TC> Action<S> for ModifyTableData<S, ER, TC>
 }
 
 #[derive(Debug)]
-pub struct RemoveTableData<S = ActionState, ER = entity::Controller, TC = table::TableAction>  {
+pub struct RemoveTableData<S = ActionState, TC = table::TableAction>  {
     pub table_name: String,
     pub keys: data::KeyData,
     pub format: TableDataFormat,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(S, ER, TC)>,
+    pub phantom_data: PhantomData<(S, TC)>,
 }
 
-impl<S, ER, TC> RemoveTableData<S, ER, TC>
+impl<S, TC> RemoveTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
@@ -248,15 +247,16 @@ impl<S, ER, TC> RemoveTableData<S, ER, TC>
     }
 }
 
-impl<S, ER, TC> Action<S> for RemoveTableData<S, ER, TC>
+impl<S, TC> Action<S> for RemoveTableData<S, TC>
     where
-        ER: entity::RetrieverFunctions<data::Table, S>,
         TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ER::get_one(state, &self.table_name)
+        state
+            .get_entity_retreiver_functions()
+            .get_one(&self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Table>| {
                 match res {

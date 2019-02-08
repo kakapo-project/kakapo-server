@@ -20,24 +20,28 @@ use model::state::ActionState;
 
 use model::state::GetConnection;
 use model::auth::permissions::GetUserInfo;
+use model::entity::Controller;
+use std::marker::PhantomData;
+use std::fmt::Debug;
 
-#[derive(Debug, Clone)]
-pub struct Retriever;
+pub trait InternalRetrieverFunctions
+    where Self: Sized + Debug,
+{
+    fn get_all(state: &Controller) -> Result<Vec<Self>, EntityError>;
+
+    fn get_one(state: &Controller, name: &str) -> Result<Option<Self>, EntityError>;
+}
+
 macro_rules! make_retrievers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl RetrieverFunctions<$EntityType, ActionState> for Retriever {
-            fn get_all(
-                conn: &ActionState
-            ) -> Result<Vec<$EntityType>, EntityError> {
-                $entity::Retriever::get_all::<$EntityType>(conn.get_conn())
+        impl InternalRetrieverFunctions for $EntityType {
+            fn get_all(state: &Controller) -> Result<Vec<$EntityType>, EntityError> {
+                $entity::Retriever::get_all::<$EntityType>(state.conn)
             }
 
-            fn get_one(
-                conn: &ActionState,
-                name: &str,
-            ) -> Result<Option<$EntityType>, EntityError> {
-                $entity::Retriever::get_one::<$EntityType>(conn.get_conn(), name)
+            fn get_one(state: &Controller, name: &str) -> Result<Option<$EntityType>, EntityError> {
+                $entity::Retriever::get_one::<$EntityType>(state.conn, name)
             }
         }
     );
@@ -47,55 +51,54 @@ make_retrievers!(table, data::Table);
 make_retrievers!(query, data::Query);
 make_retrievers!(script, data::Script);
 
-#[derive(Debug, Clone)]
-pub struct Modifier;
 
-fn get_user_id(conn: &ActionState) -> i64 {
-    let id = conn.get_user_id();
-    match id {
+fn get_user_id(controller: &Controller) -> i64 {
+    match controller.claims {
         None => {
             warn!("This user does not have any id, however, the user is authorized. Setting content as admin");
             ActionState::ADMIN_USER_ID
         },
-        Some(user_id) => user_id
+        Some(claims) => {
+            claims.get_user_id()
+        }
     }
+}
+
+pub trait InternalModifierFunctions
+    where Self: Sized + Debug,
+{
+    fn create(state: &Controller, object: Self) -> Result<Created<Self>, EntityError>;
+
+    fn upsert(state: &Controller, object: Self) -> Result<Upserted<Self>, EntityError>;
+
+    fn update(state: &Controller, name_object: (&str, Self)) -> Result<Updated<Self>, EntityError>;
+
+    fn delete(state: &Controller, name: &str) -> Result<Deleted<Self>, EntityError>;
 }
 
 macro_rules! make_modifiers {
     ($entity:ident, $EntityType:ty) => (
 
-        impl ModifierFunctions<$EntityType, ActionState> for Modifier {
+        impl InternalModifierFunctions for $EntityType {
 
-            fn create(
-                conn: &ActionState,
-                object: $EntityType,
-            ) -> Result<Created<$EntityType>, EntityError> {
+            fn create(state: &Controller, object: $EntityType) -> Result<Created<$EntityType>, EntityError> {
                 info!("create object: {:?}", &object);
-                $entity::Modifier::create::<$EntityType>(conn.get_conn(), get_user_id(conn), object)
+                $entity::Modifier::create::<$EntityType>(state.conn, get_user_id(state), object)
             }
 
-            fn upsert(
-                conn: &ActionState,
-                object: $EntityType,
-            ) -> Result<Upserted<$EntityType>, EntityError> {
+            fn upsert(state: &Controller, object: $EntityType) -> Result<Upserted<$EntityType>, EntityError> {
                 info!("upsert object: {:?}", &object);
-                $entity::Modifier::upsert::<$EntityType>(conn.get_conn(), get_user_id(conn), object)
+                $entity::Modifier::upsert::<$EntityType>(state.conn, get_user_id(state), object)
             }
 
-            fn update(
-                conn: &ActionState,
-                name_object: (&str, $EntityType),
-            ) -> Result<Updated<$EntityType>, EntityError> {
+            fn update(state: &Controller, name_object: (&str, $EntityType)) -> Result<Updated<$EntityType>, EntityError> {
                 info!("update object: {:?}", &name_object);
-                $entity::Modifier::update::<$EntityType>(conn.get_conn(), get_user_id(conn), name_object)
+                $entity::Modifier::update::<$EntityType>(state.conn, get_user_id(state), name_object)
             }
 
-            fn delete(
-                conn: &ActionState,
-                name: &str,
-            ) -> Result<Deleted<$EntityType>, EntityError> {
+            fn delete(state: &Controller, name: &str) -> Result<Deleted<$EntityType>, EntityError> {
                 info!("delete object: {:?}", &name);
-                $entity::Modifier::delete::<$EntityType>(conn.get_conn(), get_user_id(conn), name)
+                $entity::Modifier::delete::<$EntityType>(state.conn, get_user_id(state), name)
             }
         }
     );

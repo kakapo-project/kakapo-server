@@ -11,12 +11,17 @@ use data::conversion::GenerateRaw;
 use serde::Serialize;
 use model::auth::permissions::Permission;
 
+use model::entity::internals::InternalRetrieverFunctions;
+use model::entity::internals::InternalModifierFunctions;
+use model::entity::update_state::UpdateActionFunctions;
+
 // Queryables
 pub trait RawEntityTypes
     where
         Self: Clone + Send + Debug + Serialize,
         Self::Data: ConvertRaw<Self>,
         Self::NewData: GenerateRaw<Self>,
+        Self: InternalRetrieverFunctions + InternalModifierFunctions + UpdateActionFunctions,
 {
     type Data;
     type NewData;

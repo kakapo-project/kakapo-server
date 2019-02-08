@@ -3,7 +3,7 @@ pub mod auth;
 pub mod actions;
 pub mod state;
 
-mod entity;
+pub mod entity;
 
 mod query;
 mod script;

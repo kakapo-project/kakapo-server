@@ -10,6 +10,8 @@ use model::state::GetConnection;
 use model::state::GetScripting;
 use data::DataType;
 use std::fmt::Debug;
+use model::entity::Controller;
+use data::dbdata::RawEntityTypes;
 
 /// This trait does something action specific after the database updates
 /// The name is a little bit confusing because the database store is also modification
@@ -17,24 +19,19 @@ use std::fmt::Debug;
 pub trait UpdateState<T>
     where
         Self: Sized,
-        T: Debug,
+        T: Debug + RawEntityTypes,
 {
-    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
-        where
-            UpdateAction: UpdateActionFunctions<T, ActionState>;
+    fn update_state(self, state: &Controller) -> Result<Self, EntityError>;
 }
 
 //Created
 impl<T> UpdateState<T> for Created<T>
-    where T: Debug
+    where T: Debug + RawEntityTypes
 {
-    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
-        where
-            UpdateAction: UpdateActionFunctions<T, ActionState>,
-    {
+    fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         info!("new: {:?}", &self);
         let res = match &self {
-            Created::Success { new } => UpdateAction::create_entity(&state, &new),
+            Created::Success { new } => T::create_entity(&state, &new),
             _ => Ok(()),
         }?;
 
@@ -46,15 +43,12 @@ impl<T> UpdateState<T> for Created<T>
 
 //Upserted
 impl<T> UpdateState<T> for Upserted<T>
-    where T: Debug
+    where T: Debug + RawEntityTypes
 {
-    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
-        where
-            UpdateAction: UpdateActionFunctions<T, ActionState>,
-    {
+    fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         let res = match &self {
-            Upserted::Update { old, new } => UpdateAction::update_entity(&state, &old, &new),
-            Upserted::Create { new } => UpdateAction::create_entity(&state, &new),
+            Upserted::Update { old, new } => T::update_entity(&state, &old, &new),
+            Upserted::Create { new } => T::create_entity(&state, &new),
         }?;
 
         //TODO: add proper permissions in the db table
@@ -65,14 +59,11 @@ impl<T> UpdateState<T> for Upserted<T>
 
 //Updated
 impl<T> UpdateState<T> for Updated<T>
-    where T: Debug
+    where T: Debug + RawEntityTypes
 {
-    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
-        where
-            UpdateAction: UpdateActionFunctions<T, ActionState>,
-    {
+    fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         let res = match &self {
-            Updated::Success { old, new } => UpdateAction::update_entity(&state, &old, &new),
+            Updated::Success { old, new } => T::update_entity(&state, &old, &new),
             _ => Ok(()),
         }?;
 
@@ -82,14 +73,11 @@ impl<T> UpdateState<T> for Updated<T>
 
 //Deleted
 impl<T> UpdateState<T> for Deleted<T>
-    where T: Debug
+    where T: Debug + RawEntityTypes
 {
-    fn update_state(self, state: &ActionState) -> Result<Self, EntityError>
-        where
-            UpdateAction: UpdateActionFunctions<T, ActionState>,
-    {
+    fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         let res = match &self {
-            Deleted::Success { old } => UpdateAction::delete_entity(&state, &old),
+            Deleted::Success { old } => T::delete_entity(&state, &old),
             _ => Ok(()),
         }?;
 
@@ -99,12 +87,101 @@ impl<T> UpdateState<T> for Deleted<T>
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct UpdateAction;
-pub trait UpdateActionFunctions<T, S> {
-    fn create_entity(conn: &S, new: &T) -> Result<(), EntityError>;
-    fn update_entity(conn: &S, old_table: &T, new_table: &T) -> Result<(), EntityError>;
-    fn delete_entity(conn: &S, old: &T) -> Result<(), EntityError>;
+pub trait UpdateActionFunctions {
+    fn create_entity(controller: &Controller, new: &Self) -> Result<(), EntityError>;
+    fn update_entity(controller: &Controller, old_table: &Self, new_table: &Self) -> Result<(), EntityError>;
+    fn delete_entity(controller: &Controller, old: &Self) -> Result<(), EntityError>;
+}
+
+///mdodify table in database here
+impl UpdateActionFunctions for data::Table {
+    fn create_entity(controller: &Controller, new: &data::Table) -> Result<(), EntityError> {
+
+        let schema = &new.schema;
+        let columns = &schema.columns;
+
+        if columns.len() == 0 {
+            Err(EntityError::NoColumns)?;
+        }
+
+        let formatted_columns: Vec<String> = columns.iter().map(|column| {
+            let col_name = &column.name;
+            let col_type = get_sql_data_type(&column.data_type);
+            //TODO: nullable + default + serial
+            format!("\"{}\" {}", col_name, col_type)
+        }).collect();
+        let command = format!("CREATE TABLE \"{}\" ({});", new.name, formatted_columns.join(", "));
+        info!("DSL command: `{}`", &command);
+
+        diesel::sql_query(command)
+            .execute(controller.conn)
+            .or_else(|err|
+                Err(EntityError::InternalError(err.description().to_string())))?;
+
+        Ok(())
+    }
+
+    fn update_entity(controller: &Controller, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
+        unimplemented!();
+        let command = format!("ALTER TABLE \"{}\";", old.name);
+        diesel::sql_query(command)
+            .execute(controller.conn)
+            .or_else(|err|
+                Err(EntityError::InternalError(err.description().to_string())))?;
+
+        Ok(())
+    }
+
+    fn delete_entity(controller: &Controller, old: &data::Table) -> Result<(), EntityError> {
+        let command = format!("DROP TABLE \"{}\";", old.name);
+        diesel::sql_query(command)
+            .execute(controller.conn)
+            .or_else(|err|
+                Err(EntityError::InternalError(err.description().to_string())))?;
+
+        Ok(())
+    }
+}
+
+///Nothing needed here
+/// TODO: maybe have stored procedures here
+impl UpdateActionFunctions for data::Query {
+    fn create_entity(controller: &Controller, new: &data::Query) -> Result<(), EntityError> {
+        Ok(())
+    }
+
+    fn update_entity(controller: &Controller, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
+        Ok(())
+    }
+
+    fn delete_entity(controller: &Controller, old: &data::Query) -> Result<(), EntityError> {
+        Ok(())
+    }
+}
+
+///Nothing needed here
+impl UpdateActionFunctions for data::Script {
+    fn create_entity(controller: &Controller, new: &data::Script) -> Result<(), EntityError> {
+        unimplemented!();
+        //let scripting = controller.scripts;
+        //Scripting::build();
+        Ok(())
+    }
+
+    fn update_entity(controller: &Controller, old: &data::Script, new: &data::Script) -> Result<(), EntityError> {
+        unimplemented!();
+        //let scripting = controller.scripts;
+        //TODO: this should be debounced so that docker doesn't get called all the time
+        //Scripting::build();
+        Ok(())
+    }
+
+    fn delete_entity(controller: &Controller, old: &data::Script) -> Result<(), EntityError> {
+        unimplemented!();
+        //let scripting = controller.scripts;
+        //Scripting::delete();
+        Ok(())
+    }
 }
 
 fn get_sql_data_type(data_type: &DataType) -> String {
@@ -132,96 +209,5 @@ fn get_sql_data_type(data_type: &DataType) -> String {
         DataType::Boolean => format!("BOOLEAN"),
 
         DataType::Json => format!("JSON"),
-    }
-}
-
-///mdodify table in database here
-impl UpdateActionFunctions<data::Table, ActionState> for UpdateAction {
-    fn create_entity(conn: &ActionState, new: &data::Table) -> Result<(), EntityError> {
-
-        let schema = &new.schema;
-        let columns = &schema.columns;
-
-        if columns.len() == 0 {
-            Err(EntityError::NoColumns)?;
-        }
-
-        let formatted_columns: Vec<String> = columns.iter().map(|column| {
-            let col_name = &column.name;
-            let col_type = get_sql_data_type(&column.data_type);
-            //TODO: nullable + default + serial
-            format!("\"{}\" {}", col_name, col_type)
-        }).collect();
-        let command = format!("CREATE TABLE \"{}\" ({});", new.name, formatted_columns.join(", "));
-        info!("DSL command: `{}`", &command);
-
-        diesel::sql_query(command)
-            .execute(conn.get_conn())
-            .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
-
-        Ok(())
-    }
-
-    fn update_entity(conn: &ActionState, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
-        unimplemented!();
-        let command = format!("ALTER TABLE \"{}\";", old.name);
-        diesel::sql_query(command)
-            .execute(conn.get_conn())
-            .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
-
-        Ok(())
-    }
-
-    fn delete_entity(conn: &ActionState, old: &data::Table) -> Result<(), EntityError> {
-        let command = format!("DROP TABLE \"{}\";", old.name);
-        diesel::sql_query(command)
-            .execute(conn.get_conn())
-            .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
-
-        Ok(())
-    }
-}
-
-///Nothing needed here
-/// TODO: maybe have stored procedures here
-impl UpdateActionFunctions<data::Query, ActionState> for UpdateAction {
-    fn create_entity(conn: &ActionState, new: &data::Query) -> Result<(), EntityError> {
-        Ok(())
-    }
-
-    fn update_entity(conn: &ActionState, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
-        Ok(())
-    }
-
-    fn delete_entity(conn: &ActionState, old: &data::Query) -> Result<(), EntityError> {
-        Ok(())
-    }
-}
-
-///Nothing needed here
-impl UpdateActionFunctions<data::Script, ActionState> for UpdateAction {
-    fn create_entity(conn: &ActionState, new: &data::Script) -> Result<(), EntityError> {
-        unimplemented!();
-        let scripting = conn.get_scripting();
-        //Scripting::build();
-        Ok(())
-    }
-
-    fn update_entity(conn: &ActionState, old: &data::Script, new: &data::Script) -> Result<(), EntityError> {
-        unimplemented!();
-        let scripting = conn.get_scripting();
-        //TODO: this should be debounced so that docker doesn't get called all the time
-        //Scripting::build();
-        Ok(())
-    }
-
-    fn delete_entity(conn: &ActionState, old: &data::Script) -> Result<(), EntityError> {
-        unimplemented!();
-        let scripting = conn.get_scripting();
-        //Scripting::delete();
-        Ok(())
     }
 }

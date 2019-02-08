@@ -33,15 +33,9 @@ pub struct Auth<'a> {
     password_secret: String,
 }
 
-impl<'a> StateFunctions<'a> for ActionState {
-    type AuthFunctions = Auth<'a>;
-
-    fn get_auth_functions(&'a self) -> Auth<'a> {
-        let password_secret = self.get_password_secret();
-        Auth {
-            conn: self.get_conn(),
-            password_secret: password_secret.to_owned(),
-        }
+impl<'a> Auth<'a> {
+    pub fn new(conn: &'a Conn, password_secret: String) -> Self {
+        Self { conn, password_secret }
     }
 }
 

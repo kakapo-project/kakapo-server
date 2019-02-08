@@ -19,19 +19,18 @@ use model::actions::ActionResult;
 use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
-
+use model::entity::RetrieverFunctions;
 
 // Query Action
 #[derive(Debug)]
-pub struct RunScript<S = ActionState, ER = entity::Controller, SC = script::ScriptAction>  {
+pub struct RunScript<S = ActionState, SC = script::ScriptAction>  {
     pub script_name: String,
     pub param: data::ScriptParam,
-    pub phantom_data: PhantomData<(S, ER, SC)>,
+    pub phantom_data: PhantomData<(S, SC)>,
 }
 
-impl<S, ER, SC> RunScript<S, ER, SC>
+impl<S, SC> RunScript<S, SC>
     where
-        ER: entity::RetrieverFunctions<data::Script, S>,
         SC: script::ScriptActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
@@ -50,15 +49,16 @@ impl<S, ER, SC> RunScript<S, ER, SC>
     }
 }
 
-impl<S, ER, SC> Action<S> for RunScript<S, ER, SC>
+impl<S, SC> Action<S> for RunScript<S, SC>
     where
-        ER: entity::RetrieverFunctions<data::Script, S>,
         SC: script::ScriptActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ER::get_one(state, &self.script_name)
+        state
+            .get_entity_retreiver_functions()
+            .get_one(&self.script_name)
             .or_else(|err| Err(Error::Entity(err)))
             .and_then(|res: Option<data::Script>| {
                 match res {

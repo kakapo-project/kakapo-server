@@ -36,22 +36,20 @@ use model::state::StateFunctions;
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
 #[derive(Debug, Clone)]
-pub struct WithFilterListByPermission<A, T, S = ActionState, ER = entity::Controller>
+pub struct WithFilterListByPermission<A, T, S = ActionState>
     where
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     action: A,
-    phantom_data: PhantomData<(T, S, ER)>,
+    phantom_data: PhantomData<(T, S)>,
 }
 
-impl<A, T, S, ER> WithFilterListByPermission<A, T, S, ER>
+impl<A, T, S> WithFilterListByPermission<A, T, S>
     where
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     pub fn new(action: A) -> Self {
@@ -62,15 +60,14 @@ impl<A, T, S, ER> WithFilterListByPermission<A, T, S, ER>
     }
 }
 
-impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
+impl<A, T, S> Action<S> for WithFilterListByPermission<A, T, S>
     where
         A: Action<S, Ret = GetAllEntitiesResult<T>>,
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S>,
         PermissionStore: PermissionStoreFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
-    type Ret = <GetAllEntities<T, S, ER> as Action<S>>::Ret;
+    type Ret = <GetAllEntities<T, S> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let user_permissions = S::get_permissions::<PermissionStore>(state).unwrap_or_default();
         let raw_results = self.action.call(state)?;
@@ -92,21 +89,20 @@ impl<A, T, S, ER> Action<S> for WithFilterListByPermission<A, T, S, ER>
 
 ///get all tables
 #[derive(Debug, Clone)]
-pub struct GetAllEntities<T, S = ActionState, ER = entity::Controller>
+pub struct GetAllEntities<T, S = ActionState>
     where
         T: RawEntityTypes,
 {
     pub show_deleted: bool,
-    pub phantom_data: PhantomData<(T, S, ER)>,
+    pub phantom_data: PhantomData<(T, S)>,
 }
 
-impl<T, S, ER> GetAllEntities<T, S, ER>
+impl<T, S> GetAllEntities<T, S>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
-    pub fn new(show_deleted: bool) -> WithFilterListByPermission<WithTransaction<Self, S>, T, S, ER> {
+    pub fn new(show_deleted: bool) -> WithFilterListByPermission<WithTransaction<Self, S>, T, S> {
         let action = Self {
             show_deleted,
             phantom_data: PhantomData,
@@ -119,15 +115,16 @@ impl<T, S, ER> GetAllEntities<T, S, ER>
     }
 }
 
-impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
+impl<T, S> Action<S> for GetAllEntities<T, S>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S> + Send,
         for<'a> S: GetConnection + GetUserInfo + StateFunctions<'a>,
 {
     type Ret = GetAllEntitiesResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        let entities: Vec<T> = ER::get_all(state)
+        let entities: Vec<T> = state
+            .get_entity_retreiver_functions()
+            .get_all()
             .or_else(|err| Err(Error::Entity(err)))?;
         ActionRes::new("GetAllEntities", GetAllEntitiesResult::<T>(entities))
     }
@@ -135,21 +132,20 @@ impl<T, S, ER> Action<S> for GetAllEntities<T, S, ER>
 
 ///get one table
 #[derive(Debug, Clone)]
-pub struct GetEntity<T, S = ActionState, ER = entity::Controller>
+pub struct GetEntity<T, S = ActionState>
     where
         T: RawEntityTypes,
 {
     pub name: String,
-    pub phantom_data: PhantomData<(T, S, ER)>,
+    pub phantom_data: PhantomData<(T, S)>,
 }
 
-impl<T, S, ER> GetEntity<T, S, ER>
+impl<T, S> GetEntity<T, S>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
-    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S, ER>, S>, S> { //weird syntax but ok
+    pub fn new(name: String) -> WithPermissionRequired<WithTransaction<GetEntity<T, S>, S>, S> { //weird syntax but ok
         let action = Self {
             name: name.to_owned(),
             phantom_data: PhantomData,
@@ -162,15 +158,16 @@ impl<T, S, ER> GetEntity<T, S, ER>
     }
 }
 
-impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
+impl<T, S> Action<S> for GetEntity<T, S>
     where
         T: RawEntityTypes,
-        ER: RetrieverFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = GetEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        let maybe_entity: Option<T> = ER::get_one(state, &self.name)
+        let maybe_entity: Option<T> = state
+            .get_entity_retreiver_functions()
+            .get_one(&self.name)
             .or_else(|err| Err(Error::Entity(err)))?;
 
         match maybe_entity {
@@ -182,21 +179,19 @@ impl<T, S, ER> Action<S> for GetEntity<T, S, ER>
 
 ///create one table
 #[derive(Debug, Clone)]
-pub struct CreateEntity<T, S = ActionState, EM = entity::Controller>
+pub struct CreateEntity<T, S = ActionState>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub data: T,
     pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<(S, EM)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<T, S, EM> CreateEntity<T, S, EM>
+impl<T, S> CreateEntity<T, S>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
         <Self as Action<S>>::Ret: Clone,
 {
@@ -236,17 +231,18 @@ impl<T, S, EM> CreateEntity<T, S, EM>
     }
 }
 
-impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
+impl<T, S> Action<S> for CreateEntity<T, S>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = CreateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         match &self.on_duplicate {
             OnDuplicate::Update => {
-                EM::upsert(state, self.data.clone())
+                state
+                    .get_entity_modifier_function()
+                    .upsert(self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("upsert result: {:?}", &res);
@@ -257,7 +253,9 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
                     })
             },
             OnDuplicate::Ignore => {
-                EM::create(state, self.data.clone())
+                state
+                    .get_entity_modifier_function()
+                    .create(self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("create result: {:?}", &res);
@@ -269,7 +267,9 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
 
             },
             OnDuplicate::Fail => {
-                EM::create(state, self.data.clone())
+                state
+                    .get_entity_modifier_function()
+                    .create(self.data.clone())
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("create result: {:?}", &res);
@@ -285,22 +285,20 @@ impl<T, S, EM> Action<S> for CreateEntity<T, S, EM>
 
 ///update table
 #[derive(Debug, Clone)]
-pub struct UpdateEntity<T, S = ActionState, EM = entity::Controller>
+pub struct UpdateEntity<T, S = ActionState>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub name: String,
     pub data: T,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(S, EM)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<T, S, EM> UpdateEntity<T, S, EM>
+impl<T, S> UpdateEntity<T, S>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -324,17 +322,18 @@ impl<T, S, EM> UpdateEntity<T, S, EM>
     }
 }
 
-impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
+impl<T, S> Action<S> for UpdateEntity<T, S>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UpdateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         match &self.on_not_found {
             OnNotFound::Ignore => {
-                EM::update(state, (&self.name, self.data.clone()))
+                state
+                    .get_entity_modifier_function()
+                    .update((&self.name, self.data.clone()))
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("update result: {:?}", &res);
@@ -348,7 +347,9 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 
             },
             OnNotFound::Fail => {
-                EM::update(state, (&self.name, self.data.clone()))
+                state
+                    .get_entity_modifier_function()
+                    .update((&self.name, self.data.clone()))
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("update result: {:?}", &res);
@@ -365,21 +366,19 @@ impl<T, S, EM> Action<S> for UpdateEntity<T, S, EM>
 
 ///delete table
 #[derive(Debug, Clone)]
-pub struct DeleteEntity<T, S = ActionState, EM = entity::Controller>
+pub struct DeleteEntity<T, S = ActionState>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub name: String,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(T, S, EM)>,
+    pub phantom_data: PhantomData<(T, S)>,
 }
 
-impl<T, S, EM> DeleteEntity<T, S, EM>
+impl<T, S> DeleteEntity<T, S>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -402,17 +401,18 @@ impl<T, S, EM> DeleteEntity<T, S, EM>
     }
 }
 
-impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
+impl<T, S> Action<S> for DeleteEntity<T, S>
     where
         T: RawEntityTypes,
-        EM: ModifierFunctions<T, S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = DeleteEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         match &self.on_not_found {
             OnNotFound::Ignore => {
-                EM::delete(state, &self.name)
+                state
+                    .get_entity_modifier_function()
+                    .delete(&self.name)
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("delete result: {:?}", &res);
@@ -425,7 +425,9 @@ impl<T, S, EM> Action<S> for DeleteEntity<T, S, EM>
 
             },
             OnNotFound::Fail => {
-                EM::delete(state, &self.name)
+                state
+                    .get_entity_modifier_function()
+                    .delete(&self.name)
                     .or_else(|err| Err(Error::Entity(err)))
                     .and_then(|res| {
                         info!("delete result: {:?}", &res);
