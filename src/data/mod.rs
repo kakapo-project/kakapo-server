@@ -405,6 +405,15 @@ pub struct Script {
     pub text: String,
 }
 
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct View {
+    pub name: String, //TODO: make sure this is an alphanumeric
+    pub description: String,
+    pub view_state: serde_json::Value,
+}
+
 /*
 impl TableData {
     fn get_rows_data_from_rows_flat_data(columns: Vec<String>, data: Vec<Vec<Value>>) -> Vec<BTreeMap<String, Value>>{

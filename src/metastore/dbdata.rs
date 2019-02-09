@@ -3,7 +3,7 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, user, permission, invitation};
+use data::schema::{entity, table_schema, query, script, view, user, permission, invitation};
 use data;
 use std::fmt::Debug;
 use serde::Serialize;
@@ -107,6 +107,34 @@ pub struct NewRawScript {
     pub script_language: String,
     pub script_text: String,
     pub script_info: serde_json::Value,
+    pub is_deleted: bool,
+    pub modified_by: i64,
+}
+
+#[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
+#[primary_key(view_id)]
+#[table_name = "view"]
+#[belongs_to(RawEntity, foreign_key = "entity_id")]
+pub struct RawView {
+    pub view_id: i64,
+    pub entity_id: i64,
+    pub name: String,
+    pub description: String,
+    pub view_state: serde_json::Value,
+    pub view_info: serde_json::Value,
+    pub is_deleted: bool,
+    pub modified_at: NaiveDateTime,
+    pub modified_by: i64,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "view"]
+pub struct NewRawView {
+    pub entity_id: i64,
+    pub name: String,
+    pub description: String,
+    pub view_state: serde_json::Value,
+    pub view_info: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
 }

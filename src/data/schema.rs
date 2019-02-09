@@ -157,6 +157,20 @@ table! {
     }
 }
 
+table! {
+    view (view_id) {
+        view_id -> Int8,
+        entity_id -> Int8,
+        name -> Varchar,
+        description -> Varchar,
+        view_state -> Json,
+        view_info -> Json,
+        is_deleted -> Bool,
+        modified_at -> Timestamp,
+        modified_by -> Int8,
+    }
+}
+
 joinable!(entity -> scope (scope_id));
 joinable!(entity -> user (created_by));
 joinable!(entity_tag -> entity (entity_id));
@@ -174,6 +188,8 @@ joinable!(table_schema_transaction -> table_schema (table_schema_id));
 joinable!(table_schema_transaction -> user (made_by));
 joinable!(user_role -> role (role_id));
 joinable!(user_role -> user (user_id));
+joinable!(view -> entity (entity_id));
+joinable!(view -> user (modified_by));
 
 allow_tables_to_appear_in_same_query!(
     entity,
@@ -192,4 +208,5 @@ allow_tables_to_appear_in_same_query!(
     user,
     user_role,
     version,
+    view,
 );

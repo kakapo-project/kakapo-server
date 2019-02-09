@@ -12,6 +12,8 @@ use metastore::dbdata::RawQuery;
 use metastore::dbdata::NewRawQuery;
 use metastore::dbdata::RawScript;
 use metastore::dbdata::NewRawScript;
+use metastore::dbdata::RawView;
+use metastore::dbdata::NewRawView;
 use model::entity::ConvertRaw;
 use model::entity::GenerateRaw;
 use model::entity::RawEntityTypes;
@@ -49,6 +51,16 @@ impl ConvertRaw<data::Script> for dbdata::RawScript {
     }
 }
 
+impl ConvertRaw<data::View> for dbdata::RawView {
+    fn convert(&self) -> data::View {
+        data::View {
+            name: self.name.to_owned(),
+            description: self.description.to_owned(),
+            view_state: self.view_state.to_owned(),
+        }
+    }
+}
+
 
 impl GenerateRaw<data::Table> for dbdata::NewRawTable {
     fn new(data: &data::Table, entity_id: i64, modified_by: i64) -> Self {
@@ -56,7 +68,7 @@ impl GenerateRaw<data::Table> for dbdata::NewRawTable {
             entity_id,
             name: data.name.to_owned(),
             description: data.description.to_owned(),
-            table_data: serde_json::to_value(data.schema.to_owned()).unwrap(),
+            table_data: serde_json::to_value(data.schema.to_owned()).unwrap_or_default(),
             is_deleted: false,
             modified_by
         }
@@ -67,7 +79,7 @@ impl GenerateRaw<data::Table> for dbdata::NewRawTable {
             entity_id,
             name: "".to_string(),
             description: "".to_string(),
-            table_data: serde_json::to_value(json!({})).unwrap(),
+            table_data: serde_json::to_value(json!({})).unwrap_or_default(),
             is_deleted: true,
             modified_by
         }
@@ -81,7 +93,7 @@ impl GenerateRaw<data::Query> for dbdata::NewRawQuery {
             name: data.name.to_owned(),
             description: data.description.to_owned(),
             statement: data.statement.to_owned(),
-            query_info: serde_json::to_value(json!({})).unwrap(),
+            query_info: serde_json::to_value(json!({})).unwrap_or_default(),
             is_deleted: false,
             modified_by
         }
@@ -93,7 +105,7 @@ impl GenerateRaw<data::Query> for dbdata::NewRawQuery {
             name,
             description: "".to_string(),
             statement: "".to_string(),
-            query_info: serde_json::to_value(json!({})).unwrap(),
+            query_info: serde_json::to_value(json!({})).unwrap_or_default(),
             is_deleted: true,
             modified_by
         }
@@ -108,7 +120,7 @@ impl GenerateRaw<data::Script> for dbdata::NewRawScript {
             description: data.description.to_owned(),
             script_language: "Python".to_string(), //Only Python is supported right now
             script_text: data.text.to_owned(),
-            script_info: serde_json::to_value(json!({})).unwrap(),
+            script_info: serde_json::to_value(json!({})).unwrap_or_default(),
             is_deleted: false,
             modified_by,
         }
@@ -121,7 +133,33 @@ impl GenerateRaw<data::Script> for dbdata::NewRawScript {
             description: "".to_string(),
             script_language: "Python".to_string(),
             script_text: "".to_string(),
-            script_info: serde_json::to_value(json!({})).unwrap(),
+            script_info: serde_json::to_value(json!({})).unwrap_or_default(),
+            is_deleted: true,
+            modified_by,
+        }
+    }
+}
+
+impl GenerateRaw<data::View> for dbdata::NewRawView {
+    fn new(data: &data::View, entity_id: i64, modified_by: i64) -> Self {
+        dbdata::NewRawView {
+            entity_id,
+            name: data.name.to_owned(),
+            description: data.description.to_owned(),
+            view_state: data.view_state.to_owned(),
+            view_info: serde_json::to_value(json!({})).unwrap_or_default(),
+            is_deleted: false,
+            modified_by,
+        }
+    }
+
+    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self {
+        dbdata::NewRawView {
+            entity_id,
+            name,
+            description: "".to_string(),
+            view_state: serde_json::to_value(json!({})).unwrap_or_default(),
+            view_info: serde_json::to_value(json!({})).unwrap_or_default(),
             is_deleted: true,
             modified_by,
         }
@@ -149,6 +187,15 @@ impl RawEntityTypes for data::Query {
 impl RawEntityTypes for data::Script {
     type Data = RawScript;
     type NewData = NewRawScript;
+
+    fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
+}
+
+impl RawEntityTypes for data::View {
+    type Data = RawView;
+    type NewData = NewRawView;
 
     fn get_name(&self) -> String {
         self.name.to_owned()

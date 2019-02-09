@@ -366,6 +366,7 @@ macro_rules! implement_retriever_and_modifier {
 make_crud_ops!(table, data::Table);
 make_crud_ops!(query, data::Query);
 make_crud_ops!(script, data::Script);
+make_crud_ops!(view, data::View);
 
 pub mod table {
     implement_retriever_and_modifier!(data::Table, table_schema);
@@ -377,4 +378,8 @@ pub mod query {
 
 pub mod script {
     implement_retriever_and_modifier!(data::Script, script);
+}
+
+pub mod view {
+    implement_retriever_and_modifier!(data::View, view);
 }
