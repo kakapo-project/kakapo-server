@@ -23,6 +23,9 @@ use model::auth::auth_modifier::Auth;
 use model::entity::Controller;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
+use model::table::TableAction;
+use model::table::TableActionFunctions;
+use std::marker::PhantomData;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -34,9 +37,11 @@ pub struct ActionState {
 
 pub trait StateFunctions<'a>
     where
+        Self: Debug,
         Self::AuthFunctions: AuthFunctions,
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,
+        Self::TableController: TableActionFunctions,
 {
     type AuthFunctions;
     fn get_auth_functions(&'a self) -> Self::AuthFunctions;
@@ -46,6 +51,9 @@ pub trait StateFunctions<'a>
 
     type EntityModifierFunctions;
     fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions;
+
+    type TableController;
+    fn get_table_controller(&'a self) -> Self::TableController;
 }
 
 impl<'a> StateFunctions<'a> for ActionState {
@@ -71,6 +79,13 @@ impl<'a> StateFunctions<'a> for ActionState {
         Controller {
             conn: &self.database,
             claims: &self.claims,
+        }
+    }
+
+    type TableController = TableAction<'a>;
+    fn get_table_controller(&'a self) -> Self::TableController {
+        TableAction {
+            conn: &self.database,
         }
     }
 }

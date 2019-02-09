@@ -633,6 +633,12 @@ mod test {
         fn get_entity_modifier_function(&'a self) -> <Self as StateFunctions<'a>>::EntityModifierFunctions {
             self.0.get_entity_modifier_function()
         }
+
+        type TableController = <ActionState as StateFunctions<'a>>::TableController;
+
+        fn get_table_controller(&'a self) -> <Self as StateFunctions<'a>>::TableController {
+            self.0.get_table_controller()
+        }
     }
     impl GetConnection for MockState {
         type Connection = <ActionState as GetConnection>::Connection;

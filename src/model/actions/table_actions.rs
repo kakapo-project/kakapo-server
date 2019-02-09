@@ -27,18 +27,18 @@ use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
+use model::table::TableActionFunctions;
 
 // Table Actions
 #[derive(Debug)]
-pub struct QueryTableData<S = ActionState, TC = table::TableAction> {
+pub struct QueryTableData<S = ActionState> {
     pub table_name: String,
     pub format: TableDataFormat,
-    pub phantom_data: PhantomData<(S, TC)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<S, TC> QueryTableData<S, TC>
+impl<S> QueryTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -56,9 +56,8 @@ impl<S, TC> QueryTableData<S, TC>
     }
 }
 
-impl<S, TC> Action<S> for QueryTableData<S, TC>
+impl<S> Action<S> for QueryTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = GetTableDataResult;
@@ -74,7 +73,9 @@ impl<S, TC> Action<S> for QueryTableData<S, TC>
                 }
             })
             .and_then(|table| {
-                TC::query(state, &table)
+                state
+                    .get_table_controller()
+                    .query(&table)
                     .or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
@@ -86,17 +87,16 @@ impl<S, TC> Action<S> for QueryTableData<S, TC>
 
 
 #[derive(Debug)]
-pub struct InsertTableData<S = ActionState, TC = table::TableAction> {
+pub struct InsertTableData<S = ActionState> {
     pub table_name: String,
     pub data: data::TableData, //payload
     pub format: TableDataFormat,
     pub on_duplicate: OnDuplicate,
-    pub phantom_data: PhantomData<(S, TC)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<S, TC> InsertTableData<S, TC>
+impl<S> InsertTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -118,9 +118,8 @@ impl<S, TC> InsertTableData<S, TC>
     }
 }
 
-impl<S, TC> Action<S> for InsertTableData<S, TC>
+impl<S> Action<S> for InsertTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = InsertTableDataResult;
@@ -137,10 +136,11 @@ impl<S, TC> Action<S> for InsertTableData<S, TC>
             })
             .and_then(|table| {
                 let data = self.data.normalize();
+                let table_controller = state.get_table_controller();
                 match &self.on_duplicate {
-                    OnDuplicate::Update => TC::upsert_row(state, &table, &data),
-                    OnDuplicate::Ignore => TC::insert_row(state, &table, &data, false),
-                    OnDuplicate::Fail => TC::insert_row(state, &table, &data, true)
+                    OnDuplicate::Update => table_controller.upsert_row(&table, &data),
+                    OnDuplicate::Ignore => table_controller.insert_row(&table, &data, false),
+                    OnDuplicate::Fail => table_controller.insert_row(&table, &data, true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
@@ -151,17 +151,16 @@ impl<S, TC> Action<S> for InsertTableData<S, TC>
 }
 
 #[derive(Debug)]
-pub struct ModifyTableData<S = ActionState, TC = table::TableAction> {
+pub struct ModifyTableData<S = ActionState> {
     pub table_name: String,
     pub keyed_data: data::KeyedTableData,
     pub format: TableDataFormat,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(S, TC)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<S, TC> ModifyTableData<S, TC>
+impl<S> ModifyTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -183,9 +182,8 @@ impl<S, TC> ModifyTableData<S, TC>
     }
 }
 
-impl<S, TC> Action<S> for ModifyTableData<S, TC>
+impl<S> Action<S> for ModifyTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = ModifyTableDataResult;
@@ -202,9 +200,10 @@ impl<S, TC> Action<S> for ModifyTableData<S, TC>
             })
             .and_then(|table| {
                 let (keys, data) = self.keyed_data.normalize();
+                let table_controller = state.get_table_controller();
                 match &self.on_not_found {
-                    OnNotFound::Ignore => TC::update_row(state, &table, &keys, &data,false),
-                    OnNotFound::Fail => TC::update_row(state, &table, &keys, &data,true)
+                    OnNotFound::Ignore => table_controller.update_row(&table, &keys, &data, false),
+                    OnNotFound::Fail => table_controller.update_row(&table, &keys, &data, true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
@@ -215,17 +214,16 @@ impl<S, TC> Action<S> for ModifyTableData<S, TC>
 }
 
 #[derive(Debug)]
-pub struct RemoveTableData<S = ActionState, TC = table::TableAction>  {
+pub struct RemoveTableData<S = ActionState>  {
     pub table_name: String,
     pub keys: data::KeyData,
     pub format: TableDataFormat,
     pub on_not_found: OnNotFound,
-    pub phantom_data: PhantomData<(S, TC)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<S, TC> RemoveTableData<S, TC>
+impl<S> RemoveTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -247,9 +245,8 @@ impl<S, TC> RemoveTableData<S, TC>
     }
 }
 
-impl<S, TC> Action<S> for RemoveTableData<S, TC>
+impl<S> Action<S> for RemoveTableData<S>
     where
-        TC: table::TableActionFunctions<S>,
         for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RemoveTableDataResult;
@@ -266,9 +263,10 @@ impl<S, TC> Action<S> for RemoveTableData<S, TC>
             })
             .and_then(|table| {
                 let keys = self.keys.normalize();
+                let table_controller = state.get_table_controller();
                 match &self.on_not_found {
-                    OnNotFound::Ignore => TC::delete_row(state, &table, &keys, false),
-                    OnNotFound::Fail => TC::delete_row(state, &table, &keys, true)
+                    OnNotFound::Ignore => table_controller.delete_row(&table, &keys, false),
+                    OnNotFound::Fail => table_controller.delete_row(&table, &keys, true)
                 }.or_else(|err| Err(Error::Table(err)))
             })
             .and_then(|table_data| {
