@@ -58,6 +58,7 @@ pub trait StateFunctions<'a>
         Self::AuthFunctions: AuthFunctions,
         Self::PermissionStore: PermissionStoreFunctions,
 {
+    // user managment
     type UserInfo;
     fn get_user_info(&'a self) -> Self::UserInfo;
 
@@ -67,12 +68,14 @@ pub trait StateFunctions<'a>
     type PermissionStore;
     fn get_permission(&'a self) -> Self::PermissionStore;
 
+    // tables management
     type EntityRetrieverFunctions;
     fn get_entity_retreiver_functions(&'a self) -> Self::EntityRetrieverFunctions;
 
     type EntityModifierFunctions;
     fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions;
 
+    // table actions
     type TableController;
     fn get_table_controller(&'a self) -> Self::TableController;
 
