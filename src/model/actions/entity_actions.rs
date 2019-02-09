@@ -18,7 +18,7 @@ use model::entity::results::Updated;
 use model::entity::results::Deleted;
 
 use model::state::ActionState;
-use model::state::Channels;
+use data::channels::Channels;
 use model::auth::permissions::*;
 use model::actions::decorator::*;
 
@@ -29,7 +29,7 @@ use metastore::permission_store::PermissionStore;
 use metastore::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
-use model::state::GetUserInfo;
+use model::auth::GetUserInfo;
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
@@ -454,7 +454,7 @@ mod test {
     use serde_json::from_value;
     use scripting::Scripting;
     use diesel::r2d2::Pool;
-    use model::state::AuthClaims;
+    use data::claims::AuthClaims;
     use connection::Broadcaster;
     use std::sync::Arc;
     use connection::BroadcasterError;

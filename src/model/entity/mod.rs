@@ -14,7 +14,7 @@ use self::update_state::UpdateState;
 use model::entity::update_state::UpdateActionFunctions;
 use std::fmt::Debug;
 use connection::executor::Conn;
-use model::state::AuthClaims;
+use data::claims::AuthClaims;
 
 pub use model::entity::conversion::RawEntityTypes;
 

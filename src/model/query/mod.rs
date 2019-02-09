@@ -5,12 +5,12 @@ use model::state::ActionState;
 use data;
 use model::query::error::QueryError;
 use database::DatabaseFunctions;
-use model::state::GetUserInfo;
 use data::Value;
 use data::QueryParams;
 use std::marker::PhantomData;
 use std::fmt::Debug;
 use model::state::StateFunctions;
+use model::auth::GetUserInfo;
 
 #[derive(Debug, Clone)]
 pub struct QueryAction {}

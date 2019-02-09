@@ -14,7 +14,7 @@ use data::utils::TableDataFormat;
 
 use model::table;
 use model::state::ActionState;
-use model::state::Channels;
+use data::channels::Channels;
 use model::auth::permissions::*;
 
 use model::actions::decorator::*;
@@ -26,7 +26,6 @@ use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
 use model::table::TableActionFunctions;
-use model::state::GetUserInfo;
 
 // Table Actions
 #[derive(Debug)]

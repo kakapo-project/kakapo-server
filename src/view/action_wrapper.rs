@@ -6,7 +6,7 @@ use actix::dev::MessageResponse;
 
 use model::actions::Action;
 use model::state::ActionState;
-use model::state::AuthClaims;
+use data::claims::AuthClaims;
 use model::actions::ActionResult;
 use model::actions::error::Error;
 use scripting::Scripting;
@@ -128,7 +128,7 @@ mod test {
     use connection::AppState;
     use futures::Future;
     use model::actions::ActionRes;
-    use model::state::Channels;
+    use data::channels::Channels;
     use connection::BroadcasterError;
 
     #[derive(Debug, Clone)]

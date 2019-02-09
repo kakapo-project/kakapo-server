@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use model::actions::error::Error;
 use model::state::ActionState;
-use model::state::Channels;
+use data::channels::Channels;
 use model::auth::permissions::*;
 
 use model::actions::Action;
@@ -16,8 +16,7 @@ use model::state::GetBroadcaster;
 use model::actions::OkAction;
 use std::fmt;
 use model::state::StateFunctions;
-use model::state::GetUserInfo;
-
+use model::auth::GetUserInfo;
 
 #[derive(Debug, Clone)]
 enum Requirements {

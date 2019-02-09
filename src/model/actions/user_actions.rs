@@ -22,7 +22,6 @@ use std::io::Cursor;
 use byteorder::{BigEndian, ReadBytesExt};
 use model::auth::send_mail::EmailSender;
 use model::state::StateFunctions;
-use model::state::GetUserInfo;
 
 #[derive(Debug)]
 pub struct Authenticate<S = ActionState> {
@@ -575,7 +574,7 @@ mod test {
     use serde_json::from_value;
     use scripting::Scripting;
     use diesel::r2d2::Pool;
-    use model::state::AuthClaims;
+    use data::claims::AuthClaims;
     use connection::Broadcaster;
     use std::sync::Arc;
     use connection::BroadcasterError;

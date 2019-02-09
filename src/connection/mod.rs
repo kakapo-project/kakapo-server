@@ -5,7 +5,7 @@ pub mod py;
 use actix::sync::SyncArbiter;
 use num_cpus;
 use std::sync::Arc;
-pub use model::state::Channels;
+pub use data::channels::Channels;
 use std::fmt::Debug;
 
 ///Put this somewhere in your State

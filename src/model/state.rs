@@ -31,6 +31,10 @@ use data::auth::Permission;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use metastore::permission_store::PermissionStore;
+use data::claims::AuthClaims;
+use Channels;
+use model::auth::GetUserInfo;
+use model::auth::UserInfo;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -158,61 +162,6 @@ impl<'a> StateFunctions<'a> for ActionState {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub enum Channels {
-    AllTables,
-    AllQueries,
-    AllScripts,
-    Table(String),
-    Query(String),
-    Script(String),
-    TableData(String),
-}
-
-impl Channels {
-    pub fn all_entities<T>() -> Self
-        where T: RawEntityTypes,
-    {
-        Channels::AllTables
-    }
-
-    pub fn entity<T>(name: &str) -> Self
-        where T: RawEntityTypes,
-    {
-        Channels::Table(name.to_string())
-    }
-
-    pub fn table(table_name: &str) -> Self {
-        Channels::TableData(table_name.to_string())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct AuthClaims {
-    iss: String,
-    sub: i64, // == user_id
-    iat: i64,
-    exp: i64,
-    username: String,
-    is_admin: bool,
-    role: Option<String>, //the default role that the user is interacting with
-}
-
-impl AuthClaims {
-    pub fn get_user_id(&self) -> i64 {
-        self.sub
-    }
-
-    pub fn get_username(&self) -> String {
-        self.username.to_owned()
-    }
-
-    pub fn is_user_admin(&self) -> bool {
-        self.is_admin
-    }
-}
-
 impl ActionState {
     //TODO: this has too many parameters
     pub fn new(
@@ -229,82 +178,6 @@ impl ActionState {
             broadcaster,
             secrets,
         }
-    }
-}
-
-pub struct UserInfo<'a, P> {
-    permission_store: P,
-    claims: &'a Option<AuthClaims>,
-}
-
-pub trait GetUserInfo {
-    fn user_id(&self) -> Option<i64>;
-
-    fn is_admin(&self) -> bool;
-
-    /// returns a hashset of permissions if the user is logged in
-    /// otherwise returns none
-    fn permissions(&self) -> Option<HashSet<Permission>>;
-
-    fn all_permissions(&self) -> HashSet<Permission>;
-
-    fn username(&self) -> Option<String>;
-
-}
-
-/// Note that the permissions here are grabbed from either the jwt, or the
-/// database
-impl<'a, P> GetUserInfo for UserInfo<'a, P>
-    where P: PermissionStoreFunctions
-{
-    fn user_id(&self) -> Option<i64> {
-        self.claims.to_owned().map(|x| x.get_user_id())
-    }
-
-    fn is_admin(&self) -> bool {
-        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
-    }
-
-    fn permissions(&self) -> Option<HashSet<Permission>> {
-        self.user_id().map(|user_id| {
-            let raw_permissions_result = self.permission_store.get_user_permissions(user_id);
-            let raw_permissions = match raw_permissions_result {
-                Ok(res) => res,
-                Err(err) => {
-                    error!("encountered an error when trying to get all permissions: {:?}", err);
-                    vec![]
-                }
-            };
-
-            let permissions = raw_permissions.into_iter()
-                .flat_map(|raw_permission| {
-                    raw_permission.as_permission()
-                });
-
-            HashSet::from_iter(permissions)
-        })
-    }
-
-    fn all_permissions(&self) -> HashSet<Permission> {
-        let raw_permissions_result = self.permission_store.get_all_permissions();
-        let raw_permissions = match raw_permissions_result {
-            Ok(res) => res,
-            Err(err) => {
-                error!("encountered an error when trying to get all permissions: {:?}", err);
-                vec![]
-            }
-        };
-
-        let permissions = raw_permissions.into_iter()
-            .flat_map(|raw_permission| {
-                raw_permission.as_permission()
-            });
-
-        HashSet::from_iter(permissions)
-    }
-
-    fn username(&self) -> Option<String> {
-        self.claims.to_owned().map(|x| x.get_username())
     }
 }
 

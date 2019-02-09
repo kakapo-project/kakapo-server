@@ -20,7 +20,6 @@ use model::state::ActionState;
 use model::entity::Controller;
 use std::marker::PhantomData;
 use std::fmt::Debug;
-use model::state::GetUserInfo;
 
 //TODO: put all of this in internal
 pub trait EntityCrudOps

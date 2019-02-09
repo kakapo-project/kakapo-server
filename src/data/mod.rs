@@ -8,6 +8,8 @@ pub mod auth;
 pub mod dbdata;
 pub mod schema;
 pub mod methods;
+pub mod claims;
+pub mod channels;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

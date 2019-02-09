@@ -21,7 +21,6 @@ use model::actions::ActionResult;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
-use model::state::GetUserInfo;
 
 // Query Action
 #[derive(Debug)]
