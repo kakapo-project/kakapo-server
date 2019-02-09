@@ -26,6 +26,11 @@ use model::entity::ModifierFunctions;
 use model::table::TableAction;
 use model::table::TableActionFunctions;
 use std::marker::PhantomData;
+use metastore::permission_store::PermissionStoreFunctions;
+use data::auth::Permission;
+use std::collections::HashSet;
+use std::iter::FromIterator;
+use metastore::permission_store::PermissionStore;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -35,16 +40,32 @@ pub struct ActionState {
     pub secrets: Secrets,
 }
 
+impl fmt::Debug for ActionState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ActionState")
+    }
+}
+
 pub trait StateFunctions<'a>
     where
         Self: Debug + Send,
-        Self::AuthFunctions: AuthFunctions,
+        Self::TableController: TableActionFunctions,
+        Self::UserInfo: GetUserInfo,
+        //TODO: managementstore
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,
-        Self::TableController: TableActionFunctions,
+        //managementstore
+        Self::AuthFunctions: AuthFunctions,
+        Self::PermissionStore: PermissionStoreFunctions,
 {
+    type UserInfo;
+    fn get_user_info(&'a self) -> Self::UserInfo;
+
     type AuthFunctions;
     fn get_auth_functions(&'a self) -> Self::AuthFunctions;
+
+    type PermissionStore;
+    fn get_permission(&'a self) -> Self::PermissionStore;
 
     type EntityRetrieverFunctions;
     fn get_entity_retreiver_functions(&'a self) -> Self::EntityRetrieverFunctions;
@@ -66,6 +87,18 @@ pub trait StateFunctions<'a>
 }
 
 impl<'a> StateFunctions<'a> for ActionState {
+    type UserInfo = UserInfo<'a, Self::PermissionStore>;
+    fn get_user_info(&'a self) -> Self::UserInfo {
+        let permission_store: PermissionStore<'a> = PermissionStore {
+            conn: &self.database,
+        };
+
+        UserInfo {
+            permission_store,
+            claims: &self.claims,
+        }
+    }
+
     type AuthFunctions = Auth<'a>;
     fn get_auth_functions(&'a self) -> Auth<'a> {
         let password_secret = self.get_password_secret();
@@ -73,6 +106,13 @@ impl<'a> StateFunctions<'a> for ActionState {
             &self.database,
             password_secret.to_owned(),
         )
+    }
+
+    type PermissionStore = PermissionStore<'a>;
+    fn get_permission(&'a self) -> Self::PermissionStore {
+        PermissionStore {
+            conn: &self.database,
+        }
     }
 
     type EntityRetrieverFunctions = Controller<'a>;
@@ -114,9 +154,6 @@ impl<'a> StateFunctions<'a> for ActionState {
         conn.transaction::<G, E, _>(f)
     }
 }
-
-
-/// OLD
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Channels {
@@ -173,12 +210,6 @@ impl AuthClaims {
     }
 }
 
-impl fmt::Debug for ActionState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "State")
-    }
-}
-
 impl ActionState {
     //TODO: this has too many parameters
     pub fn new(
@@ -198,9 +229,83 @@ impl ActionState {
     }
 }
 
-pub trait GetBroadcaster
-    where Self: Send + Debug
+pub struct UserInfo<'a, P> {
+    permission_store: P,
+    claims: &'a Option<AuthClaims>,
+}
+
+pub trait GetUserInfo {
+    fn user_id(&self) -> Option<i64>;
+
+    fn is_admin(&self) -> bool;
+
+    /// returns a hashset of permissions if the user is logged in
+    /// otherwise returns none
+    fn permissions(&self) -> Option<HashSet<Permission>>;
+
+    fn all_permissions(&self) -> HashSet<Permission>;
+
+    fn username(&self) -> Option<String>;
+
+}
+
+/// Note that the permissions here are grabbed from either the jwt, or the
+/// database
+impl<'a, P> GetUserInfo for UserInfo<'a, P>
+    where P: PermissionStoreFunctions
 {
+    fn user_id(&self) -> Option<i64> {
+        self.claims.to_owned().map(|x| x.get_user_id())
+    }
+
+    fn is_admin(&self) -> bool {
+        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
+    }
+
+    fn permissions(&self) -> Option<HashSet<Permission>> {
+        self.user_id().map(|user_id| {
+            let raw_permissions_result = self.permission_store.get_user_permissions(user_id);
+            let raw_permissions = match raw_permissions_result {
+                Ok(res) => res,
+                Err(err) => {
+                    error!("encountered an error when trying to get all permissions: {:?}", err);
+                    vec![]
+                }
+            };
+
+            let permissions = raw_permissions.into_iter()
+                .flat_map(|raw_permission| {
+                    raw_permission.as_permission()
+                });
+
+            HashSet::from_iter(permissions)
+        })
+    }
+
+    fn all_permissions(&self) -> HashSet<Permission> {
+        let raw_permissions_result = self.permission_store.get_all_permissions();
+        let raw_permissions = match raw_permissions_result {
+            Ok(res) => res,
+            Err(err) => {
+                error!("encountered an error when trying to get all permissions: {:?}", err);
+                vec![]
+            }
+        };
+
+        let permissions = raw_permissions.into_iter()
+            .flat_map(|raw_permission| {
+                raw_permission.as_permission()
+            });
+
+        HashSet::from_iter(permissions)
+    }
+
+    fn username(&self) -> Option<String> {
+        self.claims.to_owned().map(|x| x.get_username())
+    }
+}
+
+pub trait GetBroadcaster {
     fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
         where R: Serialize;
 }
@@ -220,9 +325,7 @@ impl GetBroadcaster for ActionState {
     }
 }
 
-pub trait GetSecrets
-    where Self: Send + Debug
-{
+pub trait GetSecrets {
     fn get_token_secret(&self) -> String;
     fn get_password_secret(&self) -> String;
 }

@@ -19,8 +19,12 @@ use model::state::AuthClaims;
 pub use model::entity::conversion::RawEntityTypes;
 
 pub struct Controller<'a> {
-    pub conn: &'a Conn,
+    pub conn: &'a Conn, //TODO: database specific, dependency inject here
     pub claims: &'a Option<AuthClaims>,
+}
+
+impl<'a> Controller<'a> {
+    pub const ADMIN_USER_ID: i64 = 1; //TODO: database specific, dependency inject here
 }
 
 pub trait RetrieverFunctions {

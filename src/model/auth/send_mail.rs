@@ -3,12 +3,10 @@ use data::auth::Invitation;
 use std::fmt::Debug;
 use model::state::ActionState;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EmailError;
 
-pub trait EmailSender
-    where Self: Debug + Send
-{
+pub trait EmailSender {
     fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError>;
 }
 

@@ -15,7 +15,6 @@ use metastore::auth_modifier::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::GetSecrets;
 
@@ -23,6 +22,7 @@ use std::io::Cursor;
 use byteorder::{BigEndian, ReadBytesExt};
 use model::auth::send_mail::EmailSender;
 use model::state::StateFunctions;
+use model::state::GetUserInfo;
 
 #[derive(Debug)]
 pub struct Authenticate<S = ActionState> {
@@ -32,7 +32,7 @@ pub struct Authenticate<S = ActionState> {
 }
 
 impl<S> Authenticate<S>
-    where for<'a> S: GetUserInfo + GetSecrets + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + StateFunctions<'a>,
 {
     pub fn new(user_identifier: String, password: String) -> WithTransaction<Self, S> {
         let action = Self {
@@ -48,7 +48,7 @@ impl<S> Authenticate<S>
 }
 
 impl<S> Action<S> for Authenticate<S>
-    where for<'a> S: GetUserInfo + GetSecrets + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + StateFunctions<'a>,
 {
     type Ret = Option<()>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -68,7 +68,7 @@ pub struct GetAllUsers<S = ActionState> {
 }
 
 impl<S> GetAllUsers<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -85,7 +85,7 @@ impl<S> GetAllUsers<S>
 }
 
 impl<S> Action<S> for GetAllUsers<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = AllUsersResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -105,7 +105,7 @@ pub struct AddUser<S = ActionState> {
 }
 
 impl<S> AddUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -122,7 +122,7 @@ impl<S> AddUser<S>
 }
 
 impl<S> Action<S> for AddUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -141,7 +141,7 @@ pub struct RemoveUser<S = ActionState> {
 }
 
 impl<S> RemoveUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(user_identifier: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -158,7 +158,7 @@ impl<S> RemoveUser<S>
 }
 
 impl<S> Action<S> for RemoveUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -177,7 +177,7 @@ pub struct InviteUser<S = ActionState> {
 }
 
 impl<S> InviteUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + EmailSender + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + EmailSender + StateFunctions<'a>,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -194,7 +194,7 @@ impl<S> InviteUser<S>
 }
 
 impl<S> Action<S> for InviteUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + EmailSender + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + EmailSender + StateFunctions<'a>,
 {
     type Ret = InvitationResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -213,7 +213,7 @@ pub struct SetupUser<S = ActionState> {
 }
 
 impl<S> SetupUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(user: data::auth::NewUser) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -231,7 +231,7 @@ impl<S> SetupUser<S>
 }
 
 impl<S> Action<S> for SetupUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -252,7 +252,7 @@ pub struct SetUserPassword<S = ActionState> {
 }
 
 impl<S> SetUserPassword<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(user_identifier: String, password: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
@@ -276,7 +276,7 @@ impl<S> SetUserPassword<S>
 }
 
 impl<S> Action<S> for SetUserPassword<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -295,7 +295,7 @@ pub struct AddRole<S = ActionState> {
 }
 
 impl<S> AddRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -312,7 +312,7 @@ impl<S> AddRole<S>
 }
 
 impl<S> Action<S> for AddRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -331,7 +331,7 @@ pub struct RemoveRole<S = ActionState> {
 }
 
 impl<S> RemoveRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -348,7 +348,7 @@ impl<S> RemoveRole<S>
 }
 
 impl<S> Action<S> for RemoveRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -366,7 +366,7 @@ pub struct GetAllRoles<S = ActionState> {
 }
 
 impl<S> GetAllRoles<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new() -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -382,7 +382,7 @@ impl<S> GetAllRoles<S>
 }
 
 impl<S> Action<S> for GetAllRoles<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = AllRolesResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -402,7 +402,7 @@ pub struct AttachPermissionForRole<S = ActionState> {
 }
 
 impl<S> AttachPermissionForRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
@@ -425,7 +425,7 @@ impl<S> AttachPermissionForRole<S>
 }
 
 impl<S> Action<S> for AttachPermissionForRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -445,7 +445,7 @@ pub struct DetachPermissionForRole<S = ActionState> {
 }
 
 impl<S> DetachPermissionForRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(rolename: String, permission: Permission) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
@@ -468,7 +468,7 @@ impl<S> DetachPermissionForRole<S>
 }
 
 impl<S> Action<S> for DetachPermissionForRole<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -488,7 +488,7 @@ pub struct AttachRoleForUser<S = ActionState> {
 }
 
 impl<S> AttachRoleForUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
@@ -510,7 +510,7 @@ impl<S> AttachRoleForUser<S>
 }
 
 impl<S> Action<S> for AttachRoleForUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -530,7 +530,7 @@ pub struct DetachRoleForUser<S = ActionState> {
 }
 
 impl<S> DetachRoleForUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
@@ -552,7 +552,7 @@ impl<S> DetachRoleForUser<S>
 }
 
 impl<S> Action<S> for DetachRoleForUser<S>
-    where for<'a> S: GetUserInfo + GetSecrets + GetBroadcaster + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -617,9 +617,19 @@ mod test {
     #[derive(Debug)]
     struct MockState(ActionState);
     impl<'a> StateFunctions<'a> for MockState {
+        type UserInfo = <ActionState as StateFunctions<'a>>::UserInfo;
+        fn get_user_info(&'a self) -> <Self as StateFunctions<'a>>::UserInfo {
+            self.0.get_user_info()
+        }
+
         type AuthFunctions = <ActionState as StateFunctions<'a>>::AuthFunctions;
         fn get_auth_functions(&'a self) -> <Self as StateFunctions<'a>>::AuthFunctions {
             self.0.get_auth_functions()
+        }
+
+        type PermissionStore = <ActionState as StateFunctions<'a>>::PermissionStore;
+        fn get_permission(&'a self) -> <Self as StateFunctions<'a>>::PermissionStore {
+            self.0.get_permission()
         }
 
         type EntityRetrieverFunctions = <ActionState as StateFunctions<'a>>::EntityRetrieverFunctions;
@@ -656,24 +666,6 @@ mod test {
         }
     }
 
-    impl GetUserInfo for MockState {
-        const ADMIN_USER_ID: i64 = ActionState::ADMIN_USER_ID;
-
-        fn get_user_id(&self) -> Option<i64> { self.0.get_user_id() }
-
-        fn is_admin(&self) -> bool { self.0.is_admin() }
-
-        fn get_permissions<AS>(&self) -> Option<HashSet<Permission>>
-            where AS: PermissionStoreFunctions<ActionState>
-        { self.0.get_permissions::<AS>() }
-
-        fn get_all_permissions<AS>(&self) -> HashSet<Permission>
-            where AS: PermissionStoreFunctions<ActionState>
-        { self.0.get_all_permissions::<AS>() }
-
-        fn get_username(&self) -> Option<String> { self.0.get_username() }
-    }
-
     impl GetSecrets for MockState {
         fn get_token_secret(&self) -> String { self.0.get_token_secret() }
 
@@ -685,16 +677,6 @@ mod test {
             where R: Serialize
         {
             self.0.publish(channels, action_name, action_result)
-        }
-    }
-
-    impl PermissionStoreFunctions<MockState> for PermissionStore {
-        fn get_user_permissions(state: &MockState, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
-            PermissionStore::get_user_permissions(&state.0, user_id)
-        }
-
-        fn get_all_permissions(state: &MockState) -> Result<Vec<RawPermission>, UserManagementError> {
-            PermissionStore::get_all_permissions(&state.0)
         }
     }
 

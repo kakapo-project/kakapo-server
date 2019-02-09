@@ -5,21 +5,20 @@ use std::error::Error;
 use diesel::sql_types::BigInt;
 use data::dbdata::RawPermission;
 use model::state::StateFunctions;
+use connection::executor::Conn;
 
 
-pub struct PermissionStore;
-
-pub trait PermissionStoreFunctions<S>
-    where Self: Send
-{
-
-    fn get_user_permissions(state: &S, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError>;
-    fn get_all_permissions(state: &S) -> Result<Vec<RawPermission>, UserManagementError>;
+pub struct PermissionStore<'a> {
+    pub conn: &'a Conn,
 }
 
-impl PermissionStoreFunctions<ActionState> for PermissionStore {
+pub trait PermissionStoreFunctions {
+    fn get_user_permissions(&self, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError>;
+    fn get_all_permissions(&self) -> Result<Vec<RawPermission>, UserManagementError>;
+}
 
-    fn get_user_permissions(state: &ActionState, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
+impl<'a> PermissionStoreFunctions for PermissionStore<'a> {
+    fn get_user_permissions(&self, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
         let query = r#"
         SELECT
             DISTINCT ON("permission"."permission_id")
@@ -35,16 +34,15 @@ impl PermissionStoreFunctions<ActionState> for PermissionStore {
         WHERE "user"."user_id" = $1;
         "#;
 
-        let conn = state.get_database();
         let result: Vec<RawPermission> = diesel::sql_query(query)
             .bind::<BigInt, _>(user_id)
-            .load(conn)
+            .load(self.conn)
             .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
 
         Ok(result)
     }
 
-    fn get_all_permissions(state: &ActionState) -> Result<Vec<RawPermission>, UserManagementError> {
+    fn get_all_permissions(&self) -> Result<Vec<RawPermission>, UserManagementError> {
 
         let query = r#"
         SELECT
@@ -52,9 +50,8 @@ impl PermissionStoreFunctions<ActionState> for PermissionStore {
             * FROM "permission";
         "#;
 
-        let conn = state.get_database();
         let result: Vec<RawPermission> = diesel::sql_query(query)
-            .load(conn)
+            .load(self.conn)
             .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
 
         Ok(result)

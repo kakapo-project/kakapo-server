@@ -7,7 +7,6 @@ use data::auth::NewUser;
 use model::auth::error::UserManagementError;
 use data::auth::Role;
 use model::auth::permissions::Permission;
-use model::auth::permissions::GetUserInfo;
 use std::fmt::Debug;
 use model::state::GetSecrets;
 use argonautica::Hasher;

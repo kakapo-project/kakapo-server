@@ -5,7 +5,7 @@ use model::state::ActionState;
 use data;
 use model::query::error::QueryError;
 use database::DatabaseFunctions;
-use model::auth::permissions::GetUserInfo;
+use model::state::GetUserInfo;
 use data::Value;
 use data::QueryParams;
 use std::marker::PhantomData;
@@ -23,7 +23,7 @@ pub trait QueryActionFunctions<S>
 
 impl QueryActionFunctions<ActionState> for QueryAction {
     fn run_query(state: &ActionState, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError>  {
-        let username = state.get_username();
+        let username = state.get_user_info().username();
         let db_params = params.value_list();
 
         if let Some(db_user) = username.to_owned() {

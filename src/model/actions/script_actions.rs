@@ -15,10 +15,10 @@ use model::actions::decorator::*;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
+use model::state::GetUserInfo;
 
 // Query Action
 #[derive(Debug)]
@@ -31,7 +31,7 @@ pub struct RunScript<S = ActionState, SC = script::ScriptAction>  {
 impl<S, SC> RunScript<S, SC>
     where
         SC: script::ScriptActionFunctions<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -51,7 +51,7 @@ impl<S, SC> RunScript<S, SC>
 impl<S, SC> Action<S> for RunScript<S, SC>
     where
         SC: script::ScriptActionFunctions<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

@@ -18,10 +18,10 @@ use model::actions::decorator::*;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::auth::permissions::GetUserInfo;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
+use model::state::GetUserInfo;
 
 // Query Action
 #[derive(Debug)]
@@ -35,7 +35,7 @@ pub struct RunQuery<S = ActionState, QC = query::QueryAction>  {
 impl<S, QC> RunQuery<S, QC>
     where
         QC: query::QueryActionFunctions<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -56,7 +56,7 @@ impl<S, QC> RunQuery<S, QC>
 impl<S, QC> Action<S> for RunQuery<S, QC>
     where
         QC: query::QueryActionFunctions<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

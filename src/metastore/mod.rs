@@ -17,11 +17,10 @@ use model::entity::error::EntityError;
 use model::entity::results::*;
 
 use model::state::ActionState;
-use model::auth::permissions::GetUserInfo;
 use model::entity::Controller;
 use std::marker::PhantomData;
 use std::fmt::Debug;
-
+use model::state::GetUserInfo;
 
 //TODO: put all of this in internal
 pub trait EntityCrudOps
@@ -46,7 +45,7 @@ fn get_user_id(controller: &Controller) -> i64 {
     match controller.claims {
         None => {
             warn!("This user does not have any id, however, the user is authorized. Setting content as admin");
-            ActionState::ADMIN_USER_ID
+            Controller::ADMIN_USER_ID
         },
         Some(claims) => {
             claims.get_user_id()

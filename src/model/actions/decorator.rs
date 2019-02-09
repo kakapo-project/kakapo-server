@@ -10,13 +10,13 @@ use model::auth::permissions::*;
 use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
-use model::auth::permissions::GetUserInfo;
 use metastore::permission_store::PermissionStore;
 use metastore::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::actions::OkAction;
 use std::fmt;
 use model::state::StateFunctions;
+use model::state::GetUserInfo;
 
 
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ impl Requirements {
 pub struct WithPermissionRequired<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     action: A,
     permissions: Requirements,
@@ -66,7 +66,7 @@ pub struct WithPermissionRequired<A, S = ActionState>
 impl<A, S> WithPermissionRequired<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
@@ -96,16 +96,18 @@ impl<A, S> WithPermissionRequired<A, S>
 impl<A, S> Action<S> for WithPermissionRequired<A, S>
     where
         A: Action<S>,
-        PermissionStore: PermissionStoreFunctions<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if S::is_admin(state) {
+        if state.get_user_info().is_admin() {
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions::<PermissionStore>(state).unwrap_or_default();
+        let user_permissions = state
+            .get_user_info()
+            .permissions()
+            .unwrap_or_default();
         let is_permitted = self.permissions.is_permitted(&user_permissions);
 
         if is_permitted {
@@ -123,7 +125,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
 pub struct WithLoginRequired<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     action: A,
     phantom_data: PhantomData<(S)>,
@@ -132,7 +134,7 @@ pub struct WithLoginRequired<A, S = ActionState>
 impl<A, S> WithLoginRequired<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -145,16 +147,17 @@ impl<A, S> WithLoginRequired<A, S>
 impl<A, S> Action<S> for WithLoginRequired<A, S>
     where
         A: Action<S>,
-        PermissionStore: PermissionStoreFunctions<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if S::is_admin(state) {
+        if state.get_user_info().is_admin() {
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions::<PermissionStore>(state);
+        let user_permissions = state
+            .get_user_info()
+            .permissions();
         match user_permissions {
             None => {
                 debug!("Permission denied, required login");
@@ -170,7 +173,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
 pub struct WithPermissionFor<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     action: A,
     required_permission: Box<Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send>,
@@ -180,7 +183,7 @@ pub struct WithPermissionFor<A, S = ActionState>
 impl<A, S> fmt::Debug for WithPermissionFor<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "WithPermissionFor({:?})", &self.action)
@@ -190,7 +193,7 @@ impl<A, S> fmt::Debug for WithPermissionFor<A, S>
 impl<A, S> WithPermissionFor<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new<F>(action: A, required_permission: F) -> Self
         where
@@ -207,17 +210,22 @@ impl<A, S> WithPermissionFor<A, S>
 impl<A, S> Action<S> for WithPermissionFor<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
-        PermissionStore: PermissionStoreFunctions<S>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if S::is_admin(state) {
+        if state.get_user_info().is_admin() {
             return self.action.call(state);
         }
 
-        let user_permissions = S::get_permissions::<PermissionStore>(state).unwrap_or_default();
-        let all_permissions = S::get_all_permissions::<PermissionStore>(state);
+        let user_permissions = state
+            .get_user_info()
+            .permissions()
+            .unwrap_or_default();
+
+        let all_permissions = state
+            .get_user_info()
+            .all_permissions();
 
         let is_permitted = (self.required_permission)(&user_permissions, &all_permissions);
 
