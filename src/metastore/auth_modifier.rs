@@ -10,7 +10,7 @@ use model::auth::permissions::Permission;
 use std::fmt::Debug;
 use model::state::GetSecrets;
 use argonautica::Hasher;
-use data::dbdata;
+use metastore::dbdata;
 use data::schema;
 
 use diesel::prelude::*;

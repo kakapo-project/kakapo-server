@@ -5,7 +5,6 @@ use std::fmt;
 
 pub mod utils;
 pub mod auth;
-pub mod dbdata;
 pub mod schema;
 pub mod methods;
 pub mod claims;

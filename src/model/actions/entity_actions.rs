@@ -30,6 +30,7 @@ use metastore::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::auth::GetUserInfo;
+use model::entity::update_state::UpdateActionFunctions;
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
@@ -181,7 +182,7 @@ impl<T, S> Action<S> for GetEntity<T, S>
 #[derive(Debug, Clone)]
 pub struct CreateEntity<T, S = ActionState>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub data: T,
@@ -191,7 +192,7 @@ pub struct CreateEntity<T, S = ActionState>
 
 impl<T, S> CreateEntity<T, S>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
         <Self as Action<S>>::Ret: Clone,
 {
@@ -233,7 +234,7 @@ impl<T, S> CreateEntity<T, S>
 
 impl<T, S> Action<S> for CreateEntity<T, S>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = CreateEntityResult<T>;
@@ -287,7 +288,7 @@ impl<T, S> Action<S> for CreateEntity<T, S>
 #[derive(Debug, Clone)]
 pub struct UpdateEntity<T, S = ActionState>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub name: String,
@@ -298,7 +299,7 @@ pub struct UpdateEntity<T, S = ActionState>
 
 impl<T, S> UpdateEntity<T, S>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -324,7 +325,7 @@ impl<T, S> UpdateEntity<T, S>
 
 impl<T, S> Action<S> for UpdateEntity<T, S>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = UpdateEntityResult<T>;
@@ -368,7 +369,7 @@ impl<T, S> Action<S> for UpdateEntity<T, S>
 #[derive(Debug, Clone)]
 pub struct DeleteEntity<T, S = ActionState>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub name: String,
@@ -378,7 +379,7 @@ pub struct DeleteEntity<T, S = ActionState>
 
 impl<T, S> DeleteEntity<T, S>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
@@ -403,7 +404,7 @@ impl<T, S> DeleteEntity<T, S>
 
 impl<T, S> Action<S> for DeleteEntity<T, S>
     where
-        T: RawEntityTypes,
+        T: RawEntityTypes + UpdateActionFunctions,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = DeleteEntityResult<T>;

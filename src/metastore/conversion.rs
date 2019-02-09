@@ -1,35 +1,21 @@
 
-use data::dbdata;
+use metastore::dbdata;
 use data;
 
 use serde_json;
 use metastore::EntityCrudOps;
-use model::entity::update_state::UpdateActionFunctions;
 use serde::Serialize;
 use std::fmt::Debug;
-use data::dbdata::RawTable;
-use data::dbdata::NewRawTable;
-use data::dbdata::RawQuery;
-use data::dbdata::NewRawQuery;
-use data::dbdata::RawScript;
-use data::dbdata::NewRawScript;
+use metastore::dbdata::RawTable;
+use metastore::dbdata::NewRawTable;
+use metastore::dbdata::RawQuery;
+use metastore::dbdata::NewRawQuery;
+use metastore::dbdata::RawScript;
+use metastore::dbdata::NewRawScript;
+use model::entity::ConvertRaw;
+use model::entity::GenerateRaw;
+use model::entity::RawEntityTypes;
 
-pub trait RawEntityTypes
-    where
-        Self: Clone + Send + Debug + Serialize,
-        Self::Data: ConvertRaw<Self>,
-        Self::NewData: GenerateRaw<Self>,
-        Self: EntityCrudOps + UpdateActionFunctions,
-{
-    type Data;
-    type NewData;
-
-    fn get_name(&self) -> String;
-}
-
-pub trait ConvertRaw<T> {
-    fn convert(&self) -> T;
-}
 
 impl ConvertRaw<data::Table> for dbdata::RawTable {
     fn convert(&self) -> data::Table {
@@ -63,10 +49,6 @@ impl ConvertRaw<data::Script> for dbdata::RawScript {
     }
 }
 
-pub trait GenerateRaw<T> {
-    fn new(data: &T, entity_id: i64, modified_by: i64) -> Self;
-    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self;
-}
 
 impl GenerateRaw<data::Table> for dbdata::NewRawTable {
     fn new(data: &data::Table, entity_id: i64, modified_by: i64) -> Self {

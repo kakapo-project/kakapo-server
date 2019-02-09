@@ -15,6 +15,8 @@ DROP TABLE "entity_tag";
 
 DROP TABLE "tag";
 
+DROP TABLE "view";
+
 DROP TABLE "script";
 
 DROP TABLE "query";

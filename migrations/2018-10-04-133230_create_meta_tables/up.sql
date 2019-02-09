@@ -79,6 +79,18 @@ CREATE TABLE "script" (
     "modified_by"             BIGINT REFERENCES "user" NOT NULL
 );
 
+CREATE TABLE "view" (
+    "view_id"                 BIGSERIAL PRIMARY KEY,
+    "entity_id"               BIGINT REFERENCES "entity" NOT NULL,
+    "name"                    VARCHAR NOT NULL,
+    "description"             VARCHAR NOT NULL DEFAULT '',
+    "view_state"              JSON NOT NULL DEFAULT '{}',
+    "view_info"               JSON NOT NULL DEFAULT '{}',
+    "is_deleted"              BOOLEAN NOT NULL DEFAULT FALSE,
+    "modified_at"             TIMESTAMP NOT NULL DEFAULT NOW(),
+    "modified_by"             BIGINT REFERENCES "user" NOT NULL
+);
+
 CREATE TABLE "tag" (
     "tag_id"                  BIGSERIAL PRIMARY KEY,
     "name"                    VARCHAR NOT NULL,

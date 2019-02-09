@@ -3,7 +3,7 @@ use model::state::ActionState;
 use model::auth::error::UserManagementError;
 use std::error::Error;
 use diesel::sql_types::BigInt;
-use data::dbdata::RawPermission;
+use metastore::dbdata::RawPermission;
 use model::state::StateFunctions;
 use connection::executor::Conn;
 

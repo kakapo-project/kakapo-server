@@ -595,7 +595,6 @@ mod test {
     use data::auth::User;
     use data::auth::NewUser;
     use metastore::permission_store::PermissionStore;
-    use data::dbdata::RawPermission;
 
     #[derive(Debug, Clone)]
     struct TestBroadcaster;

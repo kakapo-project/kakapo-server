@@ -1,16 +1,19 @@
 
 pub mod auth_modifier;
 pub mod permission_store;
+mod conversion;
+mod dbdata;
 
 use data::schema;
-use data::dbdata;
 use data;
 
 use connection::executor::Conn;
 
-use model::entity::conversion::*;
-use data::dbdata::RawEntity;
-use data::dbdata::NewRawEntity;
+use metastore::dbdata::RawEntity;
+use metastore::dbdata::NewRawEntity;
+use model::entity::RawEntityTypes;
+use model::entity::GenerateRaw;
+use model::entity::ConvertRaw;
 
 
 use model::entity::error::EntityError;

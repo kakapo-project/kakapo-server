@@ -9,7 +9,7 @@ use diesel::RunQueryDsl;
 use data::DataType;
 use std::fmt::Debug;
 use model::entity::Controller;
-use model::entity::conversion::RawEntityTypes;
+use model::entity::RawEntityTypes;
 
 /// This trait does something action specific after the database updates
 /// The name is a little bit confusing because the database store is also modification
@@ -24,7 +24,7 @@ pub trait UpdateState<T>
 
 //Created
 impl<T> UpdateState<T> for Created<T>
-    where T: Debug + RawEntityTypes
+    where T: Debug + RawEntityTypes + UpdateActionFunctions
 {
     fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         info!("new: {:?}", &self);
@@ -41,7 +41,7 @@ impl<T> UpdateState<T> for Created<T>
 
 //Upserted
 impl<T> UpdateState<T> for Upserted<T>
-    where T: Debug + RawEntityTypes
+    where T: Debug + RawEntityTypes + UpdateActionFunctions
 {
     fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         let res = match &self {
@@ -57,7 +57,7 @@ impl<T> UpdateState<T> for Upserted<T>
 
 //Updated
 impl<T> UpdateState<T> for Updated<T>
-    where T: Debug + RawEntityTypes
+    where T: Debug + RawEntityTypes + UpdateActionFunctions
 {
     fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         let res = match &self {
@@ -71,7 +71,7 @@ impl<T> UpdateState<T> for Updated<T>
 
 //Deleted
 impl<T> UpdateState<T> for Deleted<T>
-    where T: Debug + RawEntityTypes
+    where T: Debug + RawEntityTypes + UpdateActionFunctions
 {
     fn update_state(self, state: &Controller) -> Result<Self, EntityError> {
         let res = match &self {

@@ -2,8 +2,7 @@
 pub mod error;
 pub mod results;
 
-pub mod conversion;
-mod update_state;
+pub mod update_state;
 
 use self::error::EntityError;
 use self::results::*;
@@ -15,8 +14,29 @@ use model::entity::update_state::UpdateActionFunctions;
 use std::fmt::Debug;
 use connection::executor::Conn;
 use data::claims::AuthClaims;
+use serde::Serialize;
 
-pub use model::entity::conversion::RawEntityTypes;
+pub trait RawEntityTypes
+    where
+        Self: Clone + Send + Debug + Serialize,
+        Self::Data: ConvertRaw<Self>,
+        Self::NewData: GenerateRaw<Self>,
+        Self: EntityCrudOps,
+{
+    type Data;
+    type NewData;
+
+    fn get_name(&self) -> String;
+}
+
+pub trait ConvertRaw<T> {
+    fn convert(&self) -> T;
+}
+
+pub trait GenerateRaw<T> {
+    fn new(data: &T, entity_id: i64, modified_by: i64) -> Self;
+    fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self;
+}
 
 pub struct Controller<'a> {
     pub conn: &'a Conn, //TODO: database specific, dependency inject here
@@ -45,22 +65,22 @@ pub trait ModifierFunctions {
     /// if name conflict, return the old value, creates nothing
     /// if value is created, returns nothing
     fn create<O>(&self, object: O) -> Result<Created<O>, EntityError>
-        where O: RawEntityTypes;
+        where O: RawEntityTypes + UpdateActionFunctions;
 
     /// if value is updated, return the old value
     /// if value is created, returns nothing
     fn upsert<O>(&self, object: O) -> Result<Upserted<O>, EntityError>
-        where O: RawEntityTypes;
+        where O: RawEntityTypes + UpdateActionFunctions;
 
     /// if value is updated, return the old value
     /// if name not found, returns nothing, updates nothing
     fn update<O>(&self, name_object: (&str, O)) -> Result<Updated<O>, EntityError>
-        where O: RawEntityTypes;
+        where O: RawEntityTypes + UpdateActionFunctions;
 
     /// if value is deleted, return the old value
     /// if name not found, returns nothing
     fn delete<O>(&self, name: &str) -> Result<Deleted<O>, EntityError>
-        where O: RawEntityTypes;
+        where O: RawEntityTypes + UpdateActionFunctions;
 }
 
 
@@ -82,7 +102,7 @@ impl<'a> RetrieverFunctions for Controller<'a> {
 
 impl<'a> ModifierFunctions for Controller<'a> {
     fn create<O>(&self, object: O) -> Result<Created<O>, EntityError>
-        where O: RawEntityTypes,
+        where O: RawEntityTypes + UpdateActionFunctions,
     {
         O::create(self, object)
             .and_then(|res| {
@@ -92,7 +112,7 @@ impl<'a> ModifierFunctions for Controller<'a> {
     }
 
     fn upsert<O>(&self, object: O) -> Result<Upserted<O>, EntityError>
-        where O: RawEntityTypes
+        where O: RawEntityTypes + UpdateActionFunctions
     {
         O::upsert(self, object)
             .and_then(|res| {
@@ -102,7 +122,7 @@ impl<'a> ModifierFunctions for Controller<'a> {
     }
 
     fn update<O>(&self, name_object: (&str, O)) -> Result<Updated<O>, EntityError>
-        where O: RawEntityTypes
+        where O: RawEntityTypes + UpdateActionFunctions
     {
         O::update(self, name_object)
             .and_then(|res| {
@@ -112,7 +132,7 @@ impl<'a> ModifierFunctions for Controller<'a> {
     }
 
     fn delete<O>(&self, name: &str) -> Result<Deleted<O>, EntityError>
-        where O: RawEntityTypes
+        where O: RawEntityTypes + UpdateActionFunctions
     {
         O::delete(self, name)
             .and_then(|res| {
