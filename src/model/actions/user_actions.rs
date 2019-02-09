@@ -566,153 +566,15 @@ impl<S> Action<S> for DetachRoleForUser<S>
 mod test {
     use super::*;
 
-
-    use diesel::r2d2::ConnectionManager;
-    use diesel::pg::PgConnection;
-    use diesel::Connection;
-
+    use model::actions::results::UserResult;
+    use test_common::random_identifier;
     use serde_json::from_value;
-    use scripting::Scripting;
-    use diesel::r2d2::Pool;
-    use data::claims::AuthClaims;
-    use connection::Broadcaster;
-    use std::sync::Arc;
-    use connection::BroadcasterError;
-    use data;
-    use model::actions::results::CreateEntityResult::Created;
-    use model::actions::results::DeleteEntityResult::Deleted;
-    use uuid::Uuid;
-    use Channels;
-    use connection::executor::Secrets;
     use model::auth::error::UserManagementError;
+    use data::auth::InvitationToken;
     use data::auth::Invitation;
     use model::auth::send_mail::EmailError;
-    use data::auth::InvitationToken;
-    use metastore::permission_store::PermissionStoreFunctions;
-    use std::collections::HashSet;
-    use serde::Serialize;
-    use data::auth::Role;
-    use data::auth::User;
-    use data::auth::NewUser;
-    use metastore::permission_store::PermissionStore;
-
-    #[derive(Debug, Clone)]
-    struct TestBroadcaster;
-
-    impl Broadcaster for TestBroadcaster {
-        fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
-            Ok(())
-        }
-    }
-
-    fn random_identifier() -> String {
-        let uuid = Uuid::new_v4();
-        let res = base64::encode_config(&uuid.as_bytes(), base64::STANDARD_NO_PAD);
-
-        res.replace("/", "_").replace("+", "$")
-    }
-
-    #[derive(Debug)]
-    struct MockState(ActionState);
-    impl<'a> StateFunctions<'a> for MockState {
-        type UserInfo = <ActionState as StateFunctions<'a>>::UserInfo;
-        fn get_user_info(&'a self) -> <Self as StateFunctions<'a>>::UserInfo {
-            self.0.get_user_info()
-        }
-
-        type AuthFunctions = <ActionState as StateFunctions<'a>>::AuthFunctions;
-        fn get_auth_functions(&'a self) -> <Self as StateFunctions<'a>>::AuthFunctions {
-            self.0.get_auth_functions()
-        }
-
-        type PermissionStore = <ActionState as StateFunctions<'a>>::PermissionStore;
-        fn get_permission(&'a self) -> <Self as StateFunctions<'a>>::PermissionStore {
-            self.0.get_permission()
-        }
-
-        type EntityRetrieverFunctions = <ActionState as StateFunctions<'a>>::EntityRetrieverFunctions;
-        fn get_entity_retreiver_functions(&'a self) -> <Self as StateFunctions<'a>>::EntityRetrieverFunctions {
-            self.0.get_entity_retreiver_functions()
-        }
-
-        type EntityModifierFunctions = <ActionState as StateFunctions<'a>>::EntityModifierFunctions;
-        fn get_entity_modifier_function(&'a self) -> <Self as StateFunctions<'a>>::EntityModifierFunctions {
-            self.0.get_entity_modifier_function()
-        }
-
-        type TableController = <ActionState as StateFunctions<'a>>::TableController;
-        fn get_table_controller(&'a self) -> <Self as StateFunctions<'a>>::TableController {
-            self.0.get_table_controller()
-        }
-
-        type Scripting = <ActionState as StateFunctions<'a>>::Scripting;
-        fn get_script_runner(&'a self) -> <Self as StateFunctions<'a>>::Scripting {
-            self.0.get_script_runner()
-        }
-
-        type Database = <ActionState as StateFunctions<'a>>::Database;
-        fn get_database(&'a self) -> <Self as StateFunctions<'a>>::Database {
-            self.0.get_database()
-        }
-
-        fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
-            where
-                F: FnOnce() -> Result<G, E>,
-                E: From<diesel::result::Error>
-        {
-            self.0.transaction(f)
-        }
-    }
-
-    impl GetSecrets for MockState {
-        fn get_token_secret(&self) -> String { self.0.get_token_secret() }
-
-        fn get_password_secret(&self) -> String { self.0.get_password_secret() }
-    }
-
-    impl GetBroadcaster for MockState {
-        fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
-            where R: Serialize
-        {
-            self.0.publish(channels, action_name, action_result)
-        }
-    }
-
-    impl EmailSender for MockState {
-        fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError> {
-            self.0.send_email(invitation_token)
-        }
-    }
-
-
-    fn with_state<F>(f: F)
-        where F: FnOnce(&MockState) -> ()
-    {
-        let script_path = "./path/to/scripts".to_string();
-        let conn_url = "postgres://test:password@localhost:5432/test".to_string();
-        let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
-        let pool = Pool::new(conn_manager).unwrap();
-        let pooled_conn = pool.get().unwrap();
-
-        let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
-        let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
-        let broadcaster = Arc::new(TestBroadcaster);
-        let secrets = Secrets {
-            token_secret: "A".to_string(),
-            password_secret: "B".to_string(),
-        };
-
-        let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
-
-        let mock_state = MockState(state);
-        let conn = &mock_state.0.database;
-
-        conn.test_transaction::<(), Error, _>(|| {
-            f(&mock_state);
-
-            Ok(())
-        });
-    }
+    use test_common::with_state;
+    use test_common::MockState;
 
     #[test]
     fn test_add_user() {

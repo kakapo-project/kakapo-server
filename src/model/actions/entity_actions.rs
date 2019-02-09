@@ -447,7 +447,6 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
 mod test {
     use super::*;
 
-
     use diesel::r2d2::ConnectionManager;
     use diesel::pg::PgConnection;
     use diesel::Connection;
@@ -464,49 +463,9 @@ mod test {
     use model::actions::results::DeleteEntityResult::Deleted;
     use uuid::Uuid;
     use connection::executor::Secrets;
-
-    #[derive(Debug, Clone)]
-    struct TestBroadcaster;
-    impl Broadcaster for TestBroadcaster {
-        fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
-            Ok(())
-        }
-    }
-
-    fn random_identifier() -> String {
-        let uuid = Uuid::new_v4();
-        let res = base64::encode_config(&uuid.as_bytes(), base64::STANDARD_NO_PAD);
-
-        res.replace("/", "_").replace("+", "$")
-    }
-
-    fn with_state<F>(f: F)
-        where F: FnOnce(&ActionState) -> ()
-    {
-        let script_path = "./path/to/scripts".to_string();
-        let conn_url ="postgres://test:password@localhost:5432/test".to_string();
-        let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
-        let pool = Pool::new(conn_manager).unwrap();
-        let pooled_conn = pool.get().unwrap();
-
-        let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
-        let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
-        let broadcaster = Arc::new(TestBroadcaster);
-
-        let secrets = Secrets {
-            token_secret: "A".to_string(),
-            password_secret: "B".to_string(),
-        };
-
-        let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
-        let conn = &state.database;
-
-        conn.test_transaction::<(), Error, _>(|| {
-            f(&state);
-
-            Ok(())
-        });
-    }
+    use test_common::random_identifier;
+    use test_common::with_state;
+    use test_common::MockState;
 
     #[test]
     fn test_create_entity() {
@@ -518,7 +477,7 @@ mod test {
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
-            let create_action = CreateEntity::<data::Query>::new(new_query);
+            let create_action = CreateEntity::<data::Query, MockState>::new(new_query);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
@@ -543,12 +502,12 @@ mod test {
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
-            let create_action = CreateEntity::<data::Query>::new(new_query);
+            let create_action = CreateEntity::<data::Query, MockState>::new(new_query);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let read_action = GetEntity::<data::Query>::new(name.to_owned());
+            let read_action = GetEntity::<data::Query, MockState>::new(name.to_owned());
             let result = read_action.call(&state);
 
             let data = result.unwrap().get_data();
@@ -568,12 +527,12 @@ mod test {
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
-            let create_action = CreateEntity::<data::Query>::new(new_query);
+            let create_action = CreateEntity::<data::Query, MockState>::new(new_query);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let delete_action = DeleteEntity::<data::Query>::new(name.to_owned());
+            let delete_action = DeleteEntity::<data::Query, MockState>::new(name.to_owned());
             let result = delete_action.call(&state);
             let data = result.unwrap().get_data();
 
