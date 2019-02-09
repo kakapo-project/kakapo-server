@@ -6,8 +6,6 @@ use model::state::ActionState;
 use std::error::Error;
 
 use diesel::RunQueryDsl;
-use model::state::GetConnection;
-use model::state::GetScripting;
 use data::DataType;
 use std::fmt::Debug;
 use model::entity::Controller;

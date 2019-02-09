@@ -12,16 +12,12 @@ pub enum DbError {
     Unknown,
 }
 
-#[derive(Debug, Clone)]
-pub struct Database;
-pub trait DatabaseFunctions
-    where Self: Send + Debug,
-{
-    fn exec(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError>;
+pub trait DatabaseFunctions {
+    fn exec(&self, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError>;
 }
 
-impl DatabaseFunctions for Database {
-    fn exec(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError> {
+impl DatabaseFunctions for Conn {
+    fn exec(&self, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError> {
         unimplemented!()
     }
 }

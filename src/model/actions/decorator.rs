@@ -11,11 +11,10 @@ use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
 use model::auth::permissions::GetUserInfo;
-use model::auth::permission_store::PermissionStore;
-use model::auth::permission_store::PermissionStoreFunctions;
+use metastore::permission_store::PermissionStore;
+use metastore::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::actions::OkAction;
-use model::state::GetConnection;
 use std::fmt;
 use model::state::StateFunctions;
 
@@ -57,7 +56,7 @@ impl Requirements {
 pub struct WithPermissionRequired<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     action: A,
     permissions: Requirements,
@@ -67,7 +66,7 @@ pub struct WithPermissionRequired<A, S = ActionState>
 impl<A, S> WithPermissionRequired<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(action: A, permission: Permission) -> Self {
         Self {
@@ -98,7 +97,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
     where
         A: Action<S>,
         PermissionStore: PermissionStoreFunctions<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -124,7 +123,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
 pub struct WithLoginRequired<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     action: A,
     phantom_data: PhantomData<(S)>,
@@ -133,7 +132,7 @@ pub struct WithLoginRequired<A, S = ActionState>
 impl<A, S> WithLoginRequired<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -147,7 +146,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
     where
         A: Action<S>,
         PermissionStore: PermissionStoreFunctions<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -171,7 +170,7 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
 pub struct WithPermissionFor<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     action: A,
     required_permission: Box<Fn(&HashSet<Permission>, &HashSet<Permission>) -> bool + Send>,
@@ -181,7 +180,7 @@ pub struct WithPermissionFor<A, S = ActionState>
 impl<A, S> fmt::Debug for WithPermissionFor<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "WithPermissionFor({:?})", &self.action)
@@ -191,7 +190,7 @@ impl<A, S> fmt::Debug for WithPermissionFor<A, S>
 impl<A, S> WithPermissionFor<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new<F>(action: A, required_permission: F) -> Self
         where
@@ -208,7 +207,7 @@ impl<A, S> WithPermissionFor<A, S>
 impl<A, S> Action<S> for WithPermissionFor<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
         PermissionStore: PermissionStoreFunctions<S>,
 {
     type Ret = A::Ret;
@@ -235,7 +234,7 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
 pub struct WithTransaction<A, S = ActionState>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     action: A,
     phantom_data: PhantomData<S>,
@@ -244,7 +243,7 @@ pub struct WithTransaction<A, S = ActionState>
 impl<A, S> fmt::Debug for WithTransaction<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "WithTransaction({:?})", &self.action)
@@ -254,7 +253,7 @@ impl<A, S> fmt::Debug for WithTransaction<A, S>
 impl<A, S> WithTransaction<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     pub fn new(action: A) -> Self {
         Self {
@@ -277,7 +276,7 @@ impl From<diesel::result::Error> for Error {
 impl<A, S> Action<S> for WithTransaction<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -304,7 +303,7 @@ pub struct WithDispatch<A, S = ActionState>
 impl<A, S> fmt::Debug for WithDispatch<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "WithDispatch({:?})", &self.action)
@@ -314,7 +313,7 @@ impl<A, S> fmt::Debug for WithDispatch<A, S>
 impl<A, S> WithDispatch<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(action: A, channel: Channels) -> Self {
         Self {
@@ -336,7 +335,7 @@ impl<A, S> WithDispatch<A, S>
 impl<A, S> Action<S> for WithDispatch<A, S>
     where
         A: Action<S>,
-        for<'a> S: GetConnection + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

@@ -7,7 +7,7 @@ use model::script::error::ScriptError;
 use std::fmt::Debug;
 
 use serde_json;
-use model::state::GetScripting;
+use model::state::StateFunctions;
 
 #[derive(Debug, Clone)]
 pub struct ScriptAction;
@@ -24,7 +24,7 @@ impl ScriptActionFunctions<ActionState> for ScriptAction {
     fn run_script(conn: &ActionState, script: &data::Script) -> Result<serde_json::Value, ScriptError>  {
         //TODO: debug mode for state
 
-        let scripting = conn.get_scripting();
+        let scripting = conn.get_script_runner();
         unimplemented!()
     }
 }

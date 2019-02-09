@@ -12,6 +12,7 @@ pub trait ScriptFunctions {
     fn run(&self, script_name: &str) -> Result<(), ScriptError>;
 }
 
+#[derive(Clone, Debug)]
 pub struct Scripting {
     script_home: String,
 }

@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 
-use model::auth::permission_store::PermissionStoreFunctions;
+use metastore::permission_store::PermissionStoreFunctions;
 use model::state::ActionState;
-use model::state::GetConnection;
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -119,7 +118,7 @@ impl Permission {
 
 pub trait GetUserInfo
     where
-        Self: Send + Sized + GetConnection,
+        Self: Send + Sized,
 {
     const ADMIN_USER_ID: i64;
 

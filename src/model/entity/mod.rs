@@ -8,7 +8,6 @@ mod update_state;
 use self::error::EntityError;
 use self::results::*;
 use model::state::ActionState;
-use model::state::GetConnection;
 
 use metastore::EntityCrudOps;
 use self::update_state::UpdateState;

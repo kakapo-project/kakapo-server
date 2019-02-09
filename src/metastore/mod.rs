@@ -1,5 +1,6 @@
 
 pub mod auth_modifier;
+pub mod permission_store;
 
 use data::schema;
 use data::dbdata;
@@ -16,8 +17,6 @@ use model::entity::error::EntityError;
 use model::entity::results::*;
 
 use model::state::ActionState;
-
-use model::state::GetConnection;
 use model::auth::permissions::GetUserInfo;
 use model::entity::Controller;
 use std::marker::PhantomData;

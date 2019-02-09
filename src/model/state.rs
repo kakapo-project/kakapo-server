@@ -37,7 +37,7 @@ pub struct ActionState {
 
 pub trait StateFunctions<'a>
     where
-        Self: Debug,
+        Self: Debug + Send,
         Self::AuthFunctions: AuthFunctions,
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,
@@ -54,6 +54,15 @@ pub trait StateFunctions<'a>
 
     type TableController;
     fn get_table_controller(&'a self) -> Self::TableController;
+
+    type Scripting;
+    fn get_script_runner(&'a self) -> Self::Scripting;
+
+    type Database;
+    fn get_database(&'a self) -> Self::Database;
+
+    fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: why is it a diesel::result::Error?
+        where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
 }
 
 impl<'a> StateFunctions<'a> for ActionState {
@@ -61,7 +70,7 @@ impl<'a> StateFunctions<'a> for ActionState {
     fn get_auth_functions(&'a self) -> Auth<'a> {
         let password_secret = self.get_password_secret();
         Auth::new(
-            self.get_conn(),
+            &self.database,
             password_secret.to_owned(),
         )
     }
@@ -88,32 +97,23 @@ impl<'a> StateFunctions<'a> for ActionState {
             conn: &self.database,
         }
     }
-}
 
+    type Scripting = Scripting;
+    fn get_script_runner(&'a self) -> Self::Scripting {
+        self.scripting.clone()
+    }
 
-pub trait GetConnection
-    where Self: Send + Debug
-{
-    type Connection;
-    fn get_conn(&self) -> &Self::Connection;
-
-    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
-        where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
-}
-
-impl GetConnection for ActionState {
-    type Connection = Conn;
-    fn get_conn(&self) -> &Conn {
+    type Database = &'a Conn;
+    fn get_database(&'a self) -> Self::Database {
         &self.database
     }
 
-    fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
+    fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: should work for all state actions
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error> {
-        let conn = self.get_conn();
+        let conn = &self.database;
         conn.transaction::<G, E, _>(f)
     }
 }
-
 
 
 /// OLD
@@ -195,18 +195,6 @@ impl ActionState {
             broadcaster,
             secrets,
         }
-    }
-}
-
-pub trait GetScripting
-    where Self: Send + Debug
-{
-    fn get_scripting(&self) -> &Scripting;
-}
-
-impl GetScripting for ActionState {
-    fn get_scripting(&self) -> &Scripting {
-        &self.scripting
     }
 }
 

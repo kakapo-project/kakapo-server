@@ -4,15 +4,11 @@ pub mod error;
 use data;
 use model::table::error::TableError;
 use model::state::ActionState;
-use database::Database;
 use database::DatabaseFunctions;
-use model::state::GetConnection;
 use database::DbError;
 use std::marker::PhantomData;
 use std::fmt::Debug;
 use connection::executor::Conn;
-
-type D = Database;
 
 pub struct TableAction<'a> {
     pub conn: &'a Conn,
@@ -34,7 +30,8 @@ impl<'a> TableActionFunctions for TableAction<'a> {
     fn query(&self, table: &data::Table) -> Result<data::RawTableData, TableError> {
 
         let query = format!("SELECT * FROM {}", &table.name);
-        D::exec(self.conn, &query, vec![])
+        self.conn
+            .exec(&query, vec![])
             .or_else(|err| Err(TableError::db_error(err)))
     }
 
@@ -57,7 +54,8 @@ impl<'a> TableActionFunctions for TableAction<'a> {
                 params=column_counts.join(","),
             );
 
-            let new_row = D::exec(self.conn, &query, values)
+            let new_row = self.conn
+                .exec(&query, values)
                 .or_else(|err| {
                     match err {
                         DbError::AlreadyExists => if !fail_on_duplicate {
@@ -82,9 +80,12 @@ impl<'a> TableActionFunctions for TableAction<'a> {
     fn upsert_row(&self, table: &data::Table, data: &data::ObjectValues) -> Result<data::RawTableData, TableError> {
         //TODO: doing this because I want to know whether it was an insert or update so that I can put in the correct data in the transactions table
         // otherise, maybe ON CONFLICT with triggers would have been the proper choice
-        D::exec(self.conn, "SELECT id FROM table WHERE id = my_id", vec![]);
-        D::exec(self.conn, "INSERT INTO table (value1, value2, value3) VALUES (1, 2, 3)", vec![]);
-        D::exec(self.conn, "UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id", vec![]);
+        self.conn
+            .exec( "SELECT id FROM table WHERE id = my_id", vec![]);
+        self.conn
+            .exec("INSERT INTO table (value1, value2, value3) VALUES (1, 2, 3)", vec![]);
+        self.conn
+            .exec("UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id", vec![]);
         unimplemented!()
     }
 
@@ -119,7 +120,8 @@ impl<'a> TableActionFunctions for TableAction<'a> {
                     .join(" AND "),
             );
 
-            let new_row = D::exec(self.conn, &query, values)
+            let new_row = self.conn
+                .exec(&query, values)
                 .or_else(|err| {
                     match err {
                         DbError::NotFound => if !fail_on_not_found {
@@ -161,7 +163,8 @@ impl<'a> TableActionFunctions for TableAction<'a> {
                     .join(" AND "),
             );
 
-            let new_row = D::exec(self.conn, &query, values)
+            let new_row = self.conn
+                .exec(&query, values)
                 .or_else(|err| {
                     match err {
                         DbError::NotFound => if !fail_on_not_found {

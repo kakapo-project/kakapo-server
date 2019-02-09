@@ -5,7 +5,6 @@ use data::auth::Invitation;
 
 use data::auth::NewUser;
 use model::auth::error::UserManagementError;
-use model::state::GetConnection;
 use data::auth::Role;
 use model::auth::permissions::Permission;
 use model::auth::permissions::GetUserInfo;

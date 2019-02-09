@@ -11,7 +11,6 @@ use data::utils::TableDataFormat;
 use model::query;
 
 use model::state::ActionState;
-use model::state::GetConnection;
 use model::auth::permissions::*;
 
 use model::actions::decorator::*;
@@ -36,7 +35,7 @@ pub struct RunQuery<S = ActionState, QC = query::QueryAction>  {
 impl<S, QC> RunQuery<S, QC>
     where
         QC: query::QueryActionFunctions<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -57,7 +56,7 @@ impl<S, QC> RunQuery<S, QC>
 impl<S, QC> Action<S> for RunQuery<S, QC>
     where
         QC: query::QueryActionFunctions<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

@@ -124,7 +124,6 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
 mod test {
     use super::*;
 
-    use model::state::GetConnection;
     use connection::AppStateBuilder;
     use connection::AppState;
     use futures::Future;
@@ -134,9 +133,7 @@ mod test {
 
     #[derive(Debug, Clone)]
     struct TestAction;
-    impl<S> Action<S> for TestAction
-        where S: GetConnection
-    {
+    impl<S> Action<S> for TestAction {
         type Ret = String;
 
         fn call(&self, state: &S) -> ActionResult<Self::Ret> {

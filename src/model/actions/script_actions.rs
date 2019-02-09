@@ -8,7 +8,6 @@ use model::actions::error::Error;
 use model::script;
 
 use model::state::ActionState;
-use model::state::GetConnection;
 use model::auth::permissions::*;
 
 use model::actions::decorator::*;
@@ -32,7 +31,7 @@ pub struct RunScript<S = ActionState, SC = script::ScriptAction>  {
 impl<S, SC> RunScript<S, SC>
     where
         SC: script::ScriptActionFunctions<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -52,7 +51,7 @@ impl<S, SC> RunScript<S, SC>
 impl<S, SC> Action<S> for RunScript<S, SC>
     where
         SC: script::ScriptActionFunctions<S>,
-        for<'a> S: GetConnection + GetUserInfo + GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: GetUserInfo + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

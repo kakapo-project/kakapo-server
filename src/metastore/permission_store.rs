@@ -1,10 +1,10 @@
 use diesel::RunQueryDsl;
 use model::state::ActionState;
-use model::state::GetConnection;
-use data::dbdata::RawPermission;
 use model::auth::error::UserManagementError;
 use std::error::Error;
 use diesel::sql_types::BigInt;
+use data::dbdata::RawPermission;
+use model::state::StateFunctions;
 
 
 pub struct PermissionStore;
@@ -35,7 +35,7 @@ impl PermissionStoreFunctions<ActionState> for PermissionStore {
         WHERE "user"."user_id" = $1;
         "#;
 
-        let conn = state.get_conn();
+        let conn = state.get_database();
         let result: Vec<RawPermission> = diesel::sql_query(query)
             .bind::<BigInt, _>(user_id)
             .load(conn)
@@ -52,7 +52,7 @@ impl PermissionStoreFunctions<ActionState> for PermissionStore {
             * FROM "permission";
         "#;
 
-        let conn = state.get_conn();
+        let conn = state.get_database();
         let result: Vec<RawPermission> = diesel::sql_query(query)
             .load(conn)
             .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
