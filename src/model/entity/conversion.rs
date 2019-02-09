@@ -3,8 +3,7 @@ use data::dbdata;
 use data;
 
 use serde_json;
-use model::entity::internals::InternalRetrieverFunctions;
-use model::entity::internals::InternalModifierFunctions;
+use metastore::EntityCrudOps;
 use model::entity::update_state::UpdateActionFunctions;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -20,7 +19,7 @@ pub trait RawEntityTypes
         Self: Clone + Send + Debug + Serialize,
         Self::Data: ConvertRaw<Self>,
         Self::NewData: GenerateRaw<Self>,
-        Self: InternalRetrieverFunctions + InternalModifierFunctions + UpdateActionFunctions,
+        Self: EntityCrudOps + UpdateActionFunctions,
 {
     type Data;
     type NewData;

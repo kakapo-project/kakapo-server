@@ -41,6 +41,7 @@ mod scripting;
 mod data;
 mod database;
 mod connection;
+mod metastore;
 
 //#[cfg(test)]
 pub mod test_common;

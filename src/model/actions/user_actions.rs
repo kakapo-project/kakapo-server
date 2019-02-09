@@ -11,8 +11,8 @@ use model::state::GetConnection;
 use model::auth::permissions::*;
 use model::actions::decorator::*;
 
-use model::auth::auth_modifier::Auth;
-use model::auth::auth_modifier::AuthFunctions;
+use metastore::auth_modifier::Auth;
+use metastore::auth_modifier::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;

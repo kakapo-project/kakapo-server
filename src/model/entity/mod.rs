@@ -2,20 +2,18 @@
 pub mod error;
 pub mod results;
 
-mod conversion;
+pub mod conversion;
 mod update_state;
-mod internals;
 
 use self::error::EntityError;
 use self::results::*;
 use model::state::ActionState;
 use model::state::GetConnection;
 
-use self::internals::InternalModifierFunctions;
+use metastore::EntityCrudOps;
 use self::update_state::UpdateState;
 use model::entity::update_state::UpdateActionFunctions;
 use std::fmt::Debug;
-use model::entity::internals::InternalRetrieverFunctions;
 use connection::executor::Conn;
 use model::state::AuthClaims;
 
