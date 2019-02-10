@@ -1,30 +1,38 @@
 
-use data::auth::User;
-use data::auth::InvitationToken;
-use data::auth::Invitation;
-
-use data::auth::NewUser;
-use model::auth::error::UserManagementError;
-use data::auth::Role;
-use model::auth::permissions::Permission;
 use std::fmt::Debug;
-use model::state::GetSecrets;
+use std::io::Cursor;
+use std::marker::PhantomData;
+
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+
 use argonautica::Hasher;
-use metastore::dbdata;
-use data::schema;
+use argonautica::Verifier;
 
 use diesel::prelude::*;
 use diesel;
 use diesel::result::Error as DbError;
 use diesel::result::DatabaseErrorKind as DbErrKind;
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
-use std::io::Cursor;
-use model::auth::tokens::Token;
-use std::marker::PhantomData;
+
+use data::auth::User;
+use data::auth::InvitationToken;
+use data::auth::Invitation;
+use data::auth::NewUser;
+use data::auth::Role;
+use data::schema;
+
 use connection::executor::Conn;
+
+use model::auth::error::UserManagementError;
+use data::permissions::Permission;
+use model::state::GetSecrets;
+use model::auth::tokens::Token;
 use model::state::StateFunctions;
 use model::state::ActionState;
+
+use metastore::dbdata;
+use chrono::Utc;
+
 
 pub struct Auth<'a> {
     conn: &'a Conn,
@@ -60,19 +68,54 @@ pub trait AuthFunctions {
 
 impl<'a> AuthFunctions for Auth<'a> {
     fn authenticate(&self, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
-        unimplemented!()
+        debug!("Authenticating user: {:?}", user_identifier);
+        let user = schema::user::table
+            .filter(schema::user::columns::username.eq(&user_identifier))
+            .or_filter(schema::user::columns::email.eq(&user_identifier))
+            .get_result::<dbdata::RawUser>(self.conn)
+            .map_err(|err| {
+                info!("Could not find user: {:?}", &user_identifier);
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        let time = Utc::now();
+        let mut verifier = Verifier::default();
+        let is_valid = verifier
+            .with_hash(&user.password)
+            .with_password(password)
+            .with_secret_key(&self.password_secret)
+            .verify()
+            .map_err(|err| {
+                error!("Could not verify user password with argon2 [{:?}]", &user.username);
+                UserManagementError::HashError(err)
+            })?;
+        println!("Verifying user took: {:?}", Utc::now() - time);
+
+        if is_valid {
+            info!("Password authentication passed for {:?}", &user.username);
+        } else {
+            info!("Password authentication failed for {:?}", &user.username);
+        }
+
+        Ok(is_valid)
     }
 
     fn add_user(&self, user: &NewUser) -> Result<User, UserManagementError> {
+        let time = Utc::now();
         let mut hasher = Hasher::default();
         let hashed_pass = hasher
             .with_password(&user.password)
             .with_secret_key(&self.password_secret)
             .hash()
-            .or_else(|err| {
-                error!("Could not hash user password with argno2 [{:?}]", &user.username);
-                Err(UserManagementError::HashError(err))
+            .map_err(|err| {
+                error!("Could not hash user password with argon2 [{:?}]", &user.username);
+                UserManagementError::HashError(err)
             })?;
+
+        println!("Hashing password took: {:?}", Utc::now() - time);
 
         let raw_user = dbdata::NewRawUser {
             username: user.username.to_owned(),
@@ -82,29 +125,25 @@ impl<'a> AuthFunctions for Auth<'a> {
             password: hashed_pass,
         };
 
-        let result = diesel::insert_into(schema::user::table)
+        let user = diesel::insert_into(schema::user::table)
             .values(&raw_user)
-            .get_result::<dbdata::RawUser>(self.conn);
-
-        match result {
-            Ok(user) => {
-                info!("inserted new user {}[{}] {}", &user.username, &user.display_name, &user.email);
-
-                Ok(User {
-                    username: user.username,
-                    email: user.email,
-                    display_name: user.display_name,
-                })
-            }
-            Err(err) => {
+            .get_result::<dbdata::RawUser>(self.conn)
+            .map_err(|err| {
                 println!("Could not insert new user {}[{}] {} err: {:?}", &raw_user.username, &raw_user.display_name, &raw_user.email, &err);
 
                 match err {
-                    DbError::DatabaseError(DbErrKind::UniqueViolation, _) => Err(UserManagementError::AlreadyExists),
-                    _ => Err(UserManagementError::InternalError(err.to_string())),
+                    DbError::DatabaseError(DbErrKind::UniqueViolation, _) => UserManagementError::AlreadyExists,
+                    _ => UserManagementError::InternalError(err.to_string()),
                 }
-            }
-        }
+            })?;
+
+        info!("inserted new user {}[{}] {}", &user.username, &user.display_name, &user.email);
+        Ok(User {
+            username: user.username,
+            email: user.email,
+            display_name: user.display_name,
+        })
+
     }
 
     fn remove_user(&self, user_identifier: &str) -> Result<User, UserManagementError> {
@@ -114,32 +153,26 @@ impl<'a> AuthFunctions for Auth<'a> {
         let result = diesel::delete(schema::user::table)
             .filter(schema::user::columns::username.eq(&user_identifier))
             .or_filter(schema::user::columns::email.eq(&user_identifier))
-            .execute(state.get_conn());
         */
-        let result = diesel::sql_query(r#"DELETE FROM "user" WHERE "username" = $1 OR "email" = $2 RETURNING *;"#)
+        let user = diesel::sql_query(r#"DELETE FROM "user" WHERE "username" = $1 OR "email" = $2 RETURNING *;"#)
             .bind::<diesel::sql_types::Text, _>(user_identifier)
             .bind::<diesel::sql_types::Text, _>(user_identifier)
-            .get_result::<dbdata::RawUser>(self.conn);
-
-        match result {
-            Ok(user) => {
-                info!("inserted new user {}[{}] {}", &user.username, &user.display_name, &user.email);
-
-                Ok(User {
-                    username: user.username,
-                    email: user.email,
-                    display_name: user.display_name,
-                })
-            }
-            Err(err) => {
+            .get_result::<dbdata::RawUser>(self.conn)
+            .map_err(|err| {
                 info!("Could not delete user: {:?}", &user_identifier);
 
                 match err {
-                    DbError::NotFound => Err(UserManagementError::NotFound),
-                    _ => Err(UserManagementError::InternalError(err.to_string())),
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
                 }
-            }
-        }
+            })?;
+
+        info!("inserted new user {}[{}] {}", &user.username, &user.display_name, &user.email);
+        Ok(User {
+            username: user.username,
+            email: user.email,
+            display_name: user.display_name,
+        })
     }
 
     fn create_user_token(&self, email: &str) -> Result<InvitationToken, UserManagementError> {
@@ -172,6 +205,7 @@ impl<'a> AuthFunctions for Auth<'a> {
         Ok(token)
     }
 
+    //TODO: check with old password
     fn modify_user_password(&self, user_identifier: &str, password: &str) -> Result<User, UserManagementError> {
         unimplemented!()
     }
@@ -181,13 +215,69 @@ impl<'a> AuthFunctions for Auth<'a> {
     }
 
     fn add_role(&self, rolename: &Role) -> Result<Role, UserManagementError> {
-        unimplemented!()
+        info!("Adding new role {:?}", &rolename);
+        let raw_role = dbdata::NewRawRole::new(
+            rolename.name.to_owned(),
+            rolename.description.to_owned().unwrap_or_default());
+        let role = diesel::insert_into(schema::role::table)
+            .values(&raw_role)
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not insert new role {} err: {:?}", &raw_role.name, &err);
+
+                match err {
+                    DbError::DatabaseError(DbErrKind::UniqueViolation, _) => UserManagementError::AlreadyExists,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        info!("inserted new role {}", &role.name);
+        Ok(Role {
+            name: role.name,
+            description: Some(role.description),
+        })
     }
     fn remove_role(&self, rolename: &str) -> Result<Role, UserManagementError> {
-        unimplemented!()
+        info!("Deleting role {:?}", &rolename);
+        let role = diesel::delete(schema::role::table)
+            .filter(schema::role::columns::name.eq(&rolename))
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not insert new role {} err: {:?}", &rolename, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        info!("deleting role {}", &rolename);
+        Ok(Role {
+            name: role.name,
+            description: Some(role.description),
+        })
     }
     fn get_all_roles(&self) -> Result<Vec<Role>, UserManagementError> {
-        unimplemented!()
+
+        info!("listing roles");
+        let raw_roles = schema::role::table
+            .get_results::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not list all roles err: {:?}", &err);
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+        let roles = raw_roles
+            .into_iter()
+            .map(|role| {
+                Role {
+                    name: role.name,
+                    description: Some(role.description),
+                }
+            })
+            .collect();
+
+        Ok(roles)
     }
 
     fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {

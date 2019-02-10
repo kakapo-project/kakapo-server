@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use model::actions::error::Error;
 use model::state::ActionState;
 use data::channels::Channels;
-use model::auth::permissions::*;
+use data::permissions::*;
 
 use model::actions::Action;
 use model::actions::ActionResult;

@@ -15,7 +15,7 @@ use data::utils::TableDataFormat;
 use model::table;
 use model::state::ActionState;
 use data::channels::Channels;
-use model::auth::permissions::*;
+use data::permissions::Permission;
 
 use model::actions::decorator::*;
 

@@ -11,7 +11,7 @@ use data::utils::TableDataFormat;
 use model::query;
 
 use model::state::ActionState;
-use model::auth::permissions::*;
+use data::permissions::*;
 
 use model::actions::decorator::*;
 

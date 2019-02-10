@@ -1,10 +1,9 @@
 use data::claims::AuthClaims;
-use data::auth::Permission;
+use data::permissions::Permission;
 use metastore::permission_store::PermissionStoreFunctions;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-pub mod permissions;
 pub mod error;
 pub mod send_mail;
 pub mod tokens;

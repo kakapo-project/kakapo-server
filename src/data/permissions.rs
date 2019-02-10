@@ -5,36 +5,46 @@ use model::state::ActionState;
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Permission {
+    #[serde(rename_all = "camelCase")]
     HasRole {
         rolename: String
     },
 
+    #[serde(rename_all = "camelCase")]
     GetEntity {
         type_name: String,
         entity_name: String,
     },
+    #[serde(rename_all = "camelCase")]
     CreateEntity {
         type_name: String,
     },
+    #[serde(rename_all = "camelCase")]
     ModifyEntity {
         type_name: String,
         entity_name: String,
     },
 
+    #[serde(rename_all = "camelCase")]
     GetTableData {
         table_name: String,
     },
+    #[serde(rename_all = "camelCase")]
     ModifyTableData {
         table_name: String,
     },
+    #[serde(rename_all = "camelCase")]
     RunQuery {
         query_name: String,
     },
+    #[serde(rename_all = "camelCase")]
     RunScript {
         script_name: String,
     },
 
+    #[serde(rename_all = "camelCase")]
     User { // manage user can detach roles
         username: String,
     },
@@ -48,7 +58,7 @@ pub enum Permission {
 }
 
 impl Permission {
-    pub fn has_role(name: String) -> Self {
+    pub fn has_role(name: String) -> Self { //TODO: this doesn't make any sense
         Permission::HasRole {
             rolename: name
         }

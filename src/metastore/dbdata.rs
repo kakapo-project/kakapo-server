@@ -3,11 +3,11 @@
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, view, user, permission, invitation};
+use data::schema::{entity, table_schema, query, script, view, user, permission, role, invitation};
 use data;
 use std::fmt::Debug;
 use serde::Serialize;
-use model::auth::permissions::Permission;
+use data::permissions::Permission;
 
 #[derive(Identifiable, Debug, Queryable, Clone)]
 #[primary_key(entity_id)]
@@ -160,6 +160,29 @@ pub struct RawUser {
     pub display_name: String,
     pub user_info: serde_json::Value,
     pub joined_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "role"]
+pub struct NewRawRole {
+    pub name: String,
+    pub description: String,
+}
+
+impl NewRawRole {
+    pub fn new(name: String, description: String) -> Self {
+        Self { name, description }
+    }
+}
+
+#[derive(Debug, Identifiable, Queryable, QueryableByName)]
+#[primary_key(role_id)]
+#[table_name = "role"]
+pub struct RawRole {
+    pub role_id: i64,
+    pub name: String,
+    pub description: String,
+    pub role_info: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize, Insertable)]

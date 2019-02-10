@@ -39,6 +39,7 @@ use model::auth::send_mail::EmailError;
 use diesel::r2d2::Pool;
 use model::actions;
 use diesel::Connection;
+use model::auth::send_mail::EmailOps;
 
 pub fn random_identifier() -> String {
     let uuid = Uuid::new_v4();
@@ -151,6 +152,14 @@ impl GetKakapoState<TestBroadcaster> for TestState {
 
 // unit tests
 
+pub struct MockMailer;
+
+impl EmailOps for MockMailer {
+    fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError> {
+        unimplemented!()
+    }
+}
+
 #[derive(Debug)]
 pub struct MockState(pub ActionState);
 impl<'a> StateFunctions<'a> for MockState {
@@ -194,6 +203,11 @@ impl<'a> StateFunctions<'a> for MockState {
         self.0.get_database()
     }
 
+    type EmailSender = MockMailer;
+    fn get_email_sender(&'a self) -> MockMailer {
+        MockMailer
+    }
+
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
         where
             F: FnOnce() -> Result<G, E>,
@@ -216,13 +230,6 @@ impl GetBroadcaster for MockState {
         self.0.publish(channels, action_name, action_result)
     }
 }
-
-impl EmailSender for MockState {
-    fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError> {
-        self.0.send_email(invitation_token)
-    }
-}
-
 
 pub fn with_state<F>(f: F)
     where F: FnOnce(&MockState) -> ()
@@ -251,4 +258,29 @@ pub fn with_state<F>(f: F)
 
         Ok(())
     });
+}
+
+pub fn with_state_no_transaction<F>(f: F)
+    where F: FnOnce(&MockState) -> ()
+{
+    let script_path = "./path/to/scripts".to_string();
+    let conn_url = "postgres://test:password@localhost:5432/test".to_string();
+    let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
+    let pool = Pool::new(conn_manager).unwrap();
+    let pooled_conn = pool.get().unwrap();
+
+    let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
+    let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
+    let broadcaster = Arc::new(TestBroadcaster);
+    let secrets = Secrets {
+        token_secret: "A".to_string(),
+        password_secret: "B".to_string(),
+    };
+
+    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
+
+    let mock_state = MockState(state);
+    let conn = &mock_state.0.database;
+
+    f(&mock_state);
 }

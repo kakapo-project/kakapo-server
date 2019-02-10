@@ -2,8 +2,6 @@
 use chrono;
 use serde_json;
 
-pub use model::auth::permissions::Permission;
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -42,7 +40,8 @@ pub struct InvitationToken {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Role {
-    name: String,
+    pub name: String,
+    pub description: Option<String>,
 }
 
 impl Role {

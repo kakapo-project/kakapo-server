@@ -27,7 +27,7 @@ use model::table::TableAction;
 use model::table::TableActionFunctions;
 use std::marker::PhantomData;
 use metastore::permission_store::PermissionStoreFunctions;
-use data::auth::Permission;
+use data::permissions::Permission;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use metastore::permission_store::PermissionStore;
@@ -35,6 +35,8 @@ use data::claims::AuthClaims;
 use Channels;
 use model::auth::GetUserInfo;
 use model::auth::UserInfo;
+use model::auth::send_mail::EmailSender;
+use model::auth::send_mail::EmailOps;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -61,6 +63,7 @@ pub trait StateFunctions<'a>
         //managementstore
         Self::AuthFunctions: AuthFunctions,
         Self::PermissionStore: PermissionStoreFunctions,
+        Self::EmailSender: EmailOps,
 {
     // user managment
     type UserInfo;
@@ -88,6 +91,9 @@ pub trait StateFunctions<'a>
 
     type Database;
     fn get_database(&'a self) -> Self::Database;
+
+    type EmailSender;
+    fn get_email_sender(&'a self) -> Self::EmailSender;
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: why is it a diesel::result::Error?
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
@@ -153,6 +159,11 @@ impl<'a> StateFunctions<'a> for ActionState {
     type Database = &'a Conn;
     fn get_database(&'a self) -> Self::Database {
         &self.database
+    }
+
+    type EmailSender = EmailSender;
+    fn get_email_sender(&'a self) -> Self::EmailSender {
+        EmailSender {}
     }
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: should work for all state actions

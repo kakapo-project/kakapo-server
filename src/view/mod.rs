@@ -256,13 +256,13 @@ pub mod users {
     }
 
     pub fn attach_permission_for_role(data: Value, query: Value) -> Result<impl Action, Error> {
-        let permission: data::auth::Permission = from_value(data)?;
+        let permission: data::permissions::Permission = from_value(data)?;
         let role_id: GetRole = from_value(query)?;
         Ok(actions::AttachPermissionForRole::<_>::new(role_id.rolename, permission))
     }
 
     pub fn detach_permission_for_role(data: Value, query: Value) -> Result<impl Action, Error> {
-        let permission: data::auth::Permission = from_value(data)?;
+        let permission: data::permissions::Permission = from_value(data)?;
         let role_id: GetRole = from_value(query)?;
         Ok(actions::DetachPermissionForRole::<_>::new(role_id.rolename, permission))
     }

@@ -19,7 +19,7 @@ use model::entity::results::Deleted;
 
 use model::state::ActionState;
 use data::channels::Channels;
-use model::auth::permissions::*;
+use data::permissions::*;
 use model::actions::decorator::*;
 
 use model::actions::Action;
@@ -446,10 +446,6 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use diesel::r2d2::ConnectionManager;
-    use diesel::pg::PgConnection;
-    use diesel::Connection;
 
     use serde_json::from_value;
     use scripting::Scripting;

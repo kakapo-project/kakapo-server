@@ -8,7 +8,7 @@ use model::actions::error::Error;
 use model::script;
 
 use model::state::ActionState;
-use model::auth::permissions::*;
+use data::permissions::Permission;
 
 use model::actions::decorator::*;
 

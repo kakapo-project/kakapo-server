@@ -93,7 +93,7 @@ CREATE TABLE "view" (
 
 CREATE TABLE "tag" (
     "tag_id"                  BIGSERIAL PRIMARY KEY,
-    "name"                    VARCHAR NOT NULL,
+    "name"                    VARCHAR NOT NULL UNIQUE,
     "description"             VARCHAR NOT NULL DEFAULT '',
     "tag_info"                JSON NOT NULL DEFAULT '{}'
 );
@@ -106,7 +106,7 @@ CREATE TABLE "entity_tag" (
 
 CREATE TABLE "role" (
     "role_id"                 BIGSERIAL PRIMARY KEY,
-    "name"                    VARCHAR NOT NULL,
+    "name"                    VARCHAR NOT NULL UNIQUE,
     "description"             VARCHAR NOT NULL DEFAULT '',
     "role_info"               JSON NOT NULL DEFAULT '{}'
 );

@@ -7,7 +7,7 @@ use model::actions::results::*;
 use model::actions::error::Error;
 
 use model::state::ActionState;
-use model::auth::permissions::*;
+use data::permissions::*;
 use model::actions::decorator::*;
 
 use metastore::auth_modifier::Auth;
@@ -22,6 +22,7 @@ use std::io::Cursor;
 use byteorder::{BigEndian, ReadBytesExt};
 use model::auth::send_mail::EmailSender;
 use model::state::StateFunctions;
+use model::auth::send_mail::EmailOps;
 
 #[derive(Debug)]
 pub struct Authenticate<S = ActionState> {
@@ -53,8 +54,18 @@ impl<S> Action<S> for Authenticate<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
             .authenticate(&self.user_identifier, &self.password)
-            .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("Authenticate", Some(())))
+            .or_else(|err| Ok(false))
+            .and_then(|res| {
+                ActionRes::new(
+                    "Authenticate",
+                if res {
+                        Some(())
+                    } else {
+                        None
+                    })
+            })
+
+
     }
 }
 
@@ -90,7 +101,7 @@ impl<S> Action<S> for GetAllUsers<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
             .get_all_users()
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("GetAllUsers", AllUsersResult(res)))
     }
 }
@@ -127,7 +138,7 @@ impl<S> Action<S> for AddUser<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
             .add_user(&self.user)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AddUser", UserResult(res)))
     }
 }
@@ -163,7 +174,7 @@ impl<S> Action<S> for RemoveUser<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
             .remove_user(&self.user_identifier)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
     }
 }
@@ -176,7 +187,7 @@ pub struct InviteUser<S = ActionState> {
 }
 
 impl<S> InviteUser<S>
-    where for<'a> S: GetSecrets + GetBroadcaster + EmailSender + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(email: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -193,13 +204,20 @@ impl<S> InviteUser<S>
 }
 
 impl<S> Action<S> for InviteUser<S>
-    where for<'a> S: GetSecrets + GetBroadcaster + EmailSender + StateFunctions<'a>,
+    where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = InvitationResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        let invitation_token = state.get_auth_functions()
-            .create_user_token(&self.email).map_err(Error::UserManagement)?;
-        let invitation = state.send_email(invitation_token).map_err(Error::EmailError)?;
+        let invitation_token = state
+            .get_auth_functions()
+            .create_user_token(&self.email)
+            .map_err(Error::UserManagement)?;
+
+        let invitation = state
+            .get_email_sender()
+            .send_email(invitation_token)
+            .map_err(Error::EmailError)?;
+
         ActionRes::new("InviteUser", InvitationResult(invitation))
     }
 }
@@ -236,7 +254,7 @@ impl<S> Action<S> for SetupUser<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
             .add_user(&self.user)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("SetupUser", UserResult(res)))
     }
 }
@@ -279,12 +297,15 @@ impl<S> Action<S> for SetUserPassword<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .modify_user_password(&self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("SetUserPassword", UserResult(res)))
     }
 }
+
+//TODO: Change user password / image
 
 /// Role Auth: Add Role
 #[derive(Debug)]
@@ -315,9 +336,10 @@ impl<S> Action<S> for AddRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .add_role(&self.role)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AddRole", RoleResult(res)))
     }
 }
@@ -351,7 +373,8 @@ impl<S> Action<S> for RemoveRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .remove_role(&self.rolename)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("RemoveRole", RoleResult(res)))
@@ -385,7 +408,8 @@ impl<S> Action<S> for GetAllRoles<S>
 {
     type Ret = AllRolesResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .get_all_roles()
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("GetAllRoles", AllRolesResult(res)))
@@ -428,9 +452,10 @@ impl<S> Action<S> for AttachPermissionForRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .attach_permission_for_role(&self.permission, &self.rolename)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AttachPermissionForRole", RoleResult(res)))
     }
 }
@@ -471,9 +496,10 @@ impl<S> Action<S> for DetachPermissionForRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .detach_permission_for_role(&self.permission, &self.rolename)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("DetachPermissionForRole", RoleResult(res)))
     }
 }
@@ -513,9 +539,10 @@ impl<S> Action<S> for AttachRoleForUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_auth_functions()
             .attach_role_for_user(&self.role, &self.user_identifier)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AttachRoleForUser", UserResult(res)))
     }
 }
@@ -557,7 +584,7 @@ impl<S> Action<S> for DetachRoleForUser<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
             .detach_role_for_user(&self.role, &self.user_identifier)
-            .or_else(|err| Err(Error::UserManagement(err)))
+            .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))
     }
 }
@@ -573,8 +600,7 @@ mod test {
     use data::auth::InvitationToken;
     use data::auth::Invitation;
     use model::auth::send_mail::EmailError;
-    use test_common::with_state;
-    use test_common::MockState;
+    use test_common::*;
 
     #[test]
     fn test_add_user() {
@@ -593,7 +619,13 @@ mod test {
             assert_eq!(data.email, email);
             assert_eq!(data.username, name);
             assert_eq!(data.display_name, name);
+        });
+    }
 
+
+    #[test]
+    fn test_add_user_with_display_name() {
+        with_state(|state| {
             let name = format!("bob_{}", random_identifier());
             let email = format!("stuff{}@example.com", random_identifier());
             let new_query: data::auth::NewUser = from_value(json!({
@@ -611,6 +643,7 @@ mod test {
             assert_eq!(data.display_name, "Bob");
         });
     }
+
 
     #[test]
     fn test_add_user_already_exists() {
@@ -683,7 +716,6 @@ mod test {
 
             let result= create_action.call(&state).unwrap_err();
             assert_eq!(result, Error::UserManagement(UserManagementError::NotFound));
-            println!("result: {:?}", &result);
         });
     }
 
@@ -714,26 +746,199 @@ mod test {
         });
     }
 
-    #[derive(Debug, Clone)]
-    struct MockEmailer;
-    impl EmailSender for MockEmailer {
-        fn send_email(&self, invitation_token: InvitationToken) -> Result<Invitation, EmailError> {
-            unimplemented!()
-        }
-    }
-
     #[test]
+    #[ignore]
     fn test_invite_user() {
         with_state(|state| {
 
             let email = format!("stuff{}@example.com", random_identifier());
-            let emailer = MockEmailer;
             let create_action = InviteUser::<MockState>::new(email);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
             println!("data: {:?}", &data);
+            unimplemented!()
+        });
+    }
+
+    #[test]
+    fn test_setup_user() {
+        with_state(|state| {
+            let name = format!("Bobby_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_user: data::auth::NewUser = from_value(json!({
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = SetupUser::<MockState>::new(new_user);
+
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
+
+        });
+    }
+
+    #[test]
+    fn test_authenticate() {
+        with_state(|state| {
+            let name = format!("Bobby_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_user: data::auth::NewUser = from_value(json!({
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState>::new(new_user);
+            let result = create_action.call(&state);
+
+            let create_action
+            = Authenticate::<MockState>::new(name.to_owned(), "hunter2".to_string());
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
+            assert_eq!(data, Some(()));
+
+            let create_action
+            = Authenticate::<MockState>::new(name.to_owned(), "wrong_password".to_string());
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
+            assert_eq!(data, None);
+        })
+    }
+
+    #[test]
+    #[ignore]
+    fn test_change_user_password() {
+        with_state(|state| {
+            let name = format!("Bobby_{}", random_identifier());
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_user: data::auth::NewUser = from_value(json!({
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState>::new(new_user);
+            let result = create_action.call(&state);
+
+
+            let create_action
+            = SetUserPassword::<MockState>::new(name.to_owned(), "AV3ry$ecureP@assword".to_string());
+            let result = create_action.call(&state);
+            println!("data: {:?}", &result);
+
+            let create_action
+            = Authenticate::<MockState>::new(name, "AV3ry$ecureP@assword".to_string());
+            let result = create_action.call(&state);
+            println!("data: {:?}", &result);
+
+            unimplemented!()
+        });
+    }
+
+    #[test]
+    fn test_add_role() {
+        with_state(|state| {
+            let rolename = format!("sector7G_{}", random_identifier());
+            let role: data::auth::Role = from_value(json!({
+                "name": rolename
+            })).unwrap();
+            let create_action = AddRole::<MockState>::new(role);
+            let result = create_action.call(&state);
+            let RoleResult(data) = result.unwrap().get_data();
+            assert_eq!(data.name, rolename);
+        });
+    }
+
+    #[test]
+    fn test_add_role_remove_role() {
+        with_state(|state| {
+            let rolename = format!("sector7G_{}", random_identifier());
+            let role: data::auth::Role = from_value(json!({
+                "name": rolename
+            })).unwrap();
+            let create_action = AddRole::<MockState>::new(role);
+            let result = create_action.call(&state);
+            let RoleResult(data) = result.unwrap().get_data();
+            assert_eq!(data.name, rolename.to_owned());
+
+            let create_action = RemoveRole::<MockState>::new(rolename.to_owned());
+            let result = create_action.call(&state);
+            let RoleResult(data) = result.unwrap().get_data();
+            assert_eq!(data.name, rolename.to_owned());
+
+            //deleting already deleted
+            let create_action = RemoveRole::<MockState>::new(rolename.to_owned());
+            let result = create_action.call(&state).unwrap_err();
+            assert_eq!(result, Error::UserManagement(UserManagementError::NotFound));
+        });
+    }
+
+    #[test]
+    fn test_get_all_roles() {
+        with_state(|state| {
+            let id = random_identifier();
+            let roles: Vec<data::auth::Role> = vec![
+                from_value(json!({"name": format!("A{}", id) })).unwrap(),
+                from_value(json!({"name": format!("B{}", id) })).unwrap(),
+                from_value(json!({"name": format!("C{}", id) })).unwrap(),
+                from_value(json!({"name": format!("D{}", id) })).unwrap(),
+            ];
+            for role in roles.to_owned() {
+                let create_action = AddRole::<MockState>::new(role);
+                let result = create_action.call(&state);
+            }
+
+            let create_action = GetAllRoles::<MockState>::new();
+            let result = create_action.call(&state);
+            let AllRolesResult(data) = result.unwrap().get_data();
+            let final_rolenames: Vec<String> = data.into_iter().map(|x| x.name).collect();
+
+            for role in roles {
+                assert!(final_rolenames.contains(&role.name));
+            }
+        });
+    }
+
+    #[test]
+    #[ignore]
+    fn test_attach_permission_for_role() {
+        with_state(|state| {
+            let rolename = format!("secrot_7G{}", random_identifier());
+            let permission: data::permissions::Permission = from_value(json!({
+                "runScript": {
+                    "scriptName": "some_script",
+                },
+            })).unwrap();
+            let create_action
+            = AttachPermissionForRole::<MockState>::new(rolename.to_owned(), permission.to_owned());
+            let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
+            println!("data: {:?}", &data);
+        });
+    }
+
+    #[test]
+    fn test_detach_permission_for_role() {
+        with_state(|state| {
+
+        });
+    }
+
+    #[test]
+    fn test_attach_role_for_user() {
+        with_state(|state| {
+
+        });
+    }
+
+    #[test]
+    fn test_detach_role_for_user() {
+        with_state(|state| {
 
         });
     }

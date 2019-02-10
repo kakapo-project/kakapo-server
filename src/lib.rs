@@ -30,6 +30,8 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate openssl;
+#[macro_use]
+extern crate time_test;
 extern crate tokio;
 extern crate tokio_core;
 extern crate uuid;
