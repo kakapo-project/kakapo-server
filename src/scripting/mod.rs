@@ -1,6 +1,7 @@
 
 mod helpers;
 pub mod error;
+pub mod update_state;
 
 use scripting::helpers as Run;
 use scripting::error::ScriptError;

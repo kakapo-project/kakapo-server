@@ -20,7 +20,8 @@ use model::entity::error::EntityError;
 use model::entity::results::*;
 
 use model::state::ActionState;
-use model::entity::Controller;
+use model::entity::EntityModifierController;
+use model::entity::EntityRetrieverController;
 use std::marker::PhantomData;
 use std::fmt::Debug;
 
@@ -28,26 +29,26 @@ use std::fmt::Debug;
 pub trait EntityCrudOps
     where Self: Sized + Debug,
 {
-    fn get_all(state: &Controller) -> Result<Vec<Self>, EntityError>;
+    fn get_all(state: &EntityRetrieverController) -> Result<Vec<Self>, EntityError>;
 
-    fn get_one(state: &Controller, name: &str) -> Result<Option<Self>, EntityError>;
+    fn get_one(state: &EntityRetrieverController, name: &str) -> Result<Option<Self>, EntityError>;
 
-    fn create(state: &Controller, object: Self) -> Result<Created<Self>, EntityError>;
+    fn create(state: &EntityModifierController, object: Self) -> Result<Created<Self>, EntityError>;
 
-    fn upsert(state: &Controller, object: Self) -> Result<Upserted<Self>, EntityError>;
+    fn upsert(state: &EntityModifierController, object: Self) -> Result<Upserted<Self>, EntityError>;
 
-    fn update(state: &Controller, name_object: (&str, Self)) -> Result<Updated<Self>, EntityError>;
+    fn update(state: &EntityModifierController, name_object: (&str, Self)) -> Result<Updated<Self>, EntityError>;
 
-    fn delete(state: &Controller, name: &str) -> Result<Deleted<Self>, EntityError>;
+    fn delete(state: &EntityModifierController, name: &str) -> Result<Deleted<Self>, EntityError>;
 }
 
 
 
-fn get_user_id(controller: &Controller) -> i64 {
+fn get_user_id(controller: &EntityModifierController) -> i64 {
     match controller.claims {
         None => {
             warn!("This user does not have any id, however, the user is authorized. Setting content as admin");
-            Controller::ADMIN_USER_ID
+            EntityModifierController::ADMIN_USER_ID
         },
         Some(claims) => {
             claims.get_user_id()
@@ -61,30 +62,30 @@ macro_rules! make_crud_ops {
 
         impl EntityCrudOps for $EntityType {
 
-            fn get_all(state: &Controller) -> Result<Vec<$EntityType>, EntityError> {
+            fn get_all(state: &EntityRetrieverController) -> Result<Vec<$EntityType>, EntityError> {
                 $entity::get_all::<$EntityType>(state.conn)
             }
 
-            fn get_one(state: &Controller, name: &str) -> Result<Option<$EntityType>, EntityError> {
+            fn get_one(state: &EntityRetrieverController, name: &str) -> Result<Option<$EntityType>, EntityError> {
                 $entity::get_one::<$EntityType>(state.conn, name)
             }
 
-            fn create(state: &Controller, object: $EntityType) -> Result<Created<$EntityType>, EntityError> {
+            fn create(state: &EntityModifierController, object: $EntityType) -> Result<Created<$EntityType>, EntityError> {
                 info!("create object: {:?}", &object);
                 $entity::create::<$EntityType>(state.conn, get_user_id(state), object)
             }
 
-            fn upsert(state: &Controller, object: $EntityType) -> Result<Upserted<$EntityType>, EntityError> {
+            fn upsert(state: &EntityModifierController, object: $EntityType) -> Result<Upserted<$EntityType>, EntityError> {
                 info!("upsert object: {:?}", &object);
                 $entity::upsert::<$EntityType>(state.conn, get_user_id(state), object)
             }
 
-            fn update(state: &Controller, name_object: (&str, $EntityType)) -> Result<Updated<$EntityType>, EntityError> {
+            fn update(state: &EntityModifierController, name_object: (&str, $EntityType)) -> Result<Updated<$EntityType>, EntityError> {
                 info!("update object: {:?}", &name_object);
                 $entity::update::<$EntityType>(state.conn, get_user_id(state), name_object)
             }
 
-            fn delete(state: &Controller, name: &str) -> Result<Deleted<$EntityType>, EntityError> {
+            fn delete(state: &EntityModifierController, name: &str) -> Result<Deleted<$EntityType>, EntityError> {
                 info!("delete object: {:?}", &name);
                 $entity::delete::<$EntityType>(state.conn, get_user_id(state), name)
             }

@@ -9,7 +9,7 @@ use std::error::Error;
 use diesel::RunQueryDsl;
 use data::DataType;
 use std::fmt::Debug;
-use model::entity::Controller;
+use model::entity::EntityModifierController;
 use model::entity::RawEntityTypes;
 
 use model::entity::update_state::UpdateActionFunctions;
@@ -45,7 +45,7 @@ fn get_sql_data_type(data_type: &DataType) -> String {
 
 ///mdodify table in database here
 impl UpdateActionFunctions for data::Table {
-    fn create_entity(controller: &Controller, new: &data::Table) -> Result<(), EntityError> {
+    fn create_entity(controller: &EntityModifierController, new: &data::Table) -> Result<(), EntityError> {
 
         let schema = &new.schema;
         let columns = &schema.columns;
@@ -71,7 +71,7 @@ impl UpdateActionFunctions for data::Table {
         Ok(())
     }
 
-    fn update_entity(controller: &Controller, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
+    fn update_entity(controller: &EntityModifierController, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
         unimplemented!();
         let command = format!("ALTER TABLE \"{}\";", old.name);
         diesel::sql_query(command)
@@ -82,7 +82,7 @@ impl UpdateActionFunctions for data::Table {
         Ok(())
     }
 
-    fn delete_entity(controller: &Controller, old: &data::Table) -> Result<(), EntityError> {
+    fn delete_entity(controller: &EntityModifierController, old: &data::Table) -> Result<(), EntityError> {
         let command = format!("DROP TABLE \"{}\";", old.name);
         diesel::sql_query(command)
             .execute(controller.conn)

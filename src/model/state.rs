@@ -20,7 +20,8 @@ use std::fmt;
 use connection::executor::Secrets;
 use metastore::auth_modifier::AuthFunctions;
 use metastore::auth_modifier::Auth;
-use model::entity::Controller;
+use model::entity::EntityRetrieverController;
+use model::entity::EntityModifierController;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::table::TableAction;
@@ -128,19 +129,20 @@ impl<'a> StateFunctions<'a> for ActionState {
         }
     }
 
-    type EntityRetrieverFunctions = Controller<'a>;
+    type EntityRetrieverFunctions = EntityRetrieverController<'a>;
     fn get_entity_retreiver_functions(&'a self) -> Self::EntityRetrieverFunctions {
-        Controller {
+        EntityRetrieverController {
             conn: &self.database,
             claims: &self.claims,
         }
     }
 
-    type EntityModifierFunctions = Controller<'a>;
+    type EntityModifierFunctions = EntityModifierController<'a>;
     fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions {
-        Controller {
+        EntityModifierController {
             conn: &self.database,
             claims: &self.claims,
+            scripting: &self.scripting,
         }
     }
 

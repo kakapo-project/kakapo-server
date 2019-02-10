@@ -4,17 +4,19 @@ pub mod results;
 
 pub mod update_state;
 
-use self::error::EntityError;
-use self::results::*;
+use model::entity::error::EntityError;
+use model::entity::results::*;
 use model::state::ActionState;
 
+use serde::Serialize;
+
 use metastore::EntityCrudOps;
-use self::update_state::UpdateState;
+use model::entity::update_state::UpdateState;
 use model::entity::update_state::UpdateActionFunctions;
 use std::fmt::Debug;
 use connection::executor::Conn;
 use data::claims::AuthClaims;
-use serde::Serialize;
+use scripting::Scripting;
 
 pub trait RawEntityTypes
     where
@@ -38,12 +40,18 @@ pub trait GenerateRaw<T> {
     fn tombstone(name: String, entity_id: i64, modified_by: i64) -> Self;
 }
 
-pub struct Controller<'a> {
+pub struct EntityRetrieverController<'a> {
     pub conn: &'a Conn, //TODO: database specific, dependency inject here
     pub claims: &'a Option<AuthClaims>,
 }
 
-impl<'a> Controller<'a> {
+pub struct EntityModifierController<'a> {
+    pub conn: &'a Conn, //TODO: database specific, dependency inject here
+    pub claims: &'a Option<AuthClaims>,
+    pub scripting: &'a Scripting,
+}
+
+impl<'a> EntityModifierController<'a> {
     pub const ADMIN_USER_ID: i64 = 1; //TODO: database specific, dependency inject here
 }
 
@@ -84,7 +92,7 @@ pub trait ModifierFunctions {
 }
 
 
-impl<'a> RetrieverFunctions for Controller<'a> {
+impl<'a> RetrieverFunctions for EntityRetrieverController<'a> {
     fn get_all<O>(&self) -> Result<Vec<O>, EntityError>
         where
             O: RawEntityTypes,
@@ -100,7 +108,7 @@ impl<'a> RetrieverFunctions for Controller<'a> {
     }
 }
 
-impl<'a> ModifierFunctions for Controller<'a> {
+impl<'a> ModifierFunctions for EntityModifierController<'a> {
     fn create<O>(&self, object: O) -> Result<Created<O>, EntityError>
         where O: RawEntityTypes + UpdateActionFunctions,
     {
