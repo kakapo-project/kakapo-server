@@ -59,6 +59,23 @@ impl RawTableData {
         }
     }
 
+    pub fn new_and_fill(column_names: Vec<String>, row_data: Vec<Vec<Value>>) -> Self {
+        let columns = RawTableDataColumns {
+            keys: vec![], //TODO: this is an empty column why?
+            values: column_names,
+        };
+        let data = row_data
+            .into_iter()
+            .map(|row| {
+                RawTableDataData {
+                    keys: vec![], //TODO: why
+                    values: row
+                }
+            })
+            .collect();
+        Self { columns, data }
+    }
+
     pub fn append(&mut self, other: Self) -> Result<(), DataError> {
         if self.columns.value_columns() != other.columns.value_columns() {
             return Err(DataError::MismatchedColumns)
@@ -207,7 +224,7 @@ impl ObjectKeys {
 
 impl Table {
     pub fn get_column_names(&self) -> Vec<String> {
-        unimplemented!()
+       self.schema.get_column_names()
     }
 }
 

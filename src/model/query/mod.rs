@@ -4,7 +4,7 @@ pub mod error;
 use model::state::ActionState;
 use data;
 use model::query::error::QueryError;
-use database::DatabaseFunctions;
+use model::table::DatabaseFunctions;
 use data::Value;
 use data::QueryParams;
 use std::marker::PhantomData;

@@ -273,3 +273,61 @@ impl<S> Action<S> for RemoveTableData<S>
             .and_then(|res| ActionRes::new("RemoveTableData", RemoveTableDataResult(res)))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use model::actions::results::UserResult;
+    use test_common::random_identifier;
+    use serde_json::from_value;
+    use model::auth::error::UserManagementError;
+    use data::auth::InvitationToken;
+    use data::auth::Invitation;
+    use model::auth::send_mail::EmailError;
+    use test_common::*;
+    use model::actions::entity_actions;
+
+    #[test]
+    fn test_add_data() {
+        with_state_no_transaction(|state| {
+            let table_name = format!("my_table{}", random_identifier());
+            let table: data::Table = from_value(json!({
+                "name": table_name,
+                "description": "table description",
+                "schema": {
+                    "columns": [
+                        {
+                            "name": "col_a",
+                            "dataType": "integer"
+                        },
+                        {
+                            "name": "col_b",
+                            "dataType": "integer"
+                        }
+                    ],
+                    "constraint": [
+                    ]
+                }
+            })).unwrap();
+
+            let create_action = entity_actions::CreateEntity::<data::Table, MockState>::new(table);
+            let result = create_action.call(&state);
+
+            let data: data::TableData = from_value(json!([
+                {
+                    "col_a": 42,
+                    "col_b": 43,
+                },
+                {
+                    "col_a": 5000,
+                    "col_b": 5500,
+                }
+            ])).unwrap();
+            let create_action = InsertTableData::<MockState>::new(table_name, data);
+            let result = create_action.call(&state);
+
+            println!("result: {:?}", &result);
+        });
+    }
+}

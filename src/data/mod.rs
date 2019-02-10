@@ -308,6 +308,13 @@ pub struct Column {
     pub nullable: bool,
 }
 
+impl Column {
+    pub fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
+}
+
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "op")]
@@ -369,6 +376,15 @@ pub enum Constraint {
 pub struct SchemaState {
     pub columns: Vec<Column>,
     pub constraint: Vec<Constraint>,
+}
+
+impl SchemaState {
+    pub fn get_column_names(&self) -> Vec<String> {
+        self.columns
+            .iter()
+            .map(|col| col.get_name())
+            .collect()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

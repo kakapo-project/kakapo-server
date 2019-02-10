@@ -4,14 +4,17 @@ pub mod error;
 use data;
 use model::table::error::TableError;
 use model::state::ActionState;
-use database::DatabaseFunctions;
-use database::DbError;
+use database::error::DbError;
 use std::marker::PhantomData;
 use std::fmt::Debug;
 use connection::executor::Conn;
 
 pub struct TableAction<'a> {
     pub conn: &'a Conn,
+}
+
+pub trait DatabaseFunctions {
+    fn exec(&self, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError>;
 }
 
 pub trait TableActionFunctions {
@@ -48,10 +51,10 @@ impl<'a> TableActionFunctions for TableAction<'a> {
                 .collect();
             let values = row.values().map(|x| x.to_owned()).collect();
             let query = format!(
-                "INSERT INTO {name} ({columns}) VALUES ({params}) RETURNING *",
+                r#"INSERT INTO "{name}" ("{columns}") VALUES ({params}) RETURNING *;"#,
                 name=table.name,
-                columns=column_names.join(","),
-                params=column_counts.join(","),
+                columns=column_names.join(r#"", ""#),
+                params=column_counts.join(r#", "#),
             );
 
             let new_row = self.conn

@@ -22,6 +22,12 @@ pub trait UpdateState<T>
     fn update_state(self, state: &Controller) -> Result<Self, EntityError>;
 }
 
+pub trait UpdateActionFunctions {
+    fn create_entity(controller: &Controller, new: &Self) -> Result<(), EntityError>;
+    fn update_entity(controller: &Controller, old_table: &Self, new_table: &Self) -> Result<(), EntityError>;
+    fn delete_entity(controller: &Controller, old: &Self) -> Result<(), EntityError>;
+}
+
 //Created
 impl<T> UpdateState<T> for Created<T>
     where T: Debug + RawEntityTypes + UpdateActionFunctions
@@ -85,62 +91,6 @@ impl<T> UpdateState<T> for Deleted<T>
     }
 }
 
-pub trait UpdateActionFunctions {
-    fn create_entity(controller: &Controller, new: &Self) -> Result<(), EntityError>;
-    fn update_entity(controller: &Controller, old_table: &Self, new_table: &Self) -> Result<(), EntityError>;
-    fn delete_entity(controller: &Controller, old: &Self) -> Result<(), EntityError>;
-}
-
-///mdodify table in database here
-impl UpdateActionFunctions for data::Table {
-    fn create_entity(controller: &Controller, new: &data::Table) -> Result<(), EntityError> {
-
-        let schema = &new.schema;
-        let columns = &schema.columns;
-
-        if columns.len() == 0 {
-            Err(EntityError::NoColumns)?;
-        }
-
-        let formatted_columns: Vec<String> = columns.iter().map(|column| {
-            let col_name = &column.name;
-            let col_type = get_sql_data_type(&column.data_type);
-            //TODO: nullable + default + serial
-            format!("\"{}\" {}", col_name, col_type)
-        }).collect();
-        let command = format!("CREATE TABLE \"{}\" ({});", new.name, formatted_columns.join(", "));
-        info!("DSL command: `{}`", &command);
-
-        diesel::sql_query(command)
-            .execute(controller.conn)
-            .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
-
-        Ok(())
-    }
-
-    fn update_entity(controller: &Controller, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
-        unimplemented!();
-        let command = format!("ALTER TABLE \"{}\";", old.name);
-        diesel::sql_query(command)
-            .execute(controller.conn)
-            .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
-
-        Ok(())
-    }
-
-    fn delete_entity(controller: &Controller, old: &data::Table) -> Result<(), EntityError> {
-        let command = format!("DROP TABLE \"{}\";", old.name);
-        diesel::sql_query(command)
-            .execute(controller.conn)
-            .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
-
-        Ok(())
-    }
-}
-
 ///Nothing needed here
 /// TODO: maybe have stored procedures here
 impl UpdateActionFunctions for data::Query {
@@ -179,33 +129,5 @@ impl UpdateActionFunctions for data::Script {
         //let scripting = controller.scripts;
         //Scripting::delete();
         Ok(())
-    }
-}
-
-fn get_sql_data_type(data_type: &DataType) -> String {
-    match data_type {
-        DataType::SmallInteger => format!("SMALLINT"),
-        DataType::Integer => format!("INTEGER"),
-        DataType::BigInteger => format!("BIGINT"),
-        //DataType::Decimal { precision: u32, scale: u32 },
-        DataType::Float => format!("REAL"),
-        DataType::DoubleFloat => format!("DOUBLE PRECISION"),
-
-        DataType::String => format!("TEXT"),
-        DataType::VarChar { length } => format!("VARCHAR({})", length),
-
-        DataType::Byte => format!("BYTEA"),
-
-        DataType::Timestamp { with_tz } => match with_tz {
-            true => format!("TIMESTAMP WITH TIME ZONE"),
-            false => format!("TIMESTAMP"),
-        },
-        DataType::Date => format!("SMALLINT"),
-        DataType::Time { with_tz } => format!("SMALLINT"),
-        //DataType::TimeInterval,
-
-        DataType::Boolean => format!("BOOLEAN"),
-
-        DataType::Json => format!("JSON"),
     }
 }

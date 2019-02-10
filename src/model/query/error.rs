@@ -1,11 +1,11 @@
-use database::DbError;
+use database::error::DbError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum QueryError {
     #[fail(display = "Already exists")]
     AlreadyExists,
     #[fail(display = "Internal error")]
-    InternalError, //returns back the DatabaseError variant of diesel::result::Error
+    InternalError, //returns back the DatabaseError variant of sql error
     #[fail(display = "Failed to deserialize")]
     DeserializationError,
     #[fail(display = "Failed to serialize")]

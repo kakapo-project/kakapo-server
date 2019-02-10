@@ -10,7 +10,7 @@ pub enum UserManagementError {
     #[fail(display = "{:?}", 0)]
     HashError(argonautica::Error),
     #[fail(display = "Internal error")]
-    InternalError(String), //returns back the DatabaseError variant of diesel::result::Error
+    InternalError(String), //returns back the DatabaseError variant of sql error
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }

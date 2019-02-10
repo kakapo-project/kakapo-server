@@ -2,7 +2,7 @@
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum EntityError {
     #[fail(display = "Internal error")]
-    InternalError(String), //returns back the DatabaseError variant of diesel::result::Error
+    InternalError(String), //returns back the DatabaseError variant of sql error
     #[fail(display = "Failed to deserialize")]
     DeserializationError,
     #[fail(display = "Failed to serialize")]

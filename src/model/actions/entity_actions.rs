@@ -449,7 +449,6 @@ mod test {
 
     use serde_json::from_value;
     use scripting::Scripting;
-    use diesel::r2d2::Pool;
     use data::claims::AuthClaims;
     use connection::Broadcaster;
     use std::sync::Arc;
