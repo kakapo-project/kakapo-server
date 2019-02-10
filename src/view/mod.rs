@@ -372,9 +372,9 @@ mod test {
         let query = json!({
             "showDeleted": true
         });
-        let all_tables_action = manage::get_all_tables(data.to_owned(), query.to_owned()).unwrap();
-        let all_queries_action = manage::get_all_queries(data.to_owned(), query.to_owned()).unwrap();
-        let all_scripts_action = manage::get_all_scripts(data.to_owned(), query.to_owned()).unwrap();
+        let _all_tables_action = manage::get_all_tables(data.to_owned(), query.to_owned()).unwrap();
+        let _all_queries_action = manage::get_all_queries(data.to_owned(), query.to_owned()).unwrap();
+        let _all_scripts_action = manage::get_all_scripts(data.to_owned(), query.to_owned()).unwrap();
     }
 
     #[test]
@@ -383,9 +383,9 @@ mod test {
         let query = json!({
             "name": "foo"
         });
-        let get_table_action = manage::get_table(data.to_owned(), query.to_owned()).unwrap();
-        let get_query_action = manage::get_query(data.to_owned(), query.to_owned()).unwrap();
-        let get_script_action = manage::get_script(data.to_owned(), query.to_owned()).unwrap();
+        let _get_table_action = manage::get_table(data.to_owned(), query.to_owned()).unwrap();
+        let _get_query_action = manage::get_query(data.to_owned(), query.to_owned()).unwrap();
+        let _get_script_action = manage::get_script(data.to_owned(), query.to_owned()).unwrap();
     }
 
     #[test]
@@ -404,21 +404,21 @@ mod test {
                 "constraint": []
             }
         });
-        let create_table_action = manage::create_table(data.to_owned(), query.to_owned()).unwrap();
+        let _create_table_action = manage::create_table(data.to_owned(), query.to_owned()).unwrap();
 
         data = json!({
             "name": "query_name",
             "description": "this is a really cool query",
             "statement": "SELECT * FROM awesome_table"
         });
-        let createt_query_action = manage::create_query(data.to_owned(), query.to_owned()).unwrap();
+        let _create_query_action = manage::create_query(data.to_owned(), query.to_owned()).unwrap();
 
         data = json!({
             "name": "script_name",
             "description": "this is a really cool script",
             "text": "print('hello world')"
         });
-        let create_script_action = manage::create_script(data.to_owned(), query.to_owned()).unwrap();
+        let _create_script_action = manage::create_script(data.to_owned(), query.to_owned()).unwrap();
     }
 
     #[test]
@@ -440,21 +440,21 @@ mod test {
                 "constraint": []
             }
         });
-        let update_table_action = manage::update_table(data.to_owned(), query.to_owned()).unwrap();
+        let _update_table_action = manage::update_table(data.to_owned(), query.to_owned()).unwrap();
 
         data = json!({
             "name": "query_name",
             "description": "this is a really cool query",
             "statement": "SELECT * FROM awesome_table"
         });
-        let update_query_action = manage::update_query(data.to_owned(), query.to_owned()).unwrap();
+        let _update_query_action = manage::update_query(data.to_owned(), query.to_owned()).unwrap();
 
         data = json!({
             "name": "script_name",
             "description": "this is a really cool script",
             "text": "print('hello world')"
         });
-        let update_script_action = manage::update_script(data.to_owned(), query.to_owned()).unwrap();
+        let _update_script_action = manage::update_script(data.to_owned(), query.to_owned()).unwrap();
     }
 
     #[test]
@@ -463,9 +463,9 @@ mod test {
         let query = json!({
             "name": "foo"
         });
-        let delete_table_action = manage::delete_table(data.to_owned(), query.to_owned()).unwrap();
-        let delete_query_action = manage::delete_query(data.to_owned(), query.to_owned()).unwrap();
-        let delete_script_action = manage::delete_script(data.to_owned(), query.to_owned()).unwrap();
+        let _delete_table_action = manage::delete_table(data.to_owned(), query.to_owned()).unwrap();
+        let _delete_query_action = manage::delete_query(data.to_owned(), query.to_owned()).unwrap();
+        let _delete_script_action = manage::delete_script(data.to_owned(), query.to_owned()).unwrap();
     }
 
     #[test]

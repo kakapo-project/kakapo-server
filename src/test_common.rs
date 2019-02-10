@@ -1,5 +1,4 @@
 
-use actix_web::{http, test, App, HttpRequest, HttpResponse};
 use actix_web::test::TestServer;
 
 use std::sync::Arc;
@@ -21,12 +20,10 @@ use super::KakapoBroadcaster;
 use super::Channels;
 use super::BroadcasterError;
 use super::KakapoRouter;
-use connection::Broadcaster;
 use model::state::ActionState;
 use model::state::StateFunctions;
 use model::state::GetSecrets;
 use model::state::GetBroadcaster;
-use model::auth::send_mail::EmailSender;
 use diesel::r2d2::ConnectionManager;
 use diesel::pg::PgConnection;
 use data::claims::AuthClaims;
@@ -280,7 +277,6 @@ pub fn with_state_no_transaction<F>(f: F)
     let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
 
     let mock_state = MockState(state);
-    let conn = &mock_state.0.database;
 
     f(&mock_state);
 }

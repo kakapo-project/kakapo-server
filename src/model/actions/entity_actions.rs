@@ -1,7 +1,6 @@
 
 use std::marker::PhantomData;
 
-use model::entity;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 
@@ -25,8 +24,6 @@ use model::actions::decorator::*;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use metastore::permission_store::PermissionStore;
-use metastore::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::auth::GetUserInfo;
@@ -448,16 +445,9 @@ mod test {
     use super::*;
 
     use serde_json::from_value;
-    use scripting::Scripting;
-    use data::claims::AuthClaims;
-    use connection::Broadcaster;
-    use std::sync::Arc;
-    use connection::BroadcasterError;
     use data;
     use model::actions::results::CreateEntityResult::Created;
     use model::actions::results::DeleteEntityResult::Deleted;
-    use uuid::Uuid;
-    use connection::executor::Secrets;
     use test_common::random_identifier;
     use test_common::with_state;
     use test_common::MockState;

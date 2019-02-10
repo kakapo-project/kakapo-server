@@ -1,6 +1,4 @@
 
-use uuid::Uuid;
-use std::fmt;
 use base64;
 use rand::rngs::OsRng;
 use rand::RngCore;

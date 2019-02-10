@@ -2,7 +2,6 @@ use std::result::Result::Ok;
 use std::marker::PhantomData;
 
 use data;
-use model::entity;
 use model::actions::results::*;
 use model::actions::error::Error;
 use model::script;

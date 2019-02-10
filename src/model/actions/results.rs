@@ -1,7 +1,6 @@
 
 
 use data;
-use std::marker::PhantomData;
 use data::auth::Invitation;
 
 #[derive(Debug, Clone, Serialize)]

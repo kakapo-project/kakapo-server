@@ -4,12 +4,8 @@ use serde_json;
 use std::result::Result;
 use std::result::Result::Ok;
 
-use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
-use diesel::pg::PgConnection;
-
 use connection::executor::Conn;
 use diesel::Connection;
-use model::entity::RawEntityTypes;
 use scripting::Scripting;
 use connection::Broadcaster;
 use std::sync::Arc;
@@ -26,11 +22,7 @@ use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::table::TableAction;
 use model::table::TableActionFunctions;
-use std::marker::PhantomData;
 use metastore::permission_store::PermissionStoreFunctions;
-use data::permissions::Permission;
-use std::collections::HashSet;
-use std::iter::FromIterator;
 use metastore::permission_store::PermissionStore;
 use data::claims::AuthClaims;
 use Channels;

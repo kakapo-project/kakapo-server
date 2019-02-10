@@ -1,6 +1,5 @@
 
 use chrono;
-use serde_json;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

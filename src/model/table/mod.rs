@@ -3,10 +3,7 @@ pub mod error;
 
 use data;
 use model::table::error::TableError;
-use model::state::ActionState;
 use database::error::DbError;
-use std::marker::PhantomData;
-use std::fmt::Debug;
 use connection::executor::Conn;
 
 pub struct TableAction<'a> {

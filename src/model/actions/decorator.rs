@@ -10,8 +10,6 @@ use data::permissions::*;
 use model::actions::Action;
 use model::actions::ActionResult;
 use std::collections::HashSet;
-use metastore::permission_store::PermissionStore;
-use metastore::permission_store::PermissionStoreFunctions;
 use model::state::GetBroadcaster;
 use model::actions::OkAction;
 use std::fmt;

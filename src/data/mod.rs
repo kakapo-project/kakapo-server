@@ -1,7 +1,6 @@
 
 use serde_json;
 use linked_hash_map::LinkedHashMap;
-use std::fmt;
 
 pub mod utils;
 pub mod auth;

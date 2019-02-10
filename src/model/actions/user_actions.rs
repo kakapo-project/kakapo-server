@@ -10,7 +10,6 @@ use model::state::ActionState;
 use data::permissions::*;
 use model::actions::decorator::*;
 
-use metastore::auth_modifier::Auth;
 use metastore::auth_modifier::AuthFunctions;
 use model::actions::Action;
 use model::actions::ActionRes;
@@ -18,9 +17,6 @@ use model::actions::ActionResult;
 use model::state::GetBroadcaster;
 use model::state::GetSecrets;
 
-use std::io::Cursor;
-use byteorder::{BigEndian, ReadBytesExt};
-use model::auth::send_mail::EmailSender;
 use model::state::StateFunctions;
 use model::auth::send_mail::EmailOps;
 
@@ -597,9 +593,6 @@ mod test {
     use test_common::random_identifier;
     use serde_json::from_value;
     use model::auth::error::UserManagementError;
-    use data::auth::InvitationToken;
-    use data::auth::Invitation;
-    use model::auth::send_mail::EmailError;
     use test_common::*;
 
     #[test]

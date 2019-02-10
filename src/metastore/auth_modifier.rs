@@ -1,11 +1,4 @@
 
-use std::fmt::Debug;
-use std::io::Cursor;
-use std::marker::PhantomData;
-
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
-
 use argonautica::Hasher;
 use argonautica::Verifier;
 
@@ -16,7 +9,6 @@ use diesel::result::DatabaseErrorKind as DbErrKind;
 
 use data::auth::User;
 use data::auth::InvitationToken;
-use data::auth::Invitation;
 use data::auth::NewUser;
 use data::auth::Role;
 use data::schema;
@@ -25,10 +17,7 @@ use connection::executor::Conn;
 
 use model::auth::error::UserManagementError;
 use data::permissions::Permission;
-use model::state::GetSecrets;
 use model::auth::tokens::Token;
-use model::state::StateFunctions;
-use model::state::ActionState;
 
 use metastore::dbdata;
 use chrono::Utc;
@@ -280,7 +269,6 @@ impl<'a> AuthFunctions for Auth<'a> {
     }
 
     fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {
-        use data::schema::role_permission;
 
         info!("attaching permission [{:?}] for role [{}]", &permission, &rolename);
 
@@ -320,7 +308,6 @@ impl<'a> AuthFunctions for Auth<'a> {
         })
     }
     fn detach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {
-        use data::schema::role_permission;
 
         info!("detaching permission [{:?}] for role [{}]", &permission, &rolename);
 
@@ -371,7 +358,6 @@ impl<'a> AuthFunctions for Auth<'a> {
     }
 
     fn attach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError> {
-        use data::schema::user_role;
 
         info!("attaching role [{}] for user [{}]", &rolename, &user_identifier);
 
@@ -422,7 +408,6 @@ impl<'a> AuthFunctions for Auth<'a> {
         })
     }
     fn detach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError> {
-        use data::schema::user_role;
 
         info!("detaching role [{}] for user [{}]", &rolename, &user_identifier);
 

@@ -22,7 +22,7 @@ pub fn build_image(script_home: &str, tag: &str) -> Result<(), ScriptError> {
         .output();
 
     result
-        .or_else(|err| Err(ScriptError::ExecuteError))
+        .or_else(|_err| Err(ScriptError::ExecuteError))
         .and_then(|res| {
             info!("building image: ran docker command: {:?}", u8vec_to_string(res.stdout));
             if res.status.success() {
@@ -47,19 +47,19 @@ CMD python /app/{name}.py
     let mut path_dir = PathBuf::from(script_home);
     path_dir.push(name);
     fs::create_dir_all(path_dir.to_owned())
-        .or_else(|err| Err(
+        .or_else(|_err| Err(
             ScriptError::IOError(format!("not able to create directory {:?}", &path_dir))))?;
 
     let mut docker_file = path_dir.to_owned();
     docker_file.push("Dockerfile");
     fs::write(docker_file, docker_script)
-        .or_else(|err| Err(
+        .or_else(|_err| Err(
             ScriptError::IOError(format!("not able to create file {:?}/Dockerfile", &path_dir))))?;
 
     let mut script_file = path_dir.to_owned();
     script_file.push(&format!("{}.py", name));
     fs::write(script_file, script_text)
-        .or_else(|err| Err(
+        .or_else(|_err| Err(
             ScriptError::IOError(format!("not able to create file {:?}/{}.py", &path_dir, &name))))?;
 
     Ok(())
@@ -75,7 +75,7 @@ pub fn delete_image(tag: &str) -> Result<(), ScriptError> {
         .output();
 
     result
-        .or_else(|err| Err(ScriptError::ExecuteError))
+        .or_else(|_err| Err(ScriptError::ExecuteError))
         .and_then(|res| {
             info!("deleting image: ran docker command: {:?}", u8vec_to_string(res.stdout));
             if res.status.success() {
@@ -93,7 +93,7 @@ pub fn delete_directory(script_home: &str, name: &str) -> Result<(), ScriptError
     let mut path_dir = PathBuf::from(script_home);
     path_dir.push(name);
     fs::remove_dir_all(path_dir.to_owned())
-        .or_else(|err| Err(
+        .or_else(|_err| Err(
             ScriptError::IOError(format!("not able to remove directory {:?}", &path_dir))))?;
 
     Ok(())
@@ -110,7 +110,7 @@ pub fn run_container(tag: &str) -> Result<(), ScriptError> {
         .output();
 
     result
-        .or_else(|err| Err(ScriptError::ExecuteError))
+        .or_else(|_err| Err(ScriptError::ExecuteError))
         .and_then(|res| {
             info!("ruynning container: ran docker command: {:?}", u8vec_to_string(res.stdout));
             if res.status.success() {

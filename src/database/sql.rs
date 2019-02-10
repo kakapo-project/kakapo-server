@@ -1,5 +1,4 @@
 
-use std::ops::Deref;
 use std::os::raw;
 use std::ffi::CString;
 use std::ffi::CStr;
@@ -9,7 +8,6 @@ use std::mem;
 use std::slice;
 use std::str;
 use std::io;
-use std::str::from_utf8;
 use std::ptr;
 use diesel::result::Error;
 
@@ -27,10 +25,8 @@ use diesel::pg::Pg;
 use diesel::sql_types;
 use diesel::deserialize::FromSql;
 use diesel::serialize::Output;
-use diesel::pg::PgMetadataLookup;
 use diesel::serialize::ToSql;
 use diesel::serialize::IsNull;
-use diesel::serialize;
 
 
 struct InternalRawConnection {
@@ -273,8 +269,8 @@ fn final_execute(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<R
     let param_types: Vec<u32> = params.iter().map(|x| {
         match x {
             Value::Null => 0x0, //TODO: is this right?
-            Value::Integer(x) => 0x17,
-            Value::String(x) => 0x19,
+            Value::Integer(_) => 0x17,
+            Value::String(_) => 0x19,
             _ => 0x0, //TODO: fix
         }
     }).collect();

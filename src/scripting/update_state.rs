@@ -1,13 +1,6 @@
-use model::entity::results::*;
 use model::entity::error::EntityError;
 use data;
-use model::state::ActionState;
 
-use std::error::Error;
-
-use diesel::RunQueryDsl;
-use data::DataType;
-use std::fmt::Debug;
 use model::entity::EntityModifierController;
 use model::entity::RawEntityTypes;
 use model::entity::update_state::UpdateActionFunctions;
@@ -15,6 +8,7 @@ use model::entity::update_state::UpdateActionFunctions;
 //TODO: there could be different types of script runners
 // docker, serverless, or local
 // currently we only have local
+
 
 impl UpdateActionFunctions for data::Script {
     fn create_entity(controller: &EntityModifierController, new: &data::Script) -> Result<(), EntityError> {

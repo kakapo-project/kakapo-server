@@ -1,7 +1,5 @@
 use data::auth::InvitationToken;
 use data::auth::Invitation;
-use std::fmt::Debug;
-use model::state::ActionState;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EmailError;

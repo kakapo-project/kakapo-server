@@ -1,16 +1,12 @@
 
-use model::entity::results::*;
 use model::entity::error::EntityError;
 use data;
-use model::state::ActionState;
 
 use std::error::Error;
 
 use diesel::RunQueryDsl;
 use data::DataType;
-use std::fmt::Debug;
 use model::entity::EntityModifierController;
-use model::entity::RawEntityTypes;
 
 use model::entity::update_state::UpdateActionFunctions;
 
@@ -33,7 +29,7 @@ fn get_sql_data_type(data_type: &DataType) -> String {
             false => format!("TIMESTAMP"),
         },
         DataType::Date => format!("SMALLINT"),
-        DataType::Time { with_tz } => format!("SMALLINT"),
+        DataType::Time { with_tz } => format!("SMALLINT"), //TODO: with_tz
         //DataType::TimeInterval,
 
         DataType::Boolean => format!("BOOLEAN"),

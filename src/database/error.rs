@@ -1,5 +1,3 @@
-use connection::executor::Conn;
-use data;
 
 #[derive(Debug, Fail)]
 pub enum DbError {

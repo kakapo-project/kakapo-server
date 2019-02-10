@@ -22,7 +22,6 @@ use model::entity::results::*;
 use model::state::ActionState;
 use model::entity::EntityModifierController;
 use model::entity::EntityRetrieverController;
-use std::marker::PhantomData;
 use std::fmt::Debug;
 
 //TODO: put all of this in internal

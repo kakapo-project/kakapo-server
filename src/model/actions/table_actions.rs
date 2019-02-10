@@ -4,7 +4,6 @@ use std::marker::PhantomData;
 
 use data;
 
-use model::entity;
 use model::actions::results::*;
 use model::actions::error::Error;
 use data::utils::OnDuplicate;
@@ -12,7 +11,6 @@ use data::utils::OnDuplicate;
 use data::utils::OnNotFound;
 use data::utils::TableDataFormat;
 
-use model::table;
 use model::state::ActionState;
 use data::channels::Channels;
 use data::permissions::Permission;
@@ -278,13 +276,8 @@ impl<S> Action<S> for RemoveTableData<S>
 mod test {
     use super::*;
 
-    use model::actions::results::UserResult;
     use test_common::random_identifier;
     use serde_json::from_value;
-    use model::auth::error::UserManagementError;
-    use data::auth::InvitationToken;
-    use data::auth::Invitation;
-    use model::auth::send_mail::EmailError;
     use test_common::*;
     use model::actions::entity_actions;
 

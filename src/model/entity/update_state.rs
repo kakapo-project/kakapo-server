@@ -1,12 +1,7 @@
 use model::entity::results::*;
 use model::entity::error::EntityError;
 use data;
-use model::state::ActionState;
 
-use std::error::Error;
-
-use diesel::RunQueryDsl;
-use data::DataType;
 use std::fmt::Debug;
 use model::entity::EntityModifierController;
 use model::entity::RawEntityTypes;

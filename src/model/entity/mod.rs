@@ -6,7 +6,6 @@ pub mod update_state;
 
 use model::entity::error::EntityError;
 use model::entity::results::*;
-use model::state::ActionState;
 
 use serde::Serialize;
 
