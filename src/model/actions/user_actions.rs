@@ -507,7 +507,7 @@ impl<S> Action<S> for DetachPermissionForRole<S>
 /// Role Auth: add role for user
 #[derive(Debug)]
 pub struct AttachRoleForUser<S = ActionState> {
-    role: data::auth::Role,
+    rolename: String,
     user_identifier: String,
     phantom_data: PhantomData<(S)>,
 }
@@ -515,13 +515,13 @@ pub struct AttachRoleForUser<S = ActionState> {
 impl<S> AttachRoleForUser<S>
     where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
-    pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(user_identifier: String, rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
             Permission::user_admin(),
-            Permission::has_role(role.get_name()),
+            Permission::has_role(rolename.to_owned()),
         ];
         let action = Self {
-            role,
+            rolename,
             user_identifier,
             phantom_data: PhantomData,
         };
@@ -541,7 +541,7 @@ impl<S> Action<S> for AttachRoleForUser<S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
             .get_auth_functions()
-            .attach_role_for_user(&self.role, &self.user_identifier)
+            .attach_role_for_user(&self.rolename, &self.user_identifier)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AttachRoleForUser", UserResult(res)))
     }
@@ -550,7 +550,7 @@ impl<S> Action<S> for AttachRoleForUser<S>
 /// Role Auth: remove role for user
 #[derive(Debug)]
 pub struct DetachRoleForUser<S = ActionState> {
-    role: data::auth::Role,
+    rolename: String,
     user_identifier: String,
     phantom_data: PhantomData<(S)>,
 }
@@ -558,13 +558,13 @@ pub struct DetachRoleForUser<S = ActionState> {
 impl<S> DetachRoleForUser<S>
     where for<'a> S: GetSecrets + GetBroadcaster + StateFunctions<'a>,
 {
-    pub fn new(user_identifier: String, role: data::auth::Role) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(user_identifier: String, rolename: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let required_permissions = vec![
             Permission::user_admin(),
-            Permission::has_role(role.get_name()),
+            Permission::has_role(rolename.to_owned()),
         ];
         let action = Self {
-            role,
+            rolename,
             user_identifier,
             phantom_data: PhantomData,
         };
@@ -583,7 +583,7 @@ impl<S> Action<S> for DetachRoleForUser<S>
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state.get_auth_functions()
-            .detach_role_for_user(&self.role, &self.user_identifier)
+            .detach_role_for_user(&self.rolename, &self.user_identifier)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))
     }
@@ -905,41 +905,82 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_attach_permission_for_role() {
         with_state(|state| {
-            let rolename = format!("secrot_7G{}", random_identifier());
+            let id = random_identifier();
+            let rolename = format!("a_role{}", id);
+
+            let role = from_value(json!({"name": rolename })).unwrap();
+            let create_action = AddRole::<MockState>::new(role);
+            let result = create_action.call(&state);
+
             let permission: data::permissions::Permission = from_value(json!({
                 "runScript": {
-                    "scriptName": "some_script",
+                    "scriptName": format!("some_script{}", id),
                 },
             })).unwrap();
             let create_action
             = AttachPermissionForRole::<MockState>::new(rolename.to_owned(), permission.to_owned());
             let result = create_action.call(&state);
-            let data = result.unwrap().get_data();
-            println!("data: {:?}", &data);
-        });
-    }
+            let RoleResult(data) = result.unwrap().get_data();
 
-    #[test]
-    fn test_detach_permission_for_role() {
-        with_state(|state| {
+            assert_eq!(data.name, rolename);
 
+            let create_action
+            = DetachPermissionForRole::<MockState>::new(rolename.to_owned(), permission.to_owned());
+            let result = create_action.call(&state);
+            let RoleResult(data) = result.unwrap().get_data();
+
+            assert_eq!(data.name, rolename);
         });
     }
 
     #[test]
     fn test_attach_role_for_user() {
         with_state(|state| {
+            let id = random_identifier();
 
+            //add user
+            let name = format!("bob_{}", id);
+            let email = format!("stuff{}@example.com", random_identifier());
+            let new_query: data::auth::NewUser = from_value(json!({
+                "username": name,
+                "email": email,
+                "password": "hunter2"
+            })).unwrap();
+            let create_action = AddUser::<MockState>::new(new_query);
+            let result = create_action.call(&state);
+
+            //add role
+            let rolename = format!("a_role{}", id);
+            let role = from_value(json!({"name": rolename })).unwrap();
+            let create_action = AddRole::<MockState>::new(role);
+            let result = create_action.call(&state);
+
+            //attach role for user
+            let permission: data::permissions::Permission = from_value(json!({
+                "runScript": {
+                    "scriptName": format!("some_script{}", id),
+                },
+            })).unwrap();
+            let create_action
+            = AttachRoleForUser::<MockState>::new(name.to_owned(), rolename.to_owned());
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
+
+            let create_action
+            = DetachRoleForUser::<MockState>::new(name.to_owned(), rolename.to_owned());
+            let result = create_action.call(&state);
+            let UserResult(data) = result.unwrap().get_data();
+
+            assert_eq!(data.email, email);
+            assert_eq!(data.username, name);
+            assert_eq!(data.display_name, name);
         });
     }
 
-    #[test]
-    fn test_detach_role_for_user() {
-        with_state(|state| {
-
-        });
-    }
 }

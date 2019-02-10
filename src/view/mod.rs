@@ -62,6 +62,12 @@ pub struct Invite {
     pub email: String,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct RoleData {
+    pub name: String
+}
+
 pub mod manage {
     use super::*;
 
@@ -268,15 +274,15 @@ pub mod users {
     }
 
     pub fn attach_role_for_user(data: Value, query: Value) -> Result<impl Action, Error> {
-        let role: data::auth::Role = from_value(data)?;
+        let role: RoleData = from_value(data)?;
         let get_user: GetUser = from_value(query)?;
-        Ok(actions::AttachRoleForUser::<_>::new(get_user.user_identifier, role))
+        Ok(actions::AttachRoleForUser::<_>::new(get_user.user_identifier, role.name))
     }
 
     pub fn detach_role_for_user(data: Value, query: Value) -> Result<impl Action, Error> {
-        let role: data::auth::Role = from_value(data)?;
+        let role: RoleData = from_value(data)?;
         let get_user: GetUser = from_value(query)?;
-        Ok(actions::DetachRoleForUser::<_>::new(get_user.user_identifier, role))
+        Ok(actions::DetachRoleForUser::<_>::new(get_user.user_identifier, role.name))
     }
 
 }

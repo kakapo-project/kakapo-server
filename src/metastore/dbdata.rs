@@ -210,6 +210,11 @@ pub struct RawInvitation {
     pub expires_at: chrono::NaiveDateTime,
 }
 
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "permission"]
+pub struct NewRawPermission {
+    pub data: serde_json::Value,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
 #[table_name = "permission"]

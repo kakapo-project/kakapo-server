@@ -32,7 +32,7 @@ use model::state::ActionState;
 
 use metastore::dbdata;
 use chrono::Utc;
-
+use serde_json;
 
 pub struct Auth<'a> {
     conn: &'a Conn,
@@ -62,8 +62,8 @@ pub trait AuthFunctions {
     fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError>;
     fn detach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError>;
 
-    fn attach_role_for_user(&self, role: &Role, user_identifier: &str) -> Result<User, UserManagementError>;
-    fn detach_role_for_user(&self, role: &Role, user_identifier: &str) -> Result<User, UserManagementError>;
+    fn attach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError>;
+    fn detach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError>;
 }
 
 impl<'a> AuthFunctions for Auth<'a> {
@@ -92,7 +92,7 @@ impl<'a> AuthFunctions for Auth<'a> {
                 error!("Could not verify user password with argon2 [{:?}]", &user.username);
                 UserManagementError::HashError(err)
             })?;
-        println!("Verifying user took: {:?}", Utc::now() - time);
+        debug!("Verifying user took: {:?}", Utc::now() - time);
 
         if is_valid {
             info!("Password authentication passed for {:?}", &user.username);
@@ -115,7 +115,7 @@ impl<'a> AuthFunctions for Auth<'a> {
                 UserManagementError::HashError(err)
             })?;
 
-        println!("Hashing password took: {:?}", Utc::now() - time);
+        debug!("Hashing password took: {:?}", Utc::now() - time);
 
         let raw_user = dbdata::NewRawUser {
             username: user.username.to_owned(),
@@ -129,7 +129,7 @@ impl<'a> AuthFunctions for Auth<'a> {
             .values(&raw_user)
             .get_result::<dbdata::RawUser>(self.conn)
             .map_err(|err| {
-                println!("Could not insert new user {}[{}] {} err: {:?}", &raw_user.username, &raw_user.display_name, &raw_user.email, &err);
+                error!("Could not insert new user {}[{}] {} err: {:?}", &raw_user.username, &raw_user.display_name, &raw_user.email, &err);
 
                 match err {
                     DbError::DatabaseError(DbErrKind::UniqueViolation, _) => UserManagementError::AlreadyExists,
@@ -243,7 +243,7 @@ impl<'a> AuthFunctions for Auth<'a> {
             .filter(schema::role::columns::name.eq(&rolename))
             .get_result::<dbdata::RawRole>(self.conn)
             .map_err(|err| {
-                println!("Could not insert new role {} err: {:?}", &rolename, &err);
+                error!("Could not insert new role {} err: {:?}", &rolename, &err);
 
                 match err {
                     DbError::NotFound => UserManagementError::NotFound,
@@ -258,12 +258,11 @@ impl<'a> AuthFunctions for Auth<'a> {
         })
     }
     fn get_all_roles(&self) -> Result<Vec<Role>, UserManagementError> {
-
         info!("listing roles");
         let raw_roles = schema::role::table
             .get_results::<dbdata::RawRole>(self.conn)
             .map_err(|err| {
-                println!("Could not list all roles err: {:?}", &err);
+                error!("Could not list all roles err: {:?}", &err);
                 UserManagementError::InternalError(err.to_string())
             })?;
 
@@ -281,16 +280,219 @@ impl<'a> AuthFunctions for Auth<'a> {
     }
 
     fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {
-        unimplemented!()
+        use data::schema::role_permission;
+
+        info!("attaching permission [{:?}] for role [{}]", &permission, &rolename);
+
+        //Get the role
+        let raw_role = schema::role::table
+            .filter(schema::role::columns::name.eq(&rolename))
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not get role {} err: {:?}", rolename, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        //Get the permission
+        let raw_permission = get_or_create_permission(self.conn, permission)?;
+
+        let role_permission = (
+            schema::role_permission::columns::role_id.eq(raw_role.role_id),
+            schema::role_permission::columns::permission_id.eq(raw_permission.permission_id),
+        );
+
+        //Attach the role to permission
+        //WARNING: the role_permission table doesn't have a unique constraint so duplication is possible, this should probably be an insert or ignore
+        let _ = diesel::insert_into(schema::role_permission::table)
+            .values(&role_permission)
+            .execute(self.conn)
+            .map_err(|err| UserManagementError::InternalError(err.to_string()))?;
+
+        info!("Done attaching permission [{:?}] for role [{}]", &permission, &rolename);
+
+        Ok(Role {
+            name: raw_role.name,
+            description: Some(raw_role.description),
+        })
     }
     fn detach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {
-        unimplemented!()
+        use data::schema::role_permission;
+
+        info!("detaching permission [{:?}] for role [{}]", &permission, &rolename);
+
+        //Get the role
+        let raw_role = schema::role::table
+            .filter(schema::role::columns::name.eq(&rolename))
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not get role {} err: {:?}", rolename, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        //Get the permission
+        let permission_json = serde_json::to_value(permission)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &permission, &err);
+                UserManagementError::Unknown
+            })?;
+        let raw_permission = schema::permission::table
+            .filter(schema::permission::columns::data.eq(&permission_json))
+            .get_result::<dbdata::RawPermission>(self.conn)
+            .map_err(|err| {
+                println!("Could not get permission {} err: {:?}", rolename, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        //Detach the role to permission
+        let _ = diesel::sql_query(r#"DELETE FROM "role_permission" WHERE "role_id" = $1 AND "permission_id" = $2;"#)
+            .bind::<diesel::sql_types::BigInt, _>(raw_role.role_id)
+            .bind::<diesel::sql_types::BigInt, _>(raw_permission.permission_id)
+            .execute(self.conn)
+            .map_err(|err| UserManagementError::InternalError(err.to_string()))?;
+
+        info!("Done permission [{:?}] for role [{}]", &permission, &rolename);
+
+        Ok(Role {
+            name: raw_role.name,
+            description: Some(raw_role.description),
+        })
     }
 
-    fn attach_role_for_user(&self, role: &Role, user_identifier: &str) -> Result<User, UserManagementError> {
-        unimplemented!()
+    fn attach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError> {
+        use data::schema::user_role;
+
+        info!("attaching role [{}] for user [{}]", &rolename, &user_identifier);
+
+        //Get the user
+        let raw_user = schema::user::table
+            .filter(schema::user::columns::username.eq(&user_identifier))
+            .or_filter(schema::user::columns::email.eq(&user_identifier))
+            .get_result::<dbdata::RawUser>(self.conn)
+            .map_err(|err| {
+                info!("Could not find user: {:?}", &user_identifier);
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        //Get the role
+        let raw_role = schema::role::table
+            .filter(schema::role::columns::name.eq(&rolename))
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not get role {} err: {:?}", rolename, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        let user_role = (
+            schema::user_role::columns::user_id.eq(raw_user.user_id),
+            schema::user_role::columns::role_id.eq(raw_role.role_id),
+        );
+
+        //Attach the role to user
+        //WARNING: the user_role table doesn't have a unique constraint so duplication is possible, this should probably be an insert or ignore
+        let _ = diesel::insert_into(schema::user_role::table)
+            .values(&user_role)
+            .execute(self.conn)
+            .map_err(|err| UserManagementError::InternalError(err.to_string()))?;
+
+        info!("attaching role [{}] for user [{}]", &rolename, &user_identifier);
+
+        Ok(User {
+            username: raw_user.username,
+            email: raw_user.email,
+            display_name: raw_user.display_name,
+        })
     }
-    fn detach_role_for_user(&self, role: &Role, user_identifier: &str) -> Result<User, UserManagementError> {
-        unimplemented!()
+    fn detach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError> {
+        use data::schema::user_role;
+
+        info!("detaching role [{}] for user [{}]", &rolename, &user_identifier);
+
+        //Get the user
+        let raw_user = schema::user::table
+            .filter(schema::user::columns::username.eq(&user_identifier))
+            .or_filter(schema::user::columns::email.eq(&user_identifier))
+            .get_result::<dbdata::RawUser>(self.conn)
+            .map_err(|err| {
+                info!("Could not find user: {:?}", &user_identifier);
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        //Get the role
+        let raw_role = schema::role::table
+            .filter(schema::role::columns::name.eq(&rolename))
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                println!("Could not get role {} err: {:?}", rolename, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        //Attach the role to user
+        let _ = diesel::sql_query(r#"DELETE FROM "user_role" WHERE "user_id" = $1 AND "role_id" = $2;"#)
+            .bind::<diesel::sql_types::BigInt, _>(raw_user.user_id)
+            .bind::<diesel::sql_types::BigInt, _>(raw_role.role_id)
+            .execute(self.conn)
+            .map_err(|err| UserManagementError::InternalError(err.to_string()))?;
+
+        info!("detaching role [{}] for user [{}]", &rolename, &user_identifier);
+
+        Ok(User {
+            username: raw_user.username,
+            email: raw_user.email,
+            display_name: raw_user.display_name,
+        })
     }
+}
+
+fn get_or_create_permission(conn: &Conn, permission: &Permission) -> Result<dbdata::RawPermission, UserManagementError> {
+    let permission_json = serde_json::to_value(permission)
+        .map_err(|err| {
+            error!("Could not serialize value {:?} error: {:?}", &permission, &err);
+            UserManagementError::Unknown
+        })?;
+    let permission_value = dbdata::NewRawPermission {
+        data: permission_json,
+    };
+
+    schema::permission::table
+        .filter(schema::permission::columns::data.eq(&permission_value.data))
+        .get_result::<dbdata::RawPermission>(conn)
+        .or_else(|err| match err {
+            DbError::NotFound => {
+                diesel::insert_into(schema::permission::table)
+                    .values(&permission_value)
+                    .get_result::<dbdata::RawPermission>(conn)
+            },
+            _ => Err(err),
+        })
+        .map_err(|err| {
+            println!("Could not get or create err: {:?}", &err);
+
+            UserManagementError::InternalError(err.to_string())
+        })
 }

@@ -18,6 +18,7 @@ table! {
 table! {
     entity_usage (entity_usage_id) {
         entity_usage_id -> Int8,
+        entity_id -> Int8,
         used_at -> Timestamp,
         used_by -> Int8,
     }
@@ -37,7 +38,7 @@ table! {
 table! {
     permission (permission_id) {
         permission_id -> Int8,
-        data -> Json,
+        data -> Jsonb,
     }
 }
 
@@ -175,6 +176,7 @@ joinable!(entity -> scope (scope_id));
 joinable!(entity -> user (created_by));
 joinable!(entity_tag -> entity (entity_id));
 joinable!(entity_tag -> tag (tag_id));
+joinable!(entity_usage -> entity (entity_id));
 joinable!(entity_usage -> user (used_by));
 joinable!(query -> entity (entity_id));
 joinable!(query -> user (modified_by));

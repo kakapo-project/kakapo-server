@@ -39,6 +39,7 @@ CREATE TABLE "entity" (
 
 CREATE TABLE "entity_usage" (
     "entity_usage_id"         BIGSERIAL PRIMARY KEY,
+    "entity_id"               BIGINT REFERENCES "entity" NOT NULL,
     "used_at"                 TIMESTAMP NOT NULL DEFAULT NOW(),
     "used_by"                 BIGINT REFERENCES "user" NOT NULL
 );
@@ -119,7 +120,7 @@ CREATE TABLE "user_role" (
 
 CREATE TABLE "permission" (
     "permission_id"           BIGSERIAL PRIMARY KEY,
-    "data"                    JSON NOT NULL
+    "data"                    JSONB NOT NULL UNIQUE
 );
 
 CREATE TABLE "role_permission" (
