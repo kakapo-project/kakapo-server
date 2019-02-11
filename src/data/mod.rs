@@ -10,6 +10,10 @@ pub mod claims;
 pub mod channels;
 pub mod permissions;
 
+pub trait Named {
+    fn my_name(&self) -> &str;
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DataType {
@@ -394,6 +398,12 @@ pub struct Table {
     pub schema: SchemaState,
 }
 
+impl Named for Table {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
@@ -411,7 +421,13 @@ pub struct Query {
     pub statement: String,
 }
 
-pub type ScriptParam = Option<serde_json::Value>;
+impl Named for Query {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
+
+pub type ScriptParam = serde_json::Value;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -419,6 +435,12 @@ pub struct Script {
     pub name: String, //TODO: make sure this is an alphanumeric
     pub description: String,
     pub text: String,
+}
+
+impl Named for Script {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
 }
 
 
@@ -429,6 +451,13 @@ pub struct View {
     pub description: String,
     pub view_state: serde_json::Value,
 }
+
+impl Named for View {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
+
 
 /*
 impl TableData {

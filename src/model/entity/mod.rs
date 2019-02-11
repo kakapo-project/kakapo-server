@@ -16,6 +16,7 @@ use std::fmt::Debug;
 use connection::executor::Conn;
 use data::claims::AuthClaims;
 use scripting::Scripting;
+use data::Named;
 
 pub trait RawEntityTypes
     where
@@ -23,11 +24,10 @@ pub trait RawEntityTypes
         Self::Data: ConvertRaw<Self>,
         Self::NewData: GenerateRaw<Self>,
         Self: EntityCrudOps,
+        Self: Named,
 {
     type Data;
     type NewData;
-
-    fn get_name(&self) -> String;
 }
 
 pub trait ConvertRaw<T> {

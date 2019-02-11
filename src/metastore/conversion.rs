@@ -1,11 +1,15 @@
 
-use metastore::dbdata;
-use data;
+use std::fmt::Debug;
 
 use serde_json;
-use metastore::EntityCrudOps;
 use serde::Serialize;
-use std::fmt::Debug;
+
+use metastore::dbdata;
+
+use data;
+use data::Named;
+
+use metastore::EntityCrudOps;
 use metastore::dbdata::RawTable;
 use metastore::dbdata::NewRawTable;
 use metastore::dbdata::RawQuery;
@@ -24,7 +28,7 @@ impl ConvertRaw<data::Table> for dbdata::RawTable {
         let schema: data::SchemaState = serde_json::from_value(self.table_data.to_owned())
             .unwrap_or_default(); //TODO: return serialization error!
         data::Table {
-            name: self.name.to_owned(),
+            name: self.my_name().to_owned(),
             description: self.description.to_owned(),
             schema,
         }
@@ -44,7 +48,7 @@ impl ConvertRaw<data::Query> for dbdata::RawQuery {
 impl ConvertRaw<data::Script> for dbdata::RawScript {
     fn convert(&self) -> data::Script {
         data::Script {
-            name: self.name.to_owned(),
+            name: self.my_name().to_owned(),
             description: self.description.to_owned(),
             text: self.script_text.to_owned(),
         }
@@ -54,7 +58,7 @@ impl ConvertRaw<data::Script> for dbdata::RawScript {
 impl ConvertRaw<data::View> for dbdata::RawView {
     fn convert(&self) -> data::View {
         data::View {
-            name: self.name.to_owned(),
+            name: self.my_name().to_owned(),
             description: self.description.to_owned(),
             view_state: self.view_state.to_owned(),
         }
@@ -66,7 +70,7 @@ impl GenerateRaw<data::Table> for dbdata::NewRawTable {
     fn new(data: &data::Table, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawTable {
             entity_id,
-            name: data.name.to_owned(),
+            name: data.my_name().to_owned(),
             description: data.description.to_owned(),
             table_data: serde_json::to_value(data.schema.to_owned()).unwrap_or_default(),
             is_deleted: false,
@@ -90,7 +94,7 @@ impl GenerateRaw<data::Query> for dbdata::NewRawQuery {
     fn new(data: &data::Query, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawQuery {
             entity_id,
-            name: data.name.to_owned(),
+            name: data.my_name().to_owned(),
             description: data.description.to_owned(),
             statement: data.statement.to_owned(),
             query_info: serde_json::to_value(json!({})).unwrap_or_default(),
@@ -116,7 +120,7 @@ impl GenerateRaw<data::Script> for dbdata::NewRawScript {
     fn new(data: &data::Script, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawScript {
             entity_id,
-            name: data.name.to_owned(),
+            name: data.my_name().to_owned(),
             description: data.description.to_owned(),
             script_language: "Python".to_string(), //Only Python is supported right now
             script_text: data.text.to_owned(),
@@ -144,7 +148,7 @@ impl GenerateRaw<data::View> for dbdata::NewRawView {
     fn new(data: &data::View, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawView {
             entity_id,
-            name: data.name.to_owned(),
+            name: data.my_name().to_owned(),
             description: data.description.to_owned(),
             view_state: data.view_state.to_owned(),
             view_info: serde_json::to_value(json!({})).unwrap_or_default(),
@@ -170,34 +174,22 @@ impl RawEntityTypes for data::Table {
     type Data = RawTable;
     type NewData = NewRawTable;
 
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
 }
 
 impl RawEntityTypes for data::Query {
     type Data = RawQuery;
     type NewData = NewRawQuery;
 
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
 }
 
 impl RawEntityTypes for data::Script {
     type Data = RawScript;
     type NewData = NewRawScript;
 
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
 }
 
 impl RawEntityTypes for data::View {
     type Data = RawView;
     type NewData = NewRawView;
 
-    fn get_name(&self) -> String {
-        self.name.to_owned()
-    }
 }

@@ -1,13 +1,12 @@
 
-use model::entity::error::EntityError;
-use data;
-
-use std::error::Error;
-
 use diesel::RunQueryDsl;
-use data::DataType;
-use model::entity::EntityModifierController;
 
+use data;
+use data::Named;
+use data::DataType;
+
+use model::entity::EntityModifierController;
+use model::entity::error::EntityError;
 use model::entity::update_state::UpdateActionFunctions;
 
 fn get_sql_data_type(data_type: &DataType) -> String {
@@ -56,34 +55,34 @@ impl UpdateActionFunctions for data::Table {
             //TODO: nullable + default + serial
             format!("\"{}\" {}", col_name, col_type)
         }).collect();
-        let command = format!("CREATE TABLE \"{}\" ({});", new.name, formatted_columns.join(", "));
+        let command = format!("CREATE TABLE \"{}\" ({});", new.my_name(), formatted_columns.join(", "));
         info!("DSL command: `{}`", &command);
 
         diesel::sql_query(command)
             .execute(controller.conn)
             .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
+                Err(EntityError::InternalError(err.to_string())))?;
 
         Ok(())
     }
 
     fn update_entity(controller: &EntityModifierController, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
         unimplemented!();
-        let command = format!("ALTER TABLE \"{}\";", old.name);
+        let command = format!("ALTER TABLE \"{}\";", old.my_name());
         diesel::sql_query(command)
             .execute(controller.conn)
             .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
+                Err(EntityError::InternalError(err.to_string())))?;
 
         Ok(())
     }
 
     fn delete_entity(controller: &EntityModifierController, old: &data::Table) -> Result<(), EntityError> {
-        let command = format!("DROP TABLE \"{}\";", old.name);
+        let command = format!("DROP TABLE \"{}\";", old.my_name());
         diesel::sql_query(command)
             .execute(controller.conn)
             .or_else(|err|
-                Err(EntityError::InternalError(err.description().to_string())))?;
+                Err(EntityError::InternalError(err.to_string())))?;
 
         Ok(())
     }

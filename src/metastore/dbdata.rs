@@ -4,10 +4,10 @@ use chrono::NaiveDateTime;
 use serde_json;
 
 use data::schema::{entity, table_schema, query, script, view, user, permission, role, invitation};
-use data;
 use std::fmt::Debug;
 use serde::Serialize;
 use data::permissions::Permission;
+use data::Named;
 
 #[derive(Identifiable, Debug, Queryable, Clone)]
 #[primary_key(entity_id)]
@@ -41,6 +41,11 @@ pub struct RawTable {
     pub modified_by: i64,
 }
 
+impl Named for RawTable {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
 
 #[derive(Debug, Deserialize, Insertable)]
 #[table_name = "table_schema"]
@@ -51,6 +56,12 @@ pub struct NewRawTable {
     pub table_data: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
+}
+
+impl Named for NewRawTable {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
@@ -69,6 +80,12 @@ pub struct RawQuery {
     pub modified_by: i64,
 }
 
+impl Named for RawQuery {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Debug, Deserialize, Insertable)]
 #[table_name = "query"]
 pub struct NewRawQuery {
@@ -79,6 +96,12 @@ pub struct NewRawQuery {
     pub query_info: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
+}
+
+impl Named for NewRawQuery {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
@@ -98,6 +121,12 @@ pub struct RawScript {
     pub modified_by: i64,
 }
 
+impl Named for RawScript {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Debug, Deserialize, Insertable)]
 #[table_name = "script"]
 pub struct NewRawScript {
@@ -109,6 +138,12 @@ pub struct NewRawScript {
     pub script_info: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
+}
+
+impl Named for NewRawScript {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Identifiable, Associations, Debug, Queryable, QueryableByName, Clone)]
@@ -127,6 +162,12 @@ pub struct RawView {
     pub modified_by: i64,
 }
 
+impl Named for RawView {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Debug, Deserialize, Insertable)]
 #[table_name = "view"]
 pub struct NewRawView {
@@ -137,6 +178,12 @@ pub struct NewRawView {
     pub view_info: serde_json::Value,
     pub is_deleted: bool,
     pub modified_by: i64,
+}
+
+impl Named for NewRawView {
+    fn my_name(&self) -> &str {
+        &self.name
+    }
 }
 
 

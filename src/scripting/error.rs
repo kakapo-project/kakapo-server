@@ -1,7 +1,7 @@
 
 
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum ScriptError {
     #[fail(display = "io error: {:?}", 0)]
     IOError(String),

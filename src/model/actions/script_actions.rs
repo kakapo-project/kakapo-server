@@ -2,9 +2,9 @@ use std::result::Result::Ok;
 use std::marker::PhantomData;
 
 use data;
+use data::Named;
 use model::actions::results::*;
 use model::actions::error::Error;
-use model::script;
 
 use model::state::ActionState;
 use data::permissions::Permission;
@@ -17,18 +17,18 @@ use model::actions::ActionResult;
 use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
+use scripting::ScriptFunctions;
 
-// Query Action
+// Script Action
 #[derive(Debug)]
-pub struct RunScript<S = ActionState, SC = script::ScriptAction>  {
+pub struct RunScript<S = ActionState>  {
     pub script_name: String,
     pub param: data::ScriptParam,
-    pub phantom_data: PhantomData<(S, SC)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<S, SC> RunScript<S, SC>
+impl<S> RunScript<S>
     where
-        SC: script::ScriptActionFunctions<S>,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -46,26 +46,25 @@ impl<S, SC> RunScript<S, SC>
     }
 }
 
-impl<S, SC> Action<S> for RunScript<S, SC>
+impl<S> Action<S> for RunScript<S>
     where
-        SC: script::ScriptActionFunctions<S>,
         for<'a> S: GetBroadcaster + StateFunctions<'a>,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
             .get_entity_retreiver_functions()
-            .get_one(&self.script_name)
-            .or_else(|err| Err(Error::Entity(err)))
-            .and_then(|res: Option<data::Script>| {
-                match res {
-                    Some(query) => Ok(query),
-                    None => Err(Error::NotFound),
-                }
+            .get_one::<data::Script>(&self.script_name)
+            .map_err(Error::Entity)
+            .and_then(|res| match res {
+                Some(query) => Ok(query),
+                None => Err(Error::NotFound),
             })
             .and_then(|script| {
-                SC::run_script(state, &script)
-                    .or_else(|err| Err(Error::Script(err)))
+                state
+                    .get_script_runner()
+                    .run(&script.my_name(), &self.param)
+                    .map_err(Error::Script)
             })
             .and_then(|res| ActionRes::new("RunScript", RunScriptResult(res)))
     }
@@ -87,15 +86,20 @@ mod test {
         with_state(|state| {
             let script_name = format!("my_table{}", random_identifier());
             let script: data::Script = from_value(json!({
-                "name": script_name,
+                "name": script_name.to_owned(),
                 "description": "table description",
                 "text": "print('Hello World')"
             })).unwrap();
 
             let create_action = entity_actions::CreateEntity::<data::Script, MockState>::new(script);
             let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
 
-            println!("{:?}", &result);
+            let params = json!({"Hello": "World"});
+            let create_action = RunScript::<MockState>::new(script_name, params);
+            let result = create_action.call(&state);
+
+            println!("FINAL RESULT: {:?}", &result);
         });
     }
 }

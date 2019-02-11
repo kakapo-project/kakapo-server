@@ -1,33 +1,36 @@
 
 use std::marker::PhantomData;
 
-use model::entity::RetrieverFunctions;
-use model::entity::ModifierFunctions;
-
-use model::actions::results::*;
-use model::actions::error::Error;
 use data::utils::OnDuplicate;
 
 use data::utils::OnNotFound;
-use model::entity::RawEntityTypes;
+use data::Named;
+use data::channels::Channels;
+use data::permissions::*;
 
+use model::actions::results::*;
+use model::actions::error::Error;
+use model::actions::decorator::*;
+use model::actions::Action;
+use model::actions::ActionRes;
+use model::actions::ActionResult;
+
+use model::state::GetBroadcaster;
+use model::state::StateFunctions;
+
+use model::entity::RetrieverFunctions;
+use model::entity::ModifierFunctions;
+use model::entity::RawEntityTypes;
 use model::entity::results::Upserted;
 use model::entity::results::Created;
 use model::entity::results::Updated;
 use model::entity::results::Deleted;
+use model::entity::update_state::UpdateActionFunctions;
 
 use model::state::ActionState;
-use data::channels::Channels;
-use data::permissions::*;
-use model::actions::decorator::*;
 
-use model::actions::Action;
-use model::actions::ActionRes;
-use model::actions::ActionResult;
-use model::state::GetBroadcaster;
-use model::state::StateFunctions;
 use model::auth::GetUserInfo;
-use model::entity::update_state::UpdateActionFunctions;
+
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
@@ -76,7 +79,7 @@ impl<A, T, S> Action<S> for WithFilterListByPermission<A, T, S>
         debug!("filtering list based on permissions");
         let filtered_results = inner_results.into_iter()
             .filter(|x| {
-                let required = Permission::read_entity::<T>(x.get_name());
+                let required = Permission::read_entity::<T>(x.my_name().to_owned());
                 user_permissions.contains(&required)
             })
             .collect();
@@ -195,7 +198,7 @@ impl<T, S> CreateEntity<T, S>
 {
     pub fn new(data: T) -> WithPermissionFor<WithDispatch<WithTransaction<Self, S>, S>, S> {
 
-        let name = data.get_name();
+        let name = data.my_name().to_owned();
         let create_permission = Permission::create_entity::<T>();
         let update_permission = Permission::modify_entity::<T>(name);
         let on_duplicate = OnDuplicate::Ignore; //TODO:...
@@ -469,7 +472,7 @@ mod test {
             println!("data: {:?}", &data);
 
             if let Created { new } = data {
-                assert_eq!(new.name, name);
+                assert_eq!(new.my_name(), name);
                 assert_eq!(new.description, "blah blah blah");
                 assert_eq!(new.statement, "SELECT * FROM a_table");
             } else {
@@ -497,7 +500,7 @@ mod test {
 
             let data = result.unwrap().get_data();
             let GetEntityResult(entity_result) = data;
-            assert_eq!(entity_result.name, name);
+            assert_eq!(entity_result.my_name(), name);
             assert_eq!(entity_result.description, "blah blah blah");
             assert_eq!(entity_result.statement, "SELECT * FROM a_table");
         });
@@ -523,7 +526,7 @@ mod test {
 
             if let Deleted { id, old } = data {
                 assert_eq!(id, name);
-                assert_eq!(old.name, name);
+                assert_eq!(old.my_name(), name);
                 assert_eq!(old.description, "blah blah blah");
                 assert_eq!(old.statement, "SELECT * FROM a_table");
             } else {

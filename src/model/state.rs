@@ -30,6 +30,7 @@ use model::auth::GetUserInfo;
 use model::auth::UserInfo;
 use model::auth::send_mail::EmailSender;
 use model::auth::send_mail::EmailOps;
+use scripting::ScriptFunctions;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -50,6 +51,7 @@ pub trait StateFunctions<'a>
         Self: Debug + Send,
         Self::TableController: TableActionFunctions,
         Self::UserInfo: GetUserInfo,
+        Self::Scripting: ScriptFunctions,
         //TODO: managementstore
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,

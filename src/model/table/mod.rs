@@ -2,6 +2,8 @@
 pub mod error;
 
 use data;
+use data::Named;
+
 use model::table::error::TableError;
 use database::error::DbError;
 use connection::executor::Conn;
@@ -29,7 +31,7 @@ pub trait TableActionFunctions {
 impl<'a> TableActionFunctions for TableAction<'a> {
     fn query(&self, table: &data::Table) -> Result<data::RawTableData, TableError> {
 
-        let query = format!("SELECT * FROM {}", &table.name);
+        let query = format!("SELECT * FROM {}", &table.my_name());
         self.conn
             .exec(&query, vec![])
             .or_else(|err| Err(TableError::db_error(err)))
@@ -49,7 +51,7 @@ impl<'a> TableActionFunctions for TableAction<'a> {
             let values = row.values().map(|x| x.to_owned()).collect();
             let query = format!(
                 r#"INSERT INTO "{name}" ("{columns}") VALUES ({params}) RETURNING *;"#,
-                name=table.name,
+                name=table.my_name(),
                 columns=column_names.join(r#"", ""#),
                 params=column_counts.join(r#", "#),
             );
@@ -109,7 +111,7 @@ impl<'a> TableActionFunctions for TableAction<'a> {
 
             let query = format!(
                 "UPDATE {name} SET {sets} WHERE {id} RETURNING *", //"UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id"
-                name=table.name,
+                name=table.my_name(),
                 sets=column_names.iter().enumerate()
                     .map(|(i, x)| format!("{} = ${}", x, i+val_index))
                     .collect::<Vec<String>>()
@@ -156,7 +158,7 @@ impl<'a> TableActionFunctions for TableAction<'a> {
 
             let query = format!(
                 "DELETE {name} WHERE {id} RETURNING *", //"DELETE table WHERE id = my_id"
-                name=table.name,
+                name=table.my_name(),
                 id=key_names.iter().enumerate()
                     .map(|(i, x)| format!("{} = ${}", x, i+1))
                     .collect::<Vec<String>>()

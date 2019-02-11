@@ -258,8 +258,8 @@ macro_rules! implement_retriever_and_modifier {
             NRD: GenerateRaw<O>,
             RD: ConvertRaw<O>,
         {
-            debug!("string to create entity: \"name\": {}", object.get_name());
-            let entities: Option<RD> = query_entities_by_name(conn, object.get_name())?;
+            debug!("string to create entity: \"name\": {}", object.my_name());
+            let entities: Option<RD> = query_entities_by_name(conn, object.my_name().to_owned())?;
 
             match entities {
                 Some(entity) => {
@@ -289,7 +289,7 @@ macro_rules! implement_retriever_and_modifier {
             NRD: GenerateRaw<O>,
             RD: ConvertRaw<O>,
         {
-            let entities: Option<RD> = query_entities_by_name(conn, object.get_name())?;
+            let entities: Option<RD> = query_entities_by_name(conn, object.my_name().to_owned())?;
 
             match entities {
                 Some(entity) => {

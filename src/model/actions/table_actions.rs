@@ -306,6 +306,7 @@ mod test {
 
             let create_action = entity_actions::CreateEntity::<data::Table, MockState>::new(table);
             let result = create_action.call(&state);
+            let data = result.unwrap().get_data();
 
             let data: data::TableData = from_value(json!([
                 {

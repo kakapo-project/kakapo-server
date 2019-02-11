@@ -61,16 +61,14 @@ impl<S, QC> Action<S> for RunQuery<S, QC>
         state
             .get_entity_retreiver_functions()
             .get_one(&self.query_name)
-            .or_else(|err| Err(Error::Entity(err)))
-            .and_then(|res: Option<data::Query>| {
-                match res {
-                    Some(query) => Ok(query),
-                    None => Err(Error::NotFound),
-                }
+            .map_err(Error::Entity)
+            .and_then(|res| match res {
+                Some(query) => Ok(query),
+                None => Err(Error::NotFound),
             })
             .and_then(|query| {
                 QC::run_query(state, &query, &self.params)
-                    .or_else(|err| Err(Error::Query(err)))
+                    .map_err(Error::Query)
             })
             .and_then(|table_data| {
                 Ok(table_data.format_with(&self.format))
