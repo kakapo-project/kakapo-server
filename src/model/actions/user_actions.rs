@@ -751,7 +751,6 @@ mod test {
             let data = result.unwrap().get_data();
 
             println!("data: {:?}", &data);
-            unimplemented!()
         });
     }
 
@@ -829,7 +828,6 @@ mod test {
             let result = create_action.call(&state);
             println!("data: {:?}", &result);
 
-            unimplemented!()
         });
     }
 
