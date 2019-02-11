@@ -9,4 +9,6 @@ pub enum ScriptError {
     ExecuteError,
     #[fail(display = "runtime error: {:?}", 0)]
     RuntimeError(String),
+    #[fail(display = "An unknown error occurred")]
+    Unknown,
 }

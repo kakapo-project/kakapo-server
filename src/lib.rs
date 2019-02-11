@@ -13,6 +13,7 @@ extern crate bytes;
 extern crate chrono;
 #[macro_use]
 extern crate diesel;
+extern crate dirs;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -30,6 +31,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate openssl;
+extern crate pyo3;
 #[macro_use]
 extern crate time_test;
 extern crate tokio;

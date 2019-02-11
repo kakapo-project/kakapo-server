@@ -2,6 +2,7 @@
 use actix_web::test::TestServer;
 
 use std::sync::Arc;
+use std::path::PathBuf;
 
 use actix_web::test::TestServerBuilder;
 use actix_web::HttpMessage;
@@ -235,7 +236,7 @@ impl GetBroadcaster for MockState {
 pub fn with_state<F>(f: F)
     where F: FnOnce(&MockState) -> ()
 {
-    let script_path = "./target/path/to/scripts".to_string();
+    let script_path = PathBuf::from("./target/path/to/scripts");
     let conn_url = "postgres://test:password@localhost:5432/test".to_string();
     let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
     let pool = Pool::new(conn_manager).unwrap();
@@ -264,7 +265,7 @@ pub fn with_state<F>(f: F)
 pub fn with_state_no_transaction<F>(f: F)
     where F: FnOnce(&MockState) -> ()
 {
-    let script_path = "./target/path/to/scripts".to_string();
+    let script_path = PathBuf::from("./target/path/to/scripts");
     let conn_url = "postgres://test:password@localhost:5432/test".to_string();
     let conn_manager: ConnectionManager<PgConnection> = ConnectionManager::new(conn_url);
     let pool = Pool::new(conn_manager).unwrap();

@@ -1,11 +1,14 @@
 
+use std::env;
+use std::fmt;
+use std::path::PathBuf;
+
 use diesel::pg::PgConnection;
 
 use actix::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
 use connection::AppStateBuilder;
-use std::fmt;
 
 pub type Conn = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -17,7 +20,7 @@ pub struct Secrets {
 
 pub struct Executor {
     pool: Pool<ConnectionManager<PgConnection>>,
-    script_path: String,
+    script_path: PathBuf,
     secrets: Secrets,
 }
 
@@ -47,7 +50,11 @@ impl Executor {
         let pool = Pool::builder().build(manager)
             .expect("Could not start connection");
 
-        let script_path = info.script_path_dir.unwrap_or_default(); //TODO: should fallback to home
+        let script_path = match info.script_path_dir {
+            Some(dir) => PathBuf::from(dir),
+            None => kakapo_script_home(),
+        };
+
         let secrets = Secrets {
             token_secret: info.token_secret_key.unwrap_or_default(),
             password_secret: info.password_secret_key.unwrap_or_default(),
@@ -60,7 +67,7 @@ impl Executor {
         }
     }
 
-    pub fn get_scripts_path(&self) -> String {
+    pub fn get_scripts_path(&self) -> PathBuf {
         self.script_path.to_owned()
     }
 
@@ -78,3 +85,14 @@ impl Actor for Executor {
 }
 
 
+fn kakapo_home() -> PathBuf {
+    let mut home = dirs::home_dir().unwrap_or(PathBuf::from("/var/kakapo/"));
+    home.push(".kakapo");
+    home
+}
+
+fn kakapo_script_home() -> PathBuf {
+    let mut kakapo_home = kakapo_home();
+    kakapo_home.push("scripts");
+    kakapo_home
+}
