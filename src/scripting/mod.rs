@@ -24,6 +24,10 @@ impl Scripting {
             script_home
         }
     }
+
+    pub fn get_home(&self) -> String {
+        self.script_home.to_owned()
+    }
 }
 
 impl ScriptFunctions for Scripting {

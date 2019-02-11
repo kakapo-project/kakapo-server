@@ -70,3 +70,32 @@ impl<S, SC> Action<S> for RunScript<S, SC>
             .and_then(|res| ActionRes::new("RunScript", RunScriptResult(res)))
     }
 }
+
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use test_common::random_identifier;
+    use serde_json::from_value;
+    use test_common::*;
+    use model::actions::entity_actions;
+
+    #[test]
+    fn test_run_script() {
+        with_state(|state| {
+            let script_name = format!("my_table{}", random_identifier());
+            let script: data::Script = from_value(json!({
+                "name": script_name,
+                "description": "table description",
+                "text": "print('Hello World')"
+            })).unwrap();
+
+            let create_action = entity_actions::CreateEntity::<data::Script, MockState>::new(script);
+            let result = create_action.call(&state);
+
+            println!("{:?}", &result);
+        });
+    }
+}

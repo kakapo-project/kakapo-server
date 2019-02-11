@@ -50,10 +50,6 @@ pub struct EntityModifierController<'a> {
     pub scripting: &'a Scripting,
 }
 
-impl<'a> EntityModifierController<'a> {
-    pub const ADMIN_USER_ID: i64 = 1; //TODO: database specific, dependency inject here
-}
-
 pub trait RetrieverFunctions {
     /// get all values and returns a list of all database values
     fn get_all<O>(&self) -> Result<Vec<O>, EntityError>

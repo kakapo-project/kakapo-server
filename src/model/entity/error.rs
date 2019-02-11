@@ -7,6 +7,8 @@ pub enum EntityError {
     DeserializationError,
     #[fail(display = "Failed to serialize")]
     SerializationError,
+    #[fail(display = "File System Error {:?}", 0)]
+    FileSystemError(String),
     #[fail(display = "Invalid state, something is really weird with the database")]
     InvalidState,
     #[fail(display = "No Columns found, every table must have at least one column")]

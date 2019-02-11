@@ -4,6 +4,7 @@ use std::fs;
 use std::process::Command;
 use scripting::error::ScriptError;
 
+
 fn u8vec_to_string(vec: Vec<u8>) -> String {
     vec.iter().map(|&c| c as char).collect::<String>()
 }

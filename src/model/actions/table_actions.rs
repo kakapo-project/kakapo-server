@@ -283,7 +283,7 @@ mod test {
 
     #[test]
     fn test_add_data() {
-        with_state_no_transaction(|state| {
+        with_state(|state| {
             let table_name = format!("my_table{}", random_identifier());
             let table: data::Table = from_value(json!({
                 "name": table_name,

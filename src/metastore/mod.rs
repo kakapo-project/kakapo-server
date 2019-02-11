@@ -41,13 +41,13 @@ pub trait EntityCrudOps
     fn delete(state: &EntityModifierController, name: &str) -> Result<Deleted<Self>, EntityError>;
 }
 
-
+const ADMIN_USER_ID: i64 = 1;
 
 fn get_user_id(controller: &EntityModifierController) -> i64 {
     match controller.claims {
         None => {
             warn!("This user does not have any id, however, the user is authorized. Setting content as admin");
-            EntityModifierController::ADMIN_USER_ID
+            ADMIN_USER_ID
         },
         Some(claims) => {
             claims.get_user_id()
