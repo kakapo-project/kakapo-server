@@ -1,24 +1,21 @@
 use diesel::RunQueryDsl;
 use model::state::ActionState;
-use model::auth::error::UserManagementError;
+use model::state::error::UserManagementError;
 use std::error::Error;
 use diesel::sql_types::BigInt;
 use metastore::dbdata::RawPermission;
 use model::state::StateFunctions;
 use connection::executor::Conn;
+use model::state::permission_store::PermissionStoreFunctions;
+use data::permissions::Permission;
 
 
 pub struct PermissionStore<'a> {
     pub conn: &'a Conn,
 }
 
-pub trait PermissionStoreFunctions {
-    fn get_user_permissions(&self, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError>;
-    fn get_all_permissions(&self) -> Result<Vec<RawPermission>, UserManagementError>;
-}
-
 impl<'a> PermissionStoreFunctions for PermissionStore<'a> {
-    fn get_user_permissions(&self, user_id: i64) -> Result<Vec<RawPermission>, UserManagementError> {
+    fn get_user_permissions(&self, user_id: i64) -> Result<Vec<Permission>, UserManagementError> {
         let query = r#"
         SELECT
             DISTINCT ON("permission"."permission_id")
@@ -39,10 +36,11 @@ impl<'a> PermissionStoreFunctions for PermissionStore<'a> {
             .load(self.conn)
             .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
 
-        Ok(result)
+        let permissions: Vec<Permission> = result.into_iter().flat_map(|x| x.as_permission()).collect();
+        Ok(permissions)
     }
 
-    fn get_all_permissions(&self) -> Result<Vec<RawPermission>, UserManagementError> {
+    fn get_all_permissions(&self) -> Result<Vec<Permission>, UserManagementError> {
 
         let query = r#"
         SELECT
@@ -54,6 +52,7 @@ impl<'a> PermissionStoreFunctions for PermissionStore<'a> {
             .load(self.conn)
             .or_else(|err| Err(UserManagementError::InternalError(err.description().to_string())))?;
 
-        Ok(result)
+        let permissions: Vec<Permission> = result.into_iter().flat_map(|x| x.as_permission()).collect();
+        Ok(permissions)
     }
 }

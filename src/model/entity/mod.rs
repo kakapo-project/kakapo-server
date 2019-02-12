@@ -17,6 +17,8 @@ use connection::executor::Conn;
 use data::claims::AuthClaims;
 use scripting::Scripting;
 use data::Named;
+use model::entity::update_state::UpdatePermissionFunctions;
+use metastore::auth_modifier::Auth;
 
 pub trait RawEntityTypes
     where
@@ -48,6 +50,17 @@ pub struct EntityModifierController<'a> {
     pub conn: &'a Conn, //TODO: database specific, dependency inject here
     pub claims: &'a Option<AuthClaims>,
     pub scripting: &'a Scripting,
+    pub auth_permissions: Auth<'a>,
+}
+
+impl<'a> EntityModifierController<'a> {
+    pub fn get_role_name(&self) -> Option<String> {
+        self.claims
+            .to_owned()
+            .and_then(|claim| {
+                claim.get_role()
+            })
+    }
 }
 
 pub trait RetrieverFunctions {

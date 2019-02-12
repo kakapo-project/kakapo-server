@@ -2,7 +2,7 @@ use model::entity::error::EntityError;
 use model::table::error::TableError;
 use model::query::error::QueryError;
 
-use model::auth::error::UserManagementError;
+use model::state::error::UserManagementError;
 use connection::BroadcasterError;
 use model::auth::send_mail::EmailError;
 use scripting::error::ScriptError;

@@ -1,10 +1,9 @@
 use data::claims::AuthClaims;
 use data::permissions::Permission;
-use metastore::permission_store::PermissionStoreFunctions;
 use std::collections::HashSet;
 use std::iter::FromIterator;
+use model::state::permission_store::PermissionStoreFunctions;
 
-pub mod error;
 pub mod send_mail;
 pub mod tokens;
 
@@ -53,12 +52,7 @@ impl<'a, P> GetUserInfo for UserInfo<'a, P>
                 }
             };
 
-            let permissions = raw_permissions.into_iter()
-                .flat_map(|raw_permission| {
-                    raw_permission.as_permission()
-                });
-
-            HashSet::from_iter(permissions)
+            HashSet::from_iter(raw_permissions)
         })
     }
 
@@ -72,12 +66,7 @@ impl<'a, P> GetUserInfo for UserInfo<'a, P>
             }
         };
 
-        let permissions = raw_permissions.into_iter()
-            .flat_map(|raw_permission| {
-                raw_permission.as_permission()
-            });
-
-        HashSet::from_iter(permissions)
+        HashSet::from_iter(raw_permissions)
     }
 
     fn username(&self) -> Option<String> {

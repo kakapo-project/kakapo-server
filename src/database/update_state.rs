@@ -8,6 +8,9 @@ use data::DataType;
 use model::entity::EntityModifierController;
 use model::entity::error::EntityError;
 use model::entity::update_state::UpdateActionFunctions;
+use model::entity::update_state::UpdatePermissionFunctions;
+use data::permissions::Permission;
+use model::state::auth::AuthFunctions;
 
 fn get_sql_data_type(data_type: &DataType) -> String {
     match data_type {
@@ -58,10 +61,14 @@ impl UpdateActionFunctions for data::Table {
         let command = format!("CREATE TABLE \"{}\" ({});", new.my_name(), formatted_columns.join(", "));
         info!("DSL command: `{}`", &command);
 
+        //TODO: constraints...
+
         diesel::sql_query(command)
             .execute(controller.conn)
             .or_else(|err|
                 Err(EntityError::InternalError(err.to_string())))?;
+
+        //TODO: run DSL command to add permission to role
 
         Ok(())
     }
@@ -83,6 +90,84 @@ impl UpdateActionFunctions for data::Table {
             .execute(controller.conn)
             .or_else(|err|
                 Err(EntityError::InternalError(err.to_string())))?;
+
+        Ok(())
+    }
+}
+
+///mdodify table permissions in database here
+impl UpdatePermissionFunctions for data::Table {
+    fn create_permission(controller: &EntityModifierController, new: &data::Table) -> Result<(), EntityError> {
+        let permission_list = vec![
+            Permission::read_entity::<data::Table>(new.my_name().to_owned()),
+            Permission::modify_entity::<data::Table>(new.my_name().to_owned()),
+            Permission::get_table_data(new.my_name().to_owned()),
+            Permission::modify_table_data(new.my_name().to_owned()),
+        ];
+
+        //TODO: assuming that we are going to attach it to the user permission
+        match controller.get_role_name() {
+            Some(rolename) => for permission in permission_list {
+                controller
+                    .auth_permissions
+                    .attach_permission_for_role(&permission, &rolename);
+            },
+            None => for permission in permission_list {
+                controller
+                    .auth_permissions
+                    .add_permission(&permission);
+            },
+        };
+
+        Ok(())
+    }
+
+    fn update_permission(controller: &EntityModifierController, old: &data::Table, new: &data::Table) -> Result<(), EntityError> {
+        let old_name = old.my_name().to_owned();
+        let new_name = new.my_name().to_owned();
+
+        let permission_list = vec![
+            (
+                Permission::read_entity::<data::Table>(old_name.to_owned()),
+                Permission::read_entity::<data::Table>(new_name.to_owned()),
+            ),
+            (
+                Permission::modify_entity::<data::Table>(old_name.to_owned()),
+                Permission::modify_entity::<data::Table>(new_name.to_owned()),
+            ),
+            (
+                Permission::get_table_data(old_name.to_owned()),
+                Permission::get_table_data(new_name.to_owned()),
+            ),
+            (
+                Permission::modify_table_data(old_name.to_owned()),
+                Permission::modify_table_data(new_name.to_owned()),
+            )
+        ];
+
+        for (old_permission, new_permission) in permission_list {
+            controller
+                .auth_permissions
+                .rename_permission(&old_permission, &new_permission);
+        }
+
+        Ok(())
+    }
+
+    fn delete_permission(controller: &EntityModifierController, old: &data::Table) -> Result<(), EntityError> {
+
+        let permission_list = vec![
+            Permission::read_entity::<data::Table>(old.my_name().to_owned()),
+            Permission::modify_entity::<data::Table>(old.my_name().to_owned()),
+            Permission::get_table_data(old.my_name().to_owned()),
+            Permission::modify_table_data(old.my_name().to_owned()),
+        ];
+
+        for permission in permission_list {
+            controller
+                .auth_permissions
+                .remove_permission(&permission);
+        }
 
         Ok(())
     }

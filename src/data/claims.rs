@@ -19,6 +19,10 @@ impl AuthClaims {
         self.username.to_owned()
     }
 
+    pub fn get_role(&self) -> Option<String> {
+        self.role.to_owned()
+    }
+
     pub fn is_user_admin(&self) -> bool {
         self.is_admin
     }

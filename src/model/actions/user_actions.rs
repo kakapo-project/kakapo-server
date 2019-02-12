@@ -10,7 +10,7 @@ use model::state::ActionState;
 use data::permissions::*;
 use model::actions::decorator::*;
 
-use metastore::auth_modifier::AuthFunctions;
+use model::state::auth;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
@@ -19,6 +19,7 @@ use model::state::GetSecrets;
 
 use model::state::StateFunctions;
 use model::auth::send_mail::EmailOps;
+use model::state::auth::AuthFunctions;
 
 #[derive(Debug)]
 pub struct Authenticate<S = ActionState> {
@@ -592,7 +593,7 @@ mod test {
     use model::actions::results::UserResult;
     use test_common::random_identifier;
     use serde_json::from_value;
-    use model::auth::error::UserManagementError;
+    use model::state::error::UserManagementError;
     use test_common::*;
 
     #[test]

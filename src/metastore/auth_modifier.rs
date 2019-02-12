@@ -15,13 +15,14 @@ use data::schema;
 
 use connection::executor::Conn;
 
-use model::auth::error::UserManagementError;
+use model::state::error::UserManagementError;
 use data::permissions::Permission;
 use model::auth::tokens::Token;
 
 use metastore::dbdata;
 use chrono::Utc;
 use serde_json;
+use model::state::auth::AuthFunctions;
 
 pub struct Auth<'a> {
     conn: &'a Conn,
@@ -32,27 +33,6 @@ impl<'a> Auth<'a> {
     pub fn new(conn: &'a Conn, password_secret: String) -> Self {
         Self { conn, password_secret }
     }
-}
-
-pub trait AuthFunctions {
-    fn authenticate(&self, user_identifier: &str, password: &str) -> Result<bool, UserManagementError>;
-    fn add_user(&self, user: &NewUser) -> Result<User, UserManagementError>;
-    fn remove_user(&self, user_identifier: &str) -> Result<User, UserManagementError>;
-
-    fn create_user_token(&self, email: &str) -> Result<InvitationToken, UserManagementError>;
-    //TODO: all modifications
-    fn modify_user_password(&self, user_identifier: &str, password: &str) -> Result<User, UserManagementError>;
-    fn get_all_users(&self) -> Result<Vec<User>, UserManagementError>;
-
-    fn add_role(&self, rolename: &Role) -> Result<Role, UserManagementError>;
-    fn remove_role(&self, rolename: &str) -> Result<Role, UserManagementError>;
-    fn get_all_roles(&self) -> Result<Vec<Role>, UserManagementError>;
-
-    fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError>;
-    fn detach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError>;
-
-    fn attach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError>;
-    fn detach_role_for_user(&self, rolename: &str, user_identifier: &str) -> Result<User, UserManagementError>;
 }
 
 impl<'a> AuthFunctions for Auth<'a> {
@@ -226,6 +206,11 @@ impl<'a> AuthFunctions for Auth<'a> {
             description: Some(role.description),
         })
     }
+
+    fn rename_role(&self, oldname: &'_ str, newname: &'_ str) -> Result<Role, UserManagementError> {
+        unimplemented!()
+    }
+
     fn remove_role(&self, rolename: &str) -> Result<Role, UserManagementError> {
         info!("Deleting role {:?}", &rolename);
         let role = diesel::delete(schema::role::table)
@@ -266,6 +251,18 @@ impl<'a> AuthFunctions for Auth<'a> {
             .collect();
 
         Ok(roles)
+    }
+
+    fn add_permission(&self, permission: &Permission) -> Result<Permission, UserManagementError> {
+        unimplemented!()
+    }
+
+    fn rename_permission(&self, old_permission: &Permission, new_permission: &Permission) -> Result<Permission, UserManagementError> {
+        unimplemented!()
+    }
+
+    fn remove_permission(&self, permission: &Permission) -> Result<Permission, UserManagementError> {
+        unimplemented!()
     }
 
     fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {

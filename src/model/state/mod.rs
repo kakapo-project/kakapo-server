@@ -1,36 +1,43 @@
 
+pub mod auth;
+pub mod permission_store;
+pub mod error;
+
 use serde_json;
 
-use std::result::Result;
-use std::result::Result::Ok;
+use std::fmt::Debug;
+use std::fmt;
+use std::sync::Arc;
 
-use connection::executor::Conn;
 use diesel::Connection;
 use scripting::Scripting;
 use connection::Broadcaster;
-use std::sync::Arc;
 use serde::Serialize;
 use model::actions::error::Error;
-use std::fmt::Debug;
-use std::fmt;
+
+use connection::executor::Conn;
 use connection::executor::Secrets;
-use metastore::auth_modifier::AuthFunctions;
+
 use metastore::auth_modifier::Auth;
+use metastore::permission_store::PermissionStore;
+
 use model::entity::EntityRetrieverController;
 use model::entity::EntityModifierController;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::table::TableAction;
 use model::table::TableActionFunctions;
-use metastore::permission_store::PermissionStoreFunctions;
-use metastore::permission_store::PermissionStore;
-use data::claims::AuthClaims;
-use Channels;
 use model::auth::GetUserInfo;
 use model::auth::UserInfo;
 use model::auth::send_mail::EmailSender;
 use model::auth::send_mail::EmailOps;
+
 use scripting::ScriptFunctions;
+
+use data::claims::AuthClaims;
+use Channels;
+use model::state::auth::AuthFunctions;
+use model::state::permission_store::PermissionStoreFunctions;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -133,10 +140,17 @@ impl<'a> StateFunctions<'a> for ActionState {
 
     type EntityModifierFunctions = EntityModifierController<'a>;
     fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions {
+        let password_secret = self.get_password_secret();
+        let auth = Auth::new(
+            &self.database,
+            password_secret.to_owned(),
+        );
+
         EntityModifierController {
             conn: &self.database,
             claims: &self.claims,
             scripting: &self.scripting,
+            auth_permissions: auth,
         }
     }
 
