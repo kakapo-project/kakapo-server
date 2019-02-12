@@ -25,7 +25,7 @@ use connection::Broadcaster;
 use connection::executor::Executor;
 use actix_web::test::TestApp;
 
-// use actix_web::dev::QueryConfig; //TODO: for some reason this can't be imported, probably actix_web issue
+// use actix_web::dev::QueryConfig; //NOTE: for some reason this can't be imported, probably actix_web issue
 
 
 /// extend actix cors routes to handle RPC

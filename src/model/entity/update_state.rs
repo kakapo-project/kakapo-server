@@ -108,20 +108,17 @@ impl<T> UpdateState<T> for Deleted<T>
 }
 
 ///Nothing needed here
-/// TODO: maybe have stored procedures here
+///maybe have stored procedures here for some speedup
 impl UpdateActionFunctions for data::Query {
     fn create_entity(controller: &EntityModifierController, new: &data::Query) -> Result<(), EntityError> {
-        //TODO: add create query delete query run query permissions
         Ok(())
     }
 
     fn update_entity(controller: &EntityModifierController, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
-        //TODO: update create query delete query run query permissions
         Ok(())
     }
 
     fn delete_entity(controller: &EntityModifierController, old: &data::Query) -> Result<(), EntityError> {
-        //TODO: delete create query delete query run query permissions
         Ok(())
     }
 }
@@ -129,17 +126,14 @@ impl UpdateActionFunctions for data::Query {
 ///Nothing needed here
 impl UpdateActionFunctions for data::View {
     fn create_entity(controller: &EntityModifierController, new: &data::View) -> Result<(), EntityError> {
-        //TODO: add create query delete query run query permissions
         Ok(())
     }
 
     fn update_entity(controller: &EntityModifierController, old: &data::View, new: &data::View) -> Result<(), EntityError> {
-        //TODO: update create query delete query run query permissions
         Ok(())
     }
 
     fn delete_entity(controller: &EntityModifierController, old: &data::View) -> Result<(), EntityError> {
-        //TODO: delete create query delete query run query permissions
         Ok(())
     }
 }
@@ -152,7 +146,7 @@ impl UpdatePermissionFunctions for data::Query {
             Permission::run_query(new.my_name().to_owned()),
         ];
 
-        //TODO: assuming that we are going to attach it to the user permission
+        //TODO: assuming that we are going to attach it to the current user rolo
         match controller.get_role_name() {
             Some(rolename) => for permission in permission_list {
                 controller

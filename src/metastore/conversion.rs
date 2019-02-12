@@ -171,24 +171,28 @@ impl GenerateRaw<data::View> for dbdata::NewRawView {
 }
 
 impl RawEntityTypes for data::Table {
+    const TYPE_NAME: &'static str = "table";
     type Data = RawTable;
     type NewData = NewRawTable;
 
 }
 
 impl RawEntityTypes for data::Query {
+    const TYPE_NAME: &'static str = "query";
     type Data = RawQuery;
     type NewData = NewRawQuery;
 
 }
 
 impl RawEntityTypes for data::Script {
+    const TYPE_NAME: &'static str = "script";
     type Data = RawScript;
     type NewData = NewRawScript;
 
 }
 
 impl RawEntityTypes for data::View {
+    const TYPE_NAME: &'static str = "view";
     type Data = RawView;
     type NewData = NewRawView;
 

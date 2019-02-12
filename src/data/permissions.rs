@@ -1,5 +1,6 @@
 
 use model::state::ActionState;
+use model::entity::RawEntityTypes;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,22 +62,28 @@ impl Permission {
         }
     }
 
-    pub fn read_entity<T>(name: String) -> Self {
+    pub fn read_entity<T>(name: String) -> Self
+        where T: RawEntityTypes
+    {
         Permission::GetEntity {
-            type_name: "temporary...".to_string(), //TODO: this should be a const
+            type_name: T::TYPE_NAME.to_string(),
             entity_name: name,
         }
     }
 
-    pub fn create_entity<T>() -> Self {
+    pub fn create_entity<T>() -> Self
+        where T: RawEntityTypes
+    {
         Permission::CreateEntity {
-            type_name: "temporary...".to_string(), //TODO: this should be a const
+            type_name: T::TYPE_NAME.to_string(),
         }
     }
 
-    pub fn modify_entity<T>(name: String) -> Self {
+    pub fn modify_entity<T>(name: String) -> Self
+        where T: RawEntityTypes
+    {
         Permission::ModifyEntity {
-            type_name: "temporary...".to_string(), //TODO: this should be a const
+            type_name: T::TYPE_NAME.to_string(),
             entity_name: name,
         }
     }

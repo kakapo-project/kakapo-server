@@ -28,6 +28,7 @@ pub trait RawEntityTypes
         Self: EntityCrudOps,
         Self: Named,
 {
+    const TYPE_NAME: &'static str;
     type Data;
     type NewData;
 }
