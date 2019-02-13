@@ -58,6 +58,12 @@ pub struct AuthData {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct RefreshToken {
+    pub refresh_token: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Invite {
     pub email: String,
 }
@@ -66,6 +72,14 @@ pub struct Invite {
 #[serde(rename_all = "camelCase")]
 struct RoleData {
     pub name: String
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct PasswordResetRequest {
+    pub username: String,
+    pub old_password: String,
+    pub new_password: String,
 }
 
 pub mod manage {
@@ -201,10 +215,22 @@ pub mod manage {
 pub mod users {
     use super::*;
 
-    pub fn authenticate(data: Value, query: Value) -> Result<impl Action, Error> {
+    pub fn login(data: Value, query: Value) -> Result<impl Action, Error> {
         let auth_data: AuthData = from_value(data)?;
         let _: NoQuery = from_value(query)?;
-        Ok(actions::Authenticate::<_>::new(auth_data.username, auth_data.password))
+        Ok(actions::Login::<_>::new(auth_data.username, auth_data.password))
+    }
+
+    pub fn refresh(data: Value, query: Value) -> Result<impl Action, Error> {
+        let auth_data: RefreshToken = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::Refresh::<_>::new(auth_data.refresh_token))
+    }
+
+    pub fn logout(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::Logout::<_>::new())
     }
 
     pub fn get_all_users(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -238,10 +264,12 @@ pub mod users {
     }
 
     pub fn set_user_password(data: Value, query: Value) -> Result<impl Action, Error> {
-        let data: AuthData = from_value(data)?;
+        let data: PasswordResetRequest = from_value(data)?;
         let _: NoQuery = from_value(query)?;
-        Ok(actions::SetUserPassword::<_>::new(data.username, data.password)) //TODO: add old password too
+        Ok(actions::SetUserPassword::<_>::new(data.username, data.new_password)) //TODO: add old password too
     }
+
+    //TODO: modify user
 
     pub fn add_role(data: Value, query: Value) -> Result<impl Action, Error> {
         let role: data::auth::Role = from_value(data)?;
@@ -333,7 +361,9 @@ macro_rules! implement_router {
                     .procedure("/manage/runQuery", manage::run_query)
                     .procedure("/manage/runScript", manage::run_script)
 
-                    .procedure("/users/authenticate", users::authenticate)
+                    .procedure("/users/login", users::login)
+                    .procedure("/users/refresh", users::refresh)
+                    .procedure("/users/logout", users::logout)
                     .procedure("/users/getAllUsers", users::get_all_users)
 
                     .procedure("/users/addUser", users::add_user)

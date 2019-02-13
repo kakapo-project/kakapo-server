@@ -20,15 +20,16 @@ use model::state::GetSecrets;
 use model::state::StateFunctions;
 use model::auth::send_mail::EmailOps;
 use model::state::auth::AuthFunctions;
+use data::auth::SessionToken;
 
 #[derive(Debug)]
-pub struct Authenticate<S = ActionState> {
+pub struct Login<S = ActionState> {
     user_identifier: String,
     password: String,
     phantom_data: PhantomData<(S)>,
 }
 
-impl<S> Authenticate<S>
+impl<S> Login<S>
     where for<'a> S: GetSecrets + StateFunctions<'a>,
 {
     pub fn new(user_identifier: String, password: String) -> WithTransaction<Self, S> {
@@ -44,25 +45,70 @@ impl<S> Authenticate<S>
     }
 }
 
-impl<S> Action<S> for Authenticate<S>
+impl<S> Action<S> for Login<S>
     where for<'a> S: GetSecrets + StateFunctions<'a>,
 {
-    type Ret = Option<()>;
+    type Ret = SessionToken;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
-            .authenticate(&self.user_identifier, &self.password)
-            .or_else(|err| Ok(false))
-            .and_then(|res| {
-                ActionRes::new(
-                    "Authenticate",
-                if res {
-                        Some(())
-                    } else {
-                        None
-                    })
-            })
+        unimplemented!()
+    }
+}
 
+#[derive(Debug)]
+pub struct Refresh<S = ActionState> {
+    refresh_token: String,
+    phantom_data: PhantomData<(S)>,
+}
 
+impl<S> Refresh<S>
+    where for<'a> S: GetSecrets + StateFunctions<'a>,
+{
+    pub fn new(refresh_token: String) -> WithTransaction<Self, S> {
+        let action = Self {
+            refresh_token,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+
+        action_with_transaction
+    }
+}
+
+impl<S> Action<S> for Refresh<S>
+    where for<'a> S: GetSecrets + StateFunctions<'a>,
+{
+    type Ret = SessionToken;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        unimplemented!();
+    }
+}
+
+#[derive(Debug)]
+pub struct Logout<S = ActionState> {
+    phantom_data: PhantomData<(S)>,
+}
+
+impl<S> Logout<S>
+    where for<'a> S: GetSecrets + StateFunctions<'a>,
+{
+    pub fn new() -> WithTransaction<Self, S> {
+        let action = Self {
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+
+        action_with_transaction
+    }
+}
+
+impl<S> Action<S> for Logout<S>
+    where for<'a> S: GetSecrets + StateFunctions<'a>,
+{
+    type Ret = ();
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        unimplemented!()
     }
 }
 
@@ -791,16 +837,17 @@ mod test {
             let result = create_action.call(&state);
 
             let create_action
-            = Authenticate::<MockState>::new(name.to_owned(), "hunter2".to_string());
+            = Login::<MockState>::new(name.to_owned(), "hunter2".to_string());
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
-            assert_eq!(data, Some(()));
+            //assert_eq!(data, Some(()));
+            unimplemented!();
 
             let create_action
-            = Authenticate::<MockState>::new(name.to_owned(), "wrong_password".to_string());
+            = Login::<MockState>::new(name.to_owned(), "wrong_password".to_string());
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
-            assert_eq!(data, None);
+            unimplemented!();
         })
     }
 
@@ -825,7 +872,7 @@ mod test {
             println!("data: {:?}", &result);
 
             let create_action
-            = Authenticate::<MockState>::new(name, "AV3ry$ecureP@assword".to_string());
+            = Login::<MockState>::new(name, "AV3ry$ecureP@assword".to_string());
             let result = create_action.call(&state);
             println!("data: {:?}", &result);
 

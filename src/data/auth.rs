@@ -9,7 +9,6 @@ pub struct User {
     pub display_name: String,
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewUser {
@@ -17,6 +16,19 @@ pub struct NewUser {
     pub email: String,
     pub password: String,
     pub display_name: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Role {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+impl Role {
+    pub fn get_name(&self) -> String {
+        self.name.to_owned()
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -34,17 +46,14 @@ pub struct InvitationToken {
     pub expires_at: chrono::NaiveDateTime,
 }
 
-
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct Role {
-    pub name: String,
-    pub description: Option<String>,
-}
-
-impl Role {
-    pub fn get_name(&self) -> String {
-        self.name.to_owned()
+#[serde(tag = "token_type")]
+pub enum SessionToken {
+    #[serde(rename_all = "camelCase")]
+    Bearer {
+        access_token: String, //jwt
+        expires_in: u32,
+        refresh_token: String,
     }
 }
