@@ -1,7 +1,8 @@
 
-pub mod auth;
-pub mod permission_store;
 pub mod error;
+pub mod authentication;
+pub mod authorization;
+pub mod user_management;
 
 use serde_json;
 
@@ -18,8 +19,8 @@ use model::actions::error::Error;
 use connection::executor::Conn;
 use connection::executor::Secrets;
 
-use metastore::auth_modifier::Auth;
-use metastore::permission_store::PermissionStore;
+use metastore::authorization::Authorization;
+use metastore::user_management::UserManagement;
 
 use model::entity::EntityRetrieverController;
 use model::entity::EntityModifierController;
@@ -27,8 +28,6 @@ use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::table::TableAction;
 use model::table::TableActionFunctions;
-use model::auth::GetUserInfo;
-use model::auth::UserInfo;
 use model::auth::send_mail::EmailSender;
 use model::auth::send_mail::EmailOps;
 
@@ -36,8 +35,9 @@ use scripting::ScriptFunctions;
 
 use data::claims::AuthClaims;
 use Channels;
-use model::state::auth::AuthFunctions;
-use model::state::permission_store::PermissionStoreFunctions;
+use model::state::authorization::AuthorizationOps;
+use model::state::authentication::AuthenticationOps;
+use model::state::user_management::UserManagementOps;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -57,25 +57,25 @@ pub trait StateFunctions<'a>
     where
         Self: Debug + Send,
         Self::TableController: TableActionFunctions,
-        Self::UserInfo: GetUserInfo,
         Self::Scripting: ScriptFunctions,
+        Self::EmailSender: EmailOps,
         //TODO: managementstore
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,
         //managementstore
-        Self::AuthFunctions: AuthFunctions,
-        Self::PermissionStore: PermissionStoreFunctions,
-        Self::EmailSender: EmailOps,
+        Self::UserManagement: UserManagementOps,
+        Self::Authorization: AuthorizationOps,
+        Self::Authentication: AuthenticationOps,
 {
     // user managment
-    type UserInfo;
-    fn get_user_info(&'a self) -> Self::UserInfo;
+    type Authentication; //Jwt maanager and session management
+    fn get_authentication(&'a self) -> Self::Authentication;
 
-    type AuthFunctions;
-    fn get_auth_functions(&'a self) -> Self::AuthFunctions;
+    type Authorization; //Read only user stuff
+    fn get_authorization(&'a self) -> Self::Authorization;
 
-    type PermissionStore;
-    fn get_permission(&'a self) -> Self::PermissionStore;
+    type UserManagement; //write user stuff
+    fn get_user_management(&'a self) -> Self::UserManagement;
 
     // tables management
     type EntityRetrieverFunctions;
@@ -101,33 +101,35 @@ pub trait StateFunctions<'a>
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
 }
 
-impl<'a> StateFunctions<'a> for ActionState {
-    type UserInfo = UserInfo<'a, Self::PermissionStore>;
-    fn get_user_info(&'a self) -> Self::UserInfo {
-        let permission_store: PermissionStore<'a> = PermissionStore {
-            conn: &self.database,
-        };
+pub struct Authentication;
 
-        UserInfo {
-            permission_store,
+impl AuthenticationOps for Authentication {
+
+}
+
+
+
+impl<'a> StateFunctions<'a> for ActionState {
+    type Authentication = Authentication;
+    fn get_authentication(&'a self) -> Self::Authentication {
+        unimplemented!()
+    }
+
+    type Authorization = Authorization<'a>;
+    fn get_authorization(&'a self) -> Self::Authorization {
+        Authorization {
+            conn: &self.database,
             claims: &self.claims,
         }
     }
 
-    type AuthFunctions = Auth<'a>;
-    fn get_auth_functions(&'a self) -> Auth<'a> {
+    type UserManagement = UserManagement<'a>;
+    fn get_user_management(&'a self) -> Self::UserManagement {
         let password_secret = self.get_password_secret();
-        Auth::new(
+        UserManagement::new(
             &self.database,
             password_secret.to_owned(),
         )
-    }
-
-    type PermissionStore = PermissionStore<'a>;
-    fn get_permission(&'a self) -> Self::PermissionStore {
-        PermissionStore {
-            conn: &self.database,
-        }
     }
 
     type EntityRetrieverFunctions = EntityRetrieverController<'a>;
@@ -141,16 +143,17 @@ impl<'a> StateFunctions<'a> for ActionState {
     type EntityModifierFunctions = EntityModifierController<'a>;
     fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions {
         let password_secret = self.get_password_secret();
-        let auth = Auth::new(
+        let user_management = UserManagement::new(
             &self.database,
             password_secret.to_owned(),
         );
+
 
         EntityModifierController {
             conn: &self.database,
             claims: &self.claims,
             scripting: &self.scripting,
-            auth_permissions: auth,
+            user_management,
         }
     }
 

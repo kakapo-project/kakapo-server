@@ -7,35 +7,37 @@ use diesel;
 use diesel::result::Error as DbError;
 use diesel::result::DatabaseErrorKind as DbErrKind;
 
-use data::auth::User;
+use chrono::Utc;
+use serde_json;
+
+use model::state::user_management::UserManagementOps;
+use model::auth::tokens::Token;
+
+use model::state::error::UserManagementError;
 use data::auth::InvitationToken;
-use data::auth::NewUser;
 use data::auth::Role;
+use data::permissions::Permission;
+use data::auth::NewUser;
+use data::auth::User;
 use data::schema;
 
 use connection::executor::Conn;
 
-use model::state::error::UserManagementError;
-use data::permissions::Permission;
-use model::auth::tokens::Token;
-
 use metastore::dbdata;
-use chrono::Utc;
-use serde_json;
-use model::state::auth::AuthFunctions;
 
-pub struct Auth<'a> {
+
+pub struct UserManagement<'a> {
     conn: &'a Conn,
     password_secret: String,
 }
 
-impl<'a> Auth<'a> {
+impl<'a> UserManagement<'a> {
     pub fn new(conn: &'a Conn, password_secret: String) -> Self {
         Self { conn, password_secret }
     }
 }
 
-impl<'a> AuthFunctions for Auth<'a> {
+impl<'a> UserManagementOps for UserManagement<'a> {
     fn authenticate(&self, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
         debug!("Authenticating user: {:?}", user_identifier);
         let user = schema::user::table

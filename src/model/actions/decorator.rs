@@ -14,7 +14,7 @@ use model::state::GetBroadcaster;
 use model::actions::OkAction;
 use std::fmt;
 use model::state::StateFunctions;
-use model::auth::GetUserInfo;
+use model::state::authorization::AuthorizationOps;
 
 #[derive(Debug, Clone)]
 enum Requirements {
@@ -97,12 +97,12 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if state.get_user_info().is_admin() {
+        if state.get_authorization().is_admin() {
             return self.action.call(state);
         }
 
         let user_permissions = state
-            .get_user_info()
+            .get_authorization()
             .permissions()
             .unwrap_or_default();
         let is_permitted = self.permissions.is_permitted(&user_permissions);
@@ -148,12 +148,12 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if state.get_user_info().is_admin() {
+        if state.get_authorization().is_admin() {
             return self.action.call(state);
         }
 
         let user_permissions = state
-            .get_user_info()
+            .get_authorization()
             .permissions();
         match user_permissions {
             None => {
@@ -211,17 +211,17 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
 {
     type Ret = A::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        if state.get_user_info().is_admin() {
+        if state.get_authorization().is_admin() {
             return self.action.call(state);
         }
 
         let user_permissions = state
-            .get_user_info()
+            .get_authorization()
             .permissions()
             .unwrap_or_default();
 
         let all_permissions = state
-            .get_user_info()
+            .get_authorization()
             .all_permissions();
 
         let is_permitted = (self.required_permission)(&user_permissions, &all_permissions);

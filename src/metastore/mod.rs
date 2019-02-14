@@ -1,6 +1,6 @@
 
-pub mod auth_modifier;
-pub mod permission_store;
+pub mod user_management;
+pub mod authorization;
 mod conversion;
 mod dbdata;
 

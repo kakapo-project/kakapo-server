@@ -7,8 +7,7 @@ use model::entity::EntityModifierController;
 use model::entity::RawEntityTypes;
 use data::permissions::Permission;
 use data::Named;
-use model::state::auth::AuthFunctions;
-
+use model::state::user_management::UserManagementOps;
 
 pub trait UpdateActionFunctions
     where Self: UpdatePermissionFunctions
@@ -150,12 +149,12 @@ impl UpdatePermissionFunctions for data::Query {
         match controller.get_role_name() {
             Some(rolename) => for permission in permission_list {
                 controller
-                    .auth_permissions
+                    .user_management
                     .attach_permission_for_role(&permission, &rolename);
             },
             None => for permission in permission_list {
                 controller
-                    .auth_permissions
+                    .user_management
                     .add_permission(&permission);
             },
         };
@@ -184,7 +183,7 @@ impl UpdatePermissionFunctions for data::Query {
 
         for (old_permission, new_permission) in permission_list {
             controller
-                .auth_permissions
+                .user_management
                 .rename_permission(&old_permission, &new_permission);
         }
 
@@ -201,7 +200,7 @@ impl UpdatePermissionFunctions for data::Query {
 
         for permission in permission_list {
             controller
-                .auth_permissions
+                .user_management
                 .remove_permission(&permission);
         }
 

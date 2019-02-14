@@ -1,12 +1,11 @@
-
 use model::state::error::UserManagementError;
 use data::auth::NewUser;
+use data::auth::InvitationToken;
 use data::auth::User;
 use data::auth::Role;
 use data::permissions::Permission;
-use data::auth::InvitationToken;
 
-pub trait AuthFunctions {
+pub trait UserManagementOps {
     fn authenticate(&self, user_identifier: &str, password: &str) -> Result<bool, UserManagementError>;
     fn add_user(&self, user: &NewUser) -> Result<User, UserManagementError>;
     fn remove_user(&self, user_identifier: &str) -> Result<User, UserManagementError>;

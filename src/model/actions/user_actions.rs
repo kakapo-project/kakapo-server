@@ -10,7 +10,6 @@ use model::state::ActionState;
 use data::permissions::*;
 use model::actions::decorator::*;
 
-use model::state::auth;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
@@ -19,8 +18,8 @@ use model::state::GetSecrets;
 
 use model::state::StateFunctions;
 use model::auth::send_mail::EmailOps;
-use model::state::auth::AuthFunctions;
 use data::auth::SessionToken;
+use model::state::user_management::UserManagementOps;
 
 #[derive(Debug)]
 pub struct Login<S = ActionState> {
@@ -142,7 +141,8 @@ impl<S> Action<S> for GetAllUsers<S>
 {
     type Ret = AllUsersResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_user_management()
             .get_all_users()
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("GetAllUsers", AllUsersResult(res)))
@@ -179,7 +179,8 @@ impl<S> Action<S> for AddUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_user_management()
             .add_user(&self.user)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AddUser", UserResult(res)))
@@ -215,7 +216,8 @@ impl<S> Action<S> for RemoveUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_user_management()
             .remove_user(&self.user_identifier)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
@@ -252,7 +254,7 @@ impl<S> Action<S> for InviteUser<S>
     type Ret = InvitationResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let invitation_token = state
-            .get_auth_functions()
+            .get_user_management()
             .create_user_token(&self.email)
             .map_err(Error::UserManagement)?;
 
@@ -295,7 +297,8 @@ impl<S> Action<S> for SetupUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_user_management()
             .add_user(&self.user)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("SetupUser", UserResult(res)))
@@ -341,7 +344,7 @@ impl<S> Action<S> for SetUserPassword<S>
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .modify_user_password(&self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("SetUserPassword", UserResult(res)))
@@ -380,7 +383,7 @@ impl<S> Action<S> for AddRole<S>
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .add_role(&self.role)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AddRole", RoleResult(res)))
@@ -417,7 +420,7 @@ impl<S> Action<S> for RemoveRole<S>
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .remove_role(&self.rolename)
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("RemoveRole", RoleResult(res)))
@@ -452,7 +455,7 @@ impl<S> Action<S> for GetAllRoles<S>
     type Ret = AllRolesResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .get_all_roles()
             .or_else(|err| Err(Error::UserManagement(err)))
             .and_then(|res| ActionRes::new("GetAllRoles", AllRolesResult(res)))
@@ -496,7 +499,7 @@ impl<S> Action<S> for AttachPermissionForRole<S>
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .attach_permission_for_role(&self.permission, &self.rolename)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AttachPermissionForRole", RoleResult(res)))
@@ -540,7 +543,7 @@ impl<S> Action<S> for DetachPermissionForRole<S>
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .detach_permission_for_role(&self.permission, &self.rolename)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("DetachPermissionForRole", RoleResult(res)))
@@ -583,7 +586,7 @@ impl<S> Action<S> for AttachRoleForUser<S>
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
-            .get_auth_functions()
+            .get_user_management()
             .attach_role_for_user(&self.rolename, &self.user_identifier)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("AttachRoleForUser", UserResult(res)))
@@ -625,7 +628,8 @@ impl<S> Action<S> for DetachRoleForUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        state.get_auth_functions()
+        state
+            .get_user_management()
             .detach_role_for_user(&self.rolename, &self.user_identifier)
             .map_err(Error::UserManagement)
             .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))

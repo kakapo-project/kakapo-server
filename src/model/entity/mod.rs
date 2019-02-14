@@ -18,7 +18,7 @@ use data::claims::AuthClaims;
 use scripting::Scripting;
 use data::Named;
 use model::entity::update_state::UpdatePermissionFunctions;
-use metastore::auth_modifier::Auth;
+use metastore::user_management::UserManagement;
 
 pub trait RawEntityTypes
     where
@@ -51,7 +51,7 @@ pub struct EntityModifierController<'a> {
     pub conn: &'a Conn, //TODO: database specific, dependency inject here
     pub claims: &'a Option<AuthClaims>,
     pub scripting: &'a Scripting,
-    pub auth_permissions: Auth<'a>,
+    pub user_management: UserManagement<'a>, //Entities need to get access to user management for updating data
 }
 
 impl<'a> EntityModifierController<'a> {

@@ -165,20 +165,21 @@ impl EmailOps for MockMailer {
 #[derive(Debug)]
 pub struct MockState(pub ActionState);
 impl<'a> StateFunctions<'a> for MockState {
-    type UserInfo = <ActionState as StateFunctions<'a>>::UserInfo;
-    fn get_user_info(&'a self) -> <Self as StateFunctions<'a>>::UserInfo {
-        self.0.get_user_info()
+    type Authentication = <ActionState as StateFunctions<'a>>::Authentication;
+    fn get_authentication(&'a self) -> <Self as StateFunctions<'a>>::Authentication {
+        self.0.get_authentication()
     }
 
-    type AuthFunctions = <ActionState as StateFunctions<'a>>::AuthFunctions;
-    fn get_auth_functions(&'a self) -> <Self as StateFunctions<'a>>::AuthFunctions {
-        self.0.get_auth_functions()
+    type Authorization = <ActionState as StateFunctions<'a>>::Authorization;
+    fn get_authorization(&'a self) -> <Self as StateFunctions<'a>>::Authorization {
+        self.0.get_authorization()
     }
 
-    type PermissionStore = <ActionState as StateFunctions<'a>>::PermissionStore;
-    fn get_permission(&'a self) -> <Self as StateFunctions<'a>>::PermissionStore {
-        self.0.get_permission()
+    type UserManagement = <ActionState as StateFunctions<'a>>::UserManagement;
+    fn get_user_management(&'a self) -> <Self as StateFunctions<'a>>::UserManagement {
+        self.0.get_user_management()
     }
+
 
     type EntityRetrieverFunctions = <ActionState as StateFunctions<'a>>::EntityRetrieverFunctions;
     fn get_entity_retreiver_functions(&'a self) -> <Self as StateFunctions<'a>>::EntityRetrieverFunctions {

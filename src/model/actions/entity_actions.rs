@@ -28,9 +28,7 @@ use model::entity::results::Deleted;
 use model::entity::update_state::UpdateActionFunctions;
 
 use model::state::ActionState;
-
-use model::auth::GetUserInfo;
-
+use model::state::authorization::AuthorizationOps;
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
@@ -68,7 +66,7 @@ impl<A, T, S> Action<S> for WithFilterListByPermission<A, T, S>
     type Ret = <GetAllEntities<T, S> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let user_permissions = state
-            .get_user_info()
+            .get_authorization()
             .permissions()
             .unwrap_or_default();
         let raw_results = self.action.call(state)?;

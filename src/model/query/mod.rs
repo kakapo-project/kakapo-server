@@ -9,7 +9,7 @@ use data::Value;
 use data::QueryParams;
 use std::fmt::Debug;
 use model::state::StateFunctions;
-use model::auth::GetUserInfo;
+use model::state::authorization::AuthorizationOps;
 
 #[derive(Debug, Clone)]
 pub struct QueryAction {}
@@ -22,7 +22,7 @@ pub trait QueryActionFunctions<S>
 
 impl QueryActionFunctions<ActionState> for QueryAction {
     fn run_query(state: &ActionState, query: &data::Query, params: &QueryParams) -> Result<data::RawTableData, QueryError>  {
-        let username = state.get_user_info().username();
+        let username = state.get_authorization().username();
         let db_params = params.value_list();
 
         if let Some(db_user) = username.to_owned() {

@@ -10,7 +10,7 @@ use model::entity::error::EntityError;
 use model::entity::update_state::UpdateActionFunctions;
 use model::entity::update_state::UpdatePermissionFunctions;
 use data::permissions::Permission;
-use model::state::auth::AuthFunctions;
+use model::state::user_management::UserManagementOps;
 
 fn get_sql_data_type(data_type: &DataType) -> String {
     match data_type {
@@ -109,12 +109,12 @@ impl UpdatePermissionFunctions for data::Table {
         match controller.get_role_name() {
             Some(rolename) => for permission in permission_list {
                 controller
-                    .auth_permissions
+                    .user_management
                     .attach_permission_for_role(&permission, &rolename);
             },
             None => for permission in permission_list {
                 controller
-                    .auth_permissions
+                    .user_management
                     .add_permission(&permission);
             },
         };
@@ -147,7 +147,7 @@ impl UpdatePermissionFunctions for data::Table {
 
         for (old_permission, new_permission) in permission_list {
             controller
-                .auth_permissions
+                .user_management
                 .rename_permission(&old_permission, &new_permission);
         }
 
@@ -165,7 +165,7 @@ impl UpdatePermissionFunctions for data::Table {
 
         for permission in permission_list {
             controller
-                .auth_permissions
+                .user_management
                 .remove_permission(&permission);
         }
 
