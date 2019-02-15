@@ -20,19 +20,17 @@ use super::procedure::procedure_bad_request_handler_function;
 use model::actions::Action;
 use std::fmt::Debug;
 use serde::Serialize;
-use connection::GetAppState;
-use connection::Broadcaster;
 use connection::executor::Executor;
 use actix_web::test::TestApp;
+use connection::AppStateLike;
 
 // use actix_web::dev::QueryConfig; //NOTE: for some reason this can't be imported, probably actix_web issue
 
 
 /// extend actix cors routes to handle RPC
-pub trait ProcedureExt<S, B>
+pub trait ProcedureExt<S>
     where
-        S: GetAppState<B> + 'static,
-        B: Broadcaster,
+        S: AppStateLike + 'static,
 {
 
     /// Create an RPC call
@@ -47,7 +45,7 @@ pub trait ProcedureExt<S, B>
             JP: Debug + 'static,
             QP: Debug + 'static,
             A: Action + Send + 'static,
-            PB: ProcedureBuilder<S, B, JP, QP, A> + Clone + 'static,
+            PB: ProcedureBuilder<S, JP, QP, A> + Clone + 'static,
             Json<JP>: FromRequest<S, Config = JsonConfig<S>>,
             Query<QP>: FromRequest<S>,
             <A as Action>::Ret: Send + Serialize;
@@ -57,16 +55,15 @@ pub trait ProcedureExt<S, B>
 macro_rules! implement_router {
 
     ($App:ident) => {
-        impl<S, B> ProcedureExt<S, B> for $App<S>
+        impl<S> ProcedureExt<S> for $App<S>
             where
-                S: GetAppState<B> + 'static,
-                B: Broadcaster,
+                S: AppStateLike + 'static,
         {
             fn procedure<JP, QP, A, PB>(&mut self, path: &str, procedure_builder: PB) -> &mut Self
                 where
                     Executor: Handler<ActionWrapper<A>>,
                     A: Action + Send + 'static,
-                    PB: ProcedureBuilder<S, B, JP, QP, A> + Clone + 'static,
+                    PB: ProcedureBuilder<S, JP, QP, A> + Clone + 'static,
                     JP: Debug + 'static,
                     QP: Debug + 'static,
                     Json<JP>: FromRequest<S, Config = JsonConfig<S>>,
@@ -76,7 +73,7 @@ macro_rules! implement_router {
                 self.resource(path, move |r| {
                     r.method(http::Method::POST).with_config(
                         move |(req, json_params, query_params): (HttpRequest<S>, Json<JP>, Query<QP>)| {
-                            let proc = ProcedureHandler::<S, B, JP, QP, PB, A>::setup(&procedure_builder);
+                            let proc = ProcedureHandler::<S, JP, QP, PB, A>::setup(&procedure_builder);
                             procedure_handler_function(proc, req, json_params, query_params)
                         },
                         |((_, json_cfg, _query_cfg),)| {

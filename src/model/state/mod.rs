@@ -11,9 +11,9 @@ use std::fmt;
 use std::sync::Arc;
 
 use diesel::Connection;
-use scripting::Scripting;
-use connection::Broadcaster;
 use serde::Serialize;
+
+
 use model::actions::error::Error;
 
 use connection::executor::Conn;
@@ -30,20 +30,22 @@ use model::table::TableAction;
 use model::table::TableActionFunctions;
 use model::auth::send_mail::EmailSender;
 use model::auth::send_mail::EmailOps;
-
-use scripting::ScriptFunctions;
-
-use data::claims::AuthClaims;
-use Channels;
 use model::state::authorization::AuthorizationOps;
 use model::state::authentication::AuthenticationOps;
 use model::state::user_management::UserManagementOps;
+
+use scripting::ScriptFunctions;
+use scripting::Scripting;
+
+use data::claims::AuthClaims;
+use Channels;
+use model::broadcast::BroadcasterOps;
+use model::broadcast::Broadcaster;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
-    pub broadcaster: Arc<Broadcaster>,
     pub secrets: Secrets,
 }
 
@@ -59,6 +61,7 @@ pub trait StateFunctions<'a>
         Self::TableController: TableActionFunctions,
         Self::Scripting: ScriptFunctions,
         Self::EmailSender: EmailOps,
+        Self::Broadcaster: BroadcasterOps,
         //TODO: managementstore
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,
@@ -96,6 +99,9 @@ pub trait StateFunctions<'a>
 
     type EmailSender;
     fn get_email_sender(&'a self) -> Self::EmailSender;
+
+    type Broadcaster;
+    fn get_broadcaster(&'a self) -> Self::Broadcaster;
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: why is it a diesel::result::Error?
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
@@ -179,6 +185,11 @@ impl<'a> StateFunctions<'a> for ActionState {
         EmailSender {}
     }
 
+    type Broadcaster = Broadcaster;
+    fn get_broadcaster(&'a self) -> Self::Broadcaster {
+        Broadcaster {}
+    }
+
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: should work for all state actions
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error> {
         let conn = &self.database;
@@ -192,38 +203,17 @@ impl ActionState {
         database: Conn,
         scripting: Scripting,
         claims: Option<AuthClaims>,
-        broadcaster: Arc<Broadcaster>,
         secrets: Secrets,
     ) -> Self {
         Self {
             database,
             scripting,
             claims,
-            broadcaster,
             secrets,
         }
     }
 }
 
-pub trait GetBroadcaster {
-    fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
-        where R: Serialize;
-}
-
-impl GetBroadcaster for ActionState {
-    fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), Error>
-        where R: Serialize
-    {
-        let payload = serde_json::to_value(action_result)
-            .or_else(|err| Err(Error::SerializationError(err.to_string())))?;
-
-
-        self.broadcaster.publish(channels, action_name, payload)
-            .or_else(|err| Err(Error::PublishError(err)))?;
-
-        Ok(())
-    }
-}
 
 pub trait GetSecrets {
     fn get_token_secret(&self) -> String;

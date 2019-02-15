@@ -32,12 +32,9 @@ extern crate uuid;
 
 extern crate kakapo_api;
 
-use kakapo_api::KakapoState;
-use kakapo_api::KakapoStateBuilder;
-use kakapo_api::GetKakapoState;
-use kakapo_api::KakapoBroadcaster;
+use kakapo_api::AppState;
+use kakapo_api::AppStateLike;
 use kakapo_api::Channels;
-use kakapo_api::BroadcasterError;
 use kakapo_api::KakapoRouter;
 use actix_web::test::TestServerBuilder;
 use actix_web::HttpMessage;

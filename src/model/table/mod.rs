@@ -7,13 +7,10 @@ use data::Named;
 use model::table::error::TableError;
 use database::error::DbError;
 use connection::executor::Conn;
+use database::DatabaseFunctions;
 
 pub struct TableAction<'a> {
     pub conn: &'a Conn,
-}
-
-pub trait DatabaseFunctions {
-    fn exec(&self, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError>;
 }
 
 pub trait TableActionFunctions {

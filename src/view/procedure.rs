@@ -1,29 +1,28 @@
 
+use std::fmt::Debug;
 
-use actix::prelude::*;
-
-use actix_web::{
-    AsyncResponder, Error as ActixError,
-    FromRequest, Json, Query,
-    HttpRequest, HttpResponse,
-};
-
+use serde::Serialize;
 use serde_json;
 
-use connection::executor::Executor;
+use actix::prelude::*;
+use actix_web::AsyncResponder;
+use actix_web::error;
+use actix_web::error::JsonPayloadError;
+use actix_web::Error as ActixError;
+use actix_web::FromRequest;
+use actix_web::Json;
+use actix_web::Query;
+use actix_web::HttpRequest;
+use actix_web::HttpResponse;
+use actix_web::http::header;
+
 use futures::Future;
 
+use connection::executor::Executor;
+use connection::AppStateLike;
 
 use model::actions::Action;
 use view::action_wrapper::ActionWrapper;
-
-use actix_web::error;
-use std::fmt::Debug;
-use actix_web::error::JsonPayloadError;
-use serde::Serialize;
-use connection::GetAppState;
-use connection::Broadcaster;
-use actix_web::http::header;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -32,7 +31,7 @@ pub struct NoQuery {}
 
 
 /// Build `Action` from an http request
-pub trait ProcedureBuilder<S, B, JP, QP, A> {
+pub trait ProcedureBuilder<S, JP, QP, A> {
     /// build an Action
     ///
     /// # Arguments
@@ -44,11 +43,10 @@ pub trait ProcedureBuilder<S, B, JP, QP, A> {
 }
 
 /// can use lambdas instead of procedure builder
-impl<S, B, A, F> ProcedureBuilder<S, B, serde_json::Value, serde_json::Value, A> for F
+impl<S, A, F> ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> for F
     where
         F: FnOnce(serde_json::Value, serde_json::Value) -> Result<A, serde_json::Error>,
-        S: GetAppState<B>,
-        B: Broadcaster,
+        S: AppStateLike,
 {
     fn build(self, json_param: serde_json::Value, query_params: serde_json::Value) -> Result<A, serde_json::Error> {
         self(json_param, query_params)
@@ -58,34 +56,32 @@ impl<S, B, A, F> ProcedureBuilder<S, B, serde_json::Value, serde_json::Value, A>
 
 /// Container struct for implemeting the `dev::Handler<AppState>` trait
 /// This will extract the `ProcedureBuilder` and execute it asynchronously
-pub struct ProcedureHandler<S, B, JP, QP, PB, A>
+pub struct ProcedureHandler<S, JP, QP, PB, A>
     where
         Executor: Handler<ActionWrapper<A>>,
-        PB: ProcedureBuilder<S, B, JP, QP, A> + Clone,
+        PB: ProcedureBuilder<S, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<S>,
         Query<QP>: FromRequest<S>,
         A: Action + 'static,
-        S: GetAppState<B>,
-        B: Broadcaster,
+        S: AppStateLike,
 {
     builder: PB,
-    phantom_data: std::marker::PhantomData<(S, B, JP, QP, A)>,
+    phantom_data: std::marker::PhantomData<(S, JP, QP, A)>,
 }
 
 
-impl<S, B, JP, QP, PB, A> ProcedureHandler<S, B, JP, QP, PB, A>
+impl<S, JP, QP, PB, A> ProcedureHandler<S, JP, QP, PB, A>
     where
         Executor: Handler<ActionWrapper<A>>,
-        PB: ProcedureBuilder<S, B, JP, QP, A> + Clone,
+        PB: ProcedureBuilder<S, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<S>,
         Query<QP>: FromRequest<S>,
         A: Action,
-        S: GetAppState<B>,
-        B: Broadcaster,
+        S: AppStateLike,
 {
     /// constructor
     pub fn setup(builder: &PB) -> Self {
@@ -96,36 +92,33 @@ impl<S, B, JP, QP, PB, A> ProcedureHandler<S, B, JP, QP, PB, A>
     }
 }
 
-pub fn procedure_handler_function<S, B, JP, QP, PB, A>(
-    procedure_handler: ProcedureHandler<S, B, JP, QP, PB, A>,
+pub fn procedure_handler_function<S, JP, QP, PB, A>(
+    procedure_handler: ProcedureHandler<S, JP, QP, PB, A>,
     req: HttpRequest<S>,
     json_params: Json<JP>,
     query_params: Query<QP>
 ) -> AsyncResponse
     where
         Executor: Handler<ActionWrapper<A>>,
-        PB: ProcedureBuilder<S, B, JP, QP, A> + Clone,
+        PB: ProcedureBuilder<S, JP, QP, A> + Clone,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<S>,
         Query<QP>: FromRequest<S>,
         A: Action,
         <A as Action>::Ret: Serialize,
-        S: GetAppState<B>,
-        B: Broadcaster,
+        S: AppStateLike,
 {
 
     debug!("Procedure called on {:?} QUERY {:?} JSON {:?}", req.path(), &json_params, &query_params);
     let action = procedure_handler.builder.build(json_params.into_inner(), query_params.into_inner());
     let state = req.state();
 
-    let broadcaster = state.get_broadcaster();
     let auth_header = req.headers().get(header::AUTHORIZATION).map(|x| x.as_bytes());
 
     state
-        .get_app_state()
         .connect()
-        .send(ActionWrapper::new(auth_header, broadcaster, action))
+        .send(ActionWrapper::new(auth_header, action))
         .from_err()
         .and_then(|res| {
             match res {

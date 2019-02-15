@@ -11,17 +11,16 @@ use actix_web::test::TestApp;
 
 // current module
 use model::actions;
-use connection::GetAppState;
 
 use view::procedure::NoQuery;
 use view::extensions::ProcedureExt;
 use data;
 use actix_web::middleware::cors::CorsBuilder;
-use connection::Broadcaster;
 use model::actions::Action;
 use serde_json::Value;
 use serde_json::Error;
 use serde_json::from_value;
+use connection::AppStateLike;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -315,10 +314,9 @@ pub mod users {
 
 }
 
-pub trait Router<S, B>
+pub trait Router<S>
     where
-        S: GetAppState<B> + 'static,
-        B: Broadcaster,
+        S: AppStateLike + 'static,
 {
     fn router(app: &mut Self) -> &mut Self;
 }
@@ -326,10 +324,9 @@ pub trait Router<S, B>
 macro_rules! implement_router {
 
     ($App:ident) => {
-        impl<S, B> Router<S, B> for $App<S>
+        impl<S> Router<S> for $App<S>
             where
-                S: GetAppState<B> + 'static,
-                B: Broadcaster,
+                S: AppStateLike + 'static,
         {
             fn router(app: &mut Self) -> &mut Self {
                 app

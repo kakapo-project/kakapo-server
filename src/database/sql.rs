@@ -15,7 +15,6 @@ use diesel::prelude::*;
 
 use connection::executor::Conn;
 
-use model::table::DatabaseFunctions;
 use data::Value;
 use data::DataType;
 use data;
@@ -27,7 +26,7 @@ use diesel::deserialize::FromSql;
 use diesel::serialize::Output;
 use diesel::serialize::ToSql;
 use diesel::serialize::IsNull;
-
+use database::DatabaseFunctions;
 
 struct InternalRawConnection {
     pub internal_connection: NonNull<pq_sys::PGconn>,

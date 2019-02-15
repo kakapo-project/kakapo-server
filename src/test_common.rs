@@ -14,17 +14,13 @@ use actix_web::http::header;
 use uuid::Uuid;
 use actix_web::client::ClientResponse;
 
-use super::KakapoState;
-use super::KakapoStateBuilder;
-use super::GetKakapoState;
-use super::KakapoBroadcaster;
+use super::AppState as KakapoState;
+use super::AppStateBuilder as KakapoStateBuilder;
 use super::Channels;
-use super::BroadcasterError;
 use super::KakapoRouter;
 use model::state::ActionState;
 use model::state::StateFunctions;
 use model::state::GetSecrets;
-use model::state::GetBroadcaster;
 use diesel::r2d2::ConnectionManager;
 use diesel::pg::PgConnection;
 use data::claims::AuthClaims;
@@ -38,6 +34,9 @@ use diesel::r2d2::Pool;
 use model::actions;
 use diesel::Connection;
 use model::auth::send_mail::EmailOps;
+use connection::AppStateLike;
+use actix::Addr;
+use connection::executor::Executor;
 
 pub fn random_identifier() -> String {
     let uuid = Uuid::new_v4();
@@ -118,34 +117,17 @@ pub const MASTER_KEY_TOKEN: &'static str = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIU
 
 #[derive(Debug)]
 pub struct TestState(KakapoState);
-#[derive(Debug)]
-pub struct TestBroadcaster;
+
+
+impl AppStateLike for TestState {
+    fn connect(&self) -> &Addr<Executor> {
+        self.0.connect()
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Column {
     pub name: String
-}
-
-impl KakapoBroadcaster for TestBroadcaster {
-    fn publish(
-        &self,
-        channels: Vec<Channels>,
-        action_name: String,
-        action_result: serde_json::Value,
-    ) -> Result<(), BroadcasterError> {
-        //do nothing
-        Ok(())
-    }
-}
-
-impl GetKakapoState<TestBroadcaster> for TestState {
-    fn get_app_state(&self) -> &KakapoState {
-        &self.0
-    }
-
-    fn get_broadcaster(&self) -> Arc<KakapoBroadcaster> {
-        Arc::new(TestBroadcaster)
-    }
 }
 
 // unit tests
@@ -211,6 +193,12 @@ impl<'a> StateFunctions<'a> for MockState {
         MockMailer
     }
 
+    type Broadcaster = <ActionState as StateFunctions<'a>>::Broadcaster;
+
+    fn get_broadcaster(&'a self) -> <Self as StateFunctions<'a>>::Broadcaster {
+        self.0.get_broadcaster()
+    }
+
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
         where
             F: FnOnce() -> Result<G, E>,
@@ -226,14 +214,6 @@ impl GetSecrets for MockState {
     fn get_password_secret(&self) -> String { self.0.get_password_secret() }
 }
 
-impl GetBroadcaster for MockState {
-    fn publish<R>(&self, channels: Vec<Channels>, action_name: String, action_result: &R) -> Result<(), actions::error::Error>
-        where R: Serialize
-    {
-        self.0.publish(channels, action_name, action_result)
-    }
-}
-
 pub fn with_state<F>(f: F)
     where F: FnOnce(&MockState) -> ()
 {
@@ -245,13 +225,12 @@ pub fn with_state<F>(f: F)
 
     let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
     let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
-    let broadcaster = Arc::new(TestBroadcaster);
     let secrets = Secrets {
         token_secret: "A".to_string(),
         password_secret: "B".to_string(),
     };
 
-    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
+    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets);
 
     let mock_state = MockState(state);
     let conn = &mock_state.0.database;
@@ -274,13 +253,12 @@ pub fn with_state_no_transaction<F>(f: F)
 
     let claims_json = json!({ "iss": "https://doesntmatter.com", "sub": 1, "iat": 0, "exp": -1, "username": "Admin", "isAdmin": true, "role": null });
     let claims: AuthClaims = serde_json::from_value(claims_json).unwrap();
-    let broadcaster = Arc::new(TestBroadcaster);
     let secrets = Secrets {
         token_secret: "A".to_string(),
         password_secret: "B".to_string(),
     };
 
-    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), broadcaster, secrets);
+    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets);
 
     let mock_state = MockState(state);
 

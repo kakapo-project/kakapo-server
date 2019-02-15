@@ -14,7 +14,6 @@ use model::actions::decorator::*;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
 use scripting::ScriptFunctions;
@@ -29,7 +28,7 @@ pub struct RunScript<S = ActionState>  {
 
 impl<S> RunScript<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     pub fn new(script_name: String, param: data::ScriptParam) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -48,7 +47,7 @@ impl<S> RunScript<S>
 
 impl<S> Action<S> for RunScript<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     type Ret = RunScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

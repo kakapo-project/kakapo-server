@@ -46,6 +46,7 @@ mod data;
 mod database;
 mod connection;
 mod metastore;
+//mod sockets;
 
 //#[cfg(test)]
 pub mod test_common;
@@ -56,39 +57,34 @@ use actix_web::middleware::cors::CorsBuilder;
 
 
 // Internal dependencies
-pub use connection::AppStateBuilder as KakapoStateBuilder;
-pub use connection::AppState as KakapoState;
-pub use connection::GetAppState as GetKakapoState;
-pub use connection::Broadcaster as KakapoBroadcaster;
+pub use connection::AppStateBuilder;
+pub use connection::AppState;
+pub use connection::AppStateLike;
 pub use connection::Channels;
-pub use connection::BroadcasterError;
 use actix_web::test::TestApp;
 
 
-pub trait KakapoRouter<S, B>
+pub trait KakapoRouter<S>
     where
-        S: GetKakapoState<B> + 'static,
-        B: KakapoBroadcaster,
+        S: AppStateLike + 'static,
 {
     fn kakapo_routes(&mut self) -> &mut Self;
 }
 
-impl<S, B> KakapoRouter<S, B> for CorsBuilder<S>
+impl<S> KakapoRouter<S> for CorsBuilder<S>
     where
-        S: GetKakapoState<B> + 'static,
-        B: KakapoBroadcaster,
+        S: AppStateLike + 'static,
 {
     fn kakapo_routes(&mut self) -> &mut Self {
-        view::Router::<S, B>::router(self)
+        view::Router::<S>::router(self)
     }
 }
 
-impl<S, B> KakapoRouter<S, B> for TestApp<S>
+impl<S> KakapoRouter<S> for TestApp<S>
     where
-        S: GetKakapoState<B> + 'static,
-        B: KakapoBroadcaster,
+        S: AppStateLike + 'static,
 {
     fn kakapo_routes(&mut self) -> &mut Self {
-        view::Router::<S, B>::router(self)
+        view::Router::<S>::router(self)
     }
 }

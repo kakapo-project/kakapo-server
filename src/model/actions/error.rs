@@ -1,10 +1,10 @@
 use model::entity::error::EntityError;
 use model::table::error::TableError;
 use model::query::error::QueryError;
-
 use model::state::error::UserManagementError;
-use connection::BroadcasterError;
 use model::auth::send_mail::EmailError;
+use model::broadcast::error::BroadcastError;
+
 use scripting::error::ScriptError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
@@ -30,7 +30,7 @@ pub enum Error {
     #[fail(display = "{:?}", 0)]
     SerializationError(String),
     #[fail(display = "Could not publish {:?}", 0)]
-    PublishError(BroadcasterError),
+    PublishError(BroadcastError),
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }

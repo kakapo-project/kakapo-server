@@ -10,7 +10,6 @@ use data::claims::AuthClaims;
 use model::actions::ActionResult;
 use model::actions::error::Error;
 use scripting::Scripting;
-use connection::Broadcaster;
 use std::sync::Arc;
 use std::str;
 use jsonwebtoken;
@@ -20,7 +19,6 @@ const BEARER: &'static str = "Bearer ";
 
 pub struct ActionWrapper<A: Action> {
     action: Result<A, serde_json::Error>,
-    broadcaster: Arc<Broadcaster>,
     auth_header: Option<Vec<u8>>,
 }
 
@@ -33,10 +31,9 @@ impl<A> fmt::Debug for ActionWrapper<A>
 }
 
 impl<A: Action + Send> ActionWrapper<A> {
-    pub fn new(auth_header: Option<&[u8]>, broadcaster: Arc<Broadcaster>, action: Result<A, serde_json::Error>) -> Self {
+    pub fn new(auth_header: Option<&[u8]>, action: Result<A, serde_json::Error>) -> Self {
         Self {
             action,
-            broadcaster,
             auth_header: auth_header.map(|x| x.to_owned()),
         }
     }
@@ -76,10 +73,6 @@ impl<A: Action + Send> ActionWrapper<A> {
             .and_then(|token_data| Some(token_data.claims))
     }
 
-    fn get_broadcaster(&self) -> Arc<Broadcaster> {
-        self.broadcaster.clone()
-    }
-
     fn get_action(self) -> Result<A, Error> {
         self.action.or_else(|err| Err(Error::SerializationError(err.to_string())))
     }
@@ -104,7 +97,6 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         debug!("handling call : {:?}", &msg);
 
         let auth_claims = msg.decode_token(self.get_token_secret());
-        let broadcaster = msg.get_broadcaster();
 
         let action_req = msg.get_action()?;
 
@@ -113,7 +105,7 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         let secrets = self.get_secrets();
 
 
-        let state = ActionState::new(conn, scripting, auth_claims, broadcaster, secrets);
+        let state = ActionState::new(conn, scripting, auth_claims, secrets);
         let result = action_req.call(&state);
         debug!("action result: {:?}", &result);
         result
@@ -126,10 +118,10 @@ mod test {
 
     use connection::AppStateBuilder;
     use connection::AppState;
+    use connection::AppStateLike;
     use futures::Future;
     use model::actions::ActionRes;
     use data::channels::Channels;
-    use connection::BroadcasterError;
 
     #[derive(Debug, Clone)]
     struct TestAction;
@@ -138,14 +130,6 @@ mod test {
 
         fn call(&self, state: &S) -> ActionResult<Self::Ret> {
             ActionRes::new("TestAction", "Hello World!".to_string())
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    struct TestBroadcaster;
-    impl Broadcaster for TestBroadcaster {
-        fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError> {
-            Ok(())
         }
     }
 
@@ -164,12 +148,10 @@ mod test {
         actix::System::run(|| {
             let executor = mock_executor();
             let action = TestAction;
-            let arc = Arc::new(TestBroadcaster);
-
 
             let f = executor
                 .connect()
-                .send(ActionWrapper::new(None, arc,Ok(action)))
+                .send(ActionWrapper::new(None, Ok(action)))
                 .map_err(|_| ())
                 .map(|res| {
                     assert_eq!(res.unwrap().get_data(), "Hello World!");

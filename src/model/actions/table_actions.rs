@@ -20,7 +20,6 @@ use model::actions::decorator::*;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::GetBroadcaster;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
 use model::table::TableActionFunctions;
@@ -35,7 +34,7 @@ pub struct QueryTableData<S = ActionState> {
 
 impl<S> QueryTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
@@ -54,7 +53,7 @@ impl<S> QueryTableData<S>
 
 impl<S> Action<S> for QueryTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -93,7 +92,7 @@ pub struct InsertTableData<S = ActionState> {
 
 impl<S> InsertTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -116,7 +115,7 @@ impl<S> InsertTableData<S>
 
 impl<S> Action<S> for InsertTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -157,7 +156,7 @@ pub struct ModifyTableData<S = ActionState> {
 
 impl<S> ModifyTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -180,7 +179,7 @@ impl<S> ModifyTableData<S>
 
 impl<S> Action<S> for ModifyTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
@@ -220,7 +219,7 @@ pub struct RemoveTableData<S = ActionState>  {
 
 impl<S> RemoveTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channels = vec![Channels::table(&table_name)];
@@ -243,7 +242,7 @@ impl<S> RemoveTableData<S>
 
 impl<S> Action<S> for RemoveTableData<S>
     where
-        for<'a> S: GetBroadcaster + StateFunctions<'a>,
+        for<'a> S: StateFunctions<'a>,
 {
     type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {

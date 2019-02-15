@@ -8,23 +8,13 @@ use std::sync::Arc;
 pub use data::channels::Channels;
 use std::fmt::Debug;
 
-///Put this somewhere in your State
+pub trait AppStateLike {
+    fn connect(&self) -> &Addr<executor::Executor>;
+}
+
 #[derive(Debug, Clone)]
 pub struct AppState {
     connections: Addr<executor::Executor>,
-}
-
-#[derive(Debug, Fail, PartialEq, Eq)]
-pub enum BroadcasterError {
-    #[fail(display = "An unknown error occurred")]
-    Unknown,
-}
-
-///Implement this for your state for broadcasting info
-pub trait Broadcaster
-    where Self: Send + Debug + Sync + 'static
-{
-    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: serde_json::Value) -> Result<(), BroadcasterError>;
 }
 
 /// Builder for the AppState
@@ -40,17 +30,6 @@ pub struct AppStateBuilder {
     password_secret_key: Option<String>,
     threads: usize,
 }
-
-/// Implement this for your state
-pub trait GetAppState<B>
-    where
-        B: Broadcaster,
-{
-    fn get_app_state(&self) -> &AppState;
-
-    fn get_broadcaster(&self) -> Arc<Broadcaster>;
-}
-
 
 /// Example Usage
 ///
@@ -126,8 +105,8 @@ impl AppStateBuilder {
 }
 
 
-impl AppState {
-    pub fn connect(&self) -> &Addr<executor::Executor> {
+impl AppStateLike for AppState {
+    fn connect(&self) -> &Addr<executor::Executor> {
         &self.connections
     }
 }

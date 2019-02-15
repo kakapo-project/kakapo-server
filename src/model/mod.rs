@@ -4,8 +4,8 @@ pub mod actions;
 pub mod state;
 
 pub mod entity;
-pub mod table;
-
+mod table;
+mod broadcast;
 mod query;
 
 
