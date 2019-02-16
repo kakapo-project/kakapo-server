@@ -46,6 +46,8 @@ mod data;
 mod database;
 mod connection;
 mod metastore;
+mod pubsub;
+mod server;
 //mod sockets;
 
 //#[cfg(test)]
@@ -60,8 +62,11 @@ use actix_web::middleware::cors::CorsBuilder;
 pub use connection::AppStateBuilder;
 pub use connection::AppState;
 pub use connection::AppStateLike;
-pub use connection::Channels;
 use actix_web::test::TestApp;
+
+use env_logger::Builder;
+use env_logger::Target;
+use log::LevelFilter;
 
 
 pub trait KakapoRouter<S>
@@ -86,5 +91,32 @@ impl<S> KakapoRouter<S> for TestApp<S>
 {
     fn kakapo_routes(&mut self) -> &mut Self {
         view::Router::<S>::router(self)
+    }
+}
+
+pub fn run() {
+
+    Builder::new()
+        .target(Target::Stdout)
+        .filter_level(LevelFilter::Warn)
+        .filter_module("kakapo", LevelFilter::Debug)
+        .filter_module("actix_web", LevelFilter::Info)
+        .init();
+
+    let sys = actix::System::new("Kakapo");
+
+    server::serve();
+
+    // loop
+    sys.run();
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_run_server() {
+        run();
     }
 }

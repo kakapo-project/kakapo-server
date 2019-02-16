@@ -14,7 +14,7 @@ use model::actions::OkAction;
 use std::fmt;
 use model::state::StateFunctions;
 use model::state::authorization::AuthorizationOps;
-use model::broadcast::BroadcasterOps;
+use model::state::PubSubOps;
 
 #[derive(Debug, Clone)]
 enum Requirements {
@@ -348,12 +348,15 @@ impl<A, S> Action<S> for WithDispatch<A, S>
 
         let result = self.action.call(state)?;
 
+        let data_ref = serde_json::to_value(result.get_data_ref().clone())
+            .map_err(|err| Error::SerializationError(err.to_string()))?;
+
         state
-            .get_broadcaster()
+            .get_pub_sub()
             .publish(
                 self.channels.to_owned(),
                 result.get_name(),
-                result.get_data_ref())
+                &data_ref)
             .map_err(Error::PublishError)?;
 
         Ok(result)

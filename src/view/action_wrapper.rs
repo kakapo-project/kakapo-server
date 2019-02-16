@@ -14,6 +14,10 @@ use std::sync::Arc;
 use std::str;
 use jsonwebtoken;
 use std::fmt;
+use data::channels::Channels;
+use model::state::PubSubOps;
+use serde::Serialize;
+use pubsub::error::BroadcastError;
 
 const BEARER: &'static str = "Bearer ";
 
@@ -78,6 +82,27 @@ impl<A: Action + Send> ActionWrapper<A> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct PublishCallback {
+
+}
+
+impl PubSubOps for PublishCallback {
+    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError> {
+        info!("publishing: to channels: {:?}", &channels);
+        debug!("publishing results: {:?} => {:?}", &action_name, &action_result);
+        //TODO: ...
+        Ok(())
+    }
+
+    fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError> {
+        info!("subscribing: to channels: {:?}", &channels, &action_name);
+        //TODO: ...
+        Ok(())
+    }
+}
+
+
 impl<A: Action + Send> Message for ActionWrapper<A>
     where
         A::Ret: 'static,
@@ -104,8 +129,8 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         let scripting = Scripting::new(self.get_scripts_path());
         let secrets = self.get_secrets();
 
-
-        let state = ActionState::new(conn, scripting, auth_claims, secrets);
+        let pub_sub = PublishCallback {};
+        let state = ActionState::new(conn, scripting, auth_claims, secrets, pub_sub);
         let result = action_req.call(&state);
         debug!("action result: {:?}", &result);
         result

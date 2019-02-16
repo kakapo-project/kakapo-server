@@ -38,15 +38,15 @@ use scripting::ScriptFunctions;
 use scripting::Scripting;
 
 use data::claims::AuthClaims;
-use Channels;
-use model::broadcast::BroadcasterOps;
-use model::broadcast::Broadcaster;
+use pubsub::error::BroadcastError;
+use data::channels::Channels;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
+    pub pub_sub: Arc<PubSubOps>,
 }
 
 impl fmt::Debug for ActionState {
@@ -61,7 +61,6 @@ pub trait StateFunctions<'a>
         Self::TableController: TableActionFunctions,
         Self::Scripting: ScriptFunctions,
         Self::EmailSender: EmailOps,
-        Self::Broadcaster: BroadcasterOps,
         //TODO: managementstore
         Self::EntityRetrieverFunctions: RetrieverFunctions,
         Self::EntityModifierFunctions: ModifierFunctions,
@@ -100,8 +99,7 @@ pub trait StateFunctions<'a>
     type EmailSender;
     fn get_email_sender(&'a self) -> Self::EmailSender;
 
-    type Broadcaster;
-    fn get_broadcaster(&'a self) -> Self::Broadcaster;
+    fn get_pub_sub(&'a self) -> &Arc<PubSubOps>;
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: why is it a diesel::result::Error?
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
@@ -112,8 +110,6 @@ pub struct Authentication;
 impl AuthenticationOps for Authentication {
 
 }
-
-
 
 impl<'a> StateFunctions<'a> for ActionState {
     type Authentication = Authentication;
@@ -185,9 +181,8 @@ impl<'a> StateFunctions<'a> for ActionState {
         EmailSender {}
     }
 
-    type Broadcaster = Broadcaster;
-    fn get_broadcaster(&'a self) -> Self::Broadcaster {
-        Broadcaster {}
+    fn get_pub_sub(&'a self) -> &Arc<PubSubOps> {
+        &self.pub_sub
     }
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: should work for all state actions
@@ -199,21 +194,31 @@ impl<'a> StateFunctions<'a> for ActionState {
 
 impl ActionState {
     //TODO: this has too many parameters
-    pub fn new(
+    pub fn new<PS: PubSubOps + 'static>(
         database: Conn,
         scripting: Scripting,
         claims: Option<AuthClaims>,
         secrets: Secrets,
+        pub_sub: PS,
     ) -> Self {
         Self {
             database,
             scripting,
             claims,
             secrets,
+            pub_sub: Arc::new(pub_sub),
         }
     }
 }
 
+
+pub trait PubSubOps
+    where Self: Send + Sync
+{
+    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError>;
+
+    fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError>;
+}
 
 pub trait GetSecrets {
     fn get_token_secret(&self) -> String;

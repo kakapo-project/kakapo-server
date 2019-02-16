@@ -1,12 +1,18 @@
-use actix::Addr;
 
 pub mod executor;
 pub mod py;
-use actix::sync::SyncArbiter;
+pub mod publisher;
+
 use num_cpus;
+
 use std::sync::Arc;
-pub use data::channels::Channels;
 use std::fmt::Debug;
+
+use actix::Addr;
+use actix::sync::SyncArbiter;
+
+use data::channels::Channels;
+
 
 pub trait AppStateLike {
     fn connect(&self) -> &Addr<executor::Executor>;

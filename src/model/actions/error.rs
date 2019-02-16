@@ -3,9 +3,9 @@ use model::table::error::TableError;
 use model::query::error::QueryError;
 use model::state::error::UserManagementError;
 use model::auth::send_mail::EmailError;
-use model::broadcast::error::BroadcastError;
 
 use scripting::error::ScriptError;
+use pubsub::error::BroadcastError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {

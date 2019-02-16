@@ -16,7 +16,7 @@ byteorder = "1"
 bytes = "0.4"
 chrono = { version = "0.4.6", features = ["serde"] }
 dirs = "1.0.4"
-env_logger = "*"
+env_logger = "0.6.0"
 failure = "0.1.2"
 futures = "0.1"
 json = "0.11.13"

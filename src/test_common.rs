@@ -16,7 +16,6 @@ use actix_web::client::ClientResponse;
 
 use super::AppState as KakapoState;
 use super::AppStateBuilder as KakapoStateBuilder;
-use super::Channels;
 use super::KakapoRouter;
 use model::state::ActionState;
 use model::state::StateFunctions;
@@ -37,6 +36,9 @@ use model::auth::send_mail::EmailOps;
 use connection::AppStateLike;
 use actix::Addr;
 use connection::executor::Executor;
+use model::state::PubSubOps;
+use data::channels::Channels;
+use pubsub::error::BroadcastError;
 
 pub fn random_identifier() -> String {
     let uuid = Uuid::new_v4();
@@ -193,10 +195,8 @@ impl<'a> StateFunctions<'a> for MockState {
         MockMailer
     }
 
-    type Broadcaster = <ActionState as StateFunctions<'a>>::Broadcaster;
-
-    fn get_broadcaster(&'a self) -> <Self as StateFunctions<'a>>::Broadcaster {
-        self.0.get_broadcaster()
+    fn get_pub_sub(&'a self) -> &Arc<PubSubOps> {
+        self.0.get_pub_sub()
     }
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E>
@@ -205,6 +205,18 @@ impl<'a> StateFunctions<'a> for MockState {
             E: From<diesel::result::Error>
     {
         self.0.transaction(f)
+    }
+}
+
+struct MockPubSub {}
+
+impl PubSubOps for MockPubSub {
+    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError> {
+        Ok(())
+    }
+
+    fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError> {
+        Ok(())
     }
 }
 
@@ -230,7 +242,8 @@ pub fn with_state<F>(f: F)
         password_secret: "B".to_string(),
     };
 
-    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets);
+    let pub_sub = MockPubSub {};
+    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets, pub_sub);
 
     let mock_state = MockState(state);
     let conn = &mock_state.0.database;
@@ -258,7 +271,8 @@ pub fn with_state_no_transaction<F>(f: F)
         password_secret: "B".to_string(),
     };
 
-    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets);
+    let pub_sub = MockPubSub {};
+    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets, pub_sub);
 
     let mock_state = MockState(state);
 
