@@ -1,11 +1,21 @@
 
+use std::fmt::Debug;
 
+use serde::Serialize;
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::{entity, table_schema, query, script, view, user, permission, role, invitation};
-use std::fmt::Debug;
-use serde::Serialize;
+use data::schema::entity;
+use data::schema::table_schema;
+use data::schema::query;
+use data::schema::script;
+use data::schema::view;
+use data::schema::user;
+use data::schema::permission;
+use data::schema::role;
+use data::schema::invitation;
+use data::schema::session;
+
 use data::permissions::Permission;
 use data::Named;
 
@@ -254,6 +264,26 @@ pub struct RawInvitation {
     pub token: String,
     pub token_info: serde_json::Value,
     pub sent_at: chrono::NaiveDateTime,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "session"]
+pub struct NewRawSessionToken {
+    pub token: String,
+    pub user_id: i64,
+    pub created_at: chrono::NaiveDateTime,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Identifiable, Queryable, QueryableByName)]
+#[primary_key(session_id)]
+#[table_name = "session"]
+pub struct RawSessionToken {
+    pub session_id: i64,
+    pub token: String,
+    pub user_id: i64,
+    pub created_at: chrono::NaiveDateTime,
     pub expires_at: chrono::NaiveDateTime,
 }
 

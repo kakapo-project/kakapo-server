@@ -96,7 +96,7 @@ impl PubSubOps for PublishCallback {
     }
 
     fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError> {
-        info!("subscribing: to channels: {:?}", &channels, &action_name);
+        info!("subscribing: to channels: {:?}", &channels);
         //TODO: ...
         Ok(())
     }
@@ -130,7 +130,16 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         let secrets = self.get_secrets();
 
         let pub_sub = PublishCallback {};
-        let state = ActionState::new(conn, scripting, auth_claims, secrets, pub_sub);
+        let state = ActionState::new(
+            conn,
+            scripting,
+            auth_claims,
+            secrets,
+            pub_sub,
+            self.jwt_issuer.to_owned(),
+            self.jwt_token_duration,
+            self.jwt_refresh_token_duration,
+        );
         let result = action_req.call(&state);
         debug!("action result: {:?}", &result);
         result

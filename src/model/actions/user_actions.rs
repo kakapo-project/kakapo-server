@@ -2,23 +2,22 @@
 use std::marker::PhantomData;
 
 use data;
+use data::permissions::*;
+use data::auth::SessionToken;
 
 use model::actions::results::*;
 use model::actions::error::Error;
-
-use model::state::ActionState;
-use data::permissions::*;
 use model::actions::decorator::*;
-
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
+use model::state::ActionState;
 use model::state::GetSecrets;
-
 use model::state::StateFunctions;
-use model::auth::send_mail::EmailOps;
-use data::auth::SessionToken;
 use model::state::user_management::UserManagementOps;
+use model::state::authentication::AuthenticationOps;
+
+use auth::send_mail::EmailOps;
 
 #[derive(Debug)]
 pub struct Login<S = ActionState> {
@@ -48,7 +47,17 @@ impl<S> Action<S> for Login<S>
 {
     type Ret = SessionToken;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        unimplemented!()
+        let user = state
+            .get_user_management() //TODO: this should be the responsibility of the authorization
+            .get_user(&self.user_identifier, &self.password)
+            .map_err(Error::UserManagement)?;
+
+        let session_token = state
+            .get_authentication()
+            .create_session(user)
+            .map_err(Error::UserManagement)?;
+
+        ActionRes::new("Login", session_token)
     }
 }
 
@@ -644,6 +653,7 @@ mod test {
     use serde_json::from_value;
     use model::state::error::UserManagementError;
     use test_common::*;
+    use data::claims::AuthClaims;
 
     #[test]
     fn test_add_user() {
@@ -844,13 +854,18 @@ mod test {
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
             //assert_eq!(data, Some(()));
-            unimplemented!();
+            let SessionToken::Bearer { access_token, expires_in, refresh_token } = data;
+            let auth: AuthClaims = jsonwebtoken::decode(&access_token, "A".as_ref(), &jsonwebtoken::Validation::default())
+                .unwrap().claims;
+            assert_eq!(auth.iss, "THE_ISSUER");
+            assert_eq!(auth.username, name.to_owned());
+            assert_eq!(auth.is_admin, false);
 
             let create_action
             = Login::<MockState>::new(name.to_owned(), "wrong_password".to_string());
-            let result = create_action.call(&state);
-            let data = result.unwrap().get_data();
-            unimplemented!();
+            let result = create_action.call(&state).unwrap_err();
+
+            assert_eq!(result, Error::UserManagement(UserManagementError::Unauthorized));
         })
     }
 

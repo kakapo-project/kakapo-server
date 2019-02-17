@@ -1,5 +1,6 @@
 
 use chrono;
+use data::claims::AuthClaims;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -8,6 +9,16 @@ pub struct User {
     pub email: String,
     pub display_name: String,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserInfo {
+    pub user_id: i64,
+    pub username: String, //TODO: don't have all the fields as pub
+    pub email: String,
+    pub display_name: String,
+}
+
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

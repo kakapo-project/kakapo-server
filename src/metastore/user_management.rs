@@ -1,7 +1,4 @@
 
-use argonautica::Hasher;
-use argonautica::Verifier;
-
 use diesel::prelude::*;
 use diesel;
 use diesel::result::Error as DbError;
@@ -11,34 +8,25 @@ use chrono::Utc;
 use serde_json;
 
 use model::state::user_management::UserManagementOps;
-use model::auth::tokens::Token;
+use auth::tokens::Token;
 
 use model::state::error::UserManagementError;
 use data::auth::InvitationToken;
 use data::auth::Role;
 use data::permissions::Permission;
 use data::auth::NewUser;
+use data::auth::UserInfo;
 use data::auth::User;
 use data::schema;
 
-use connection::executor::Conn;
-
 use metastore::dbdata;
+use model::state::UserManagement;
+use connection::executor::Conn;
+use model::state::authentication::AuthenticationOps;
 
-
-pub struct UserManagement<'a> {
-    conn: &'a Conn,
-    password_secret: String,
-}
-
-impl<'a> UserManagement<'a> {
-    pub fn new(conn: &'a Conn, password_secret: String) -> Self {
-        Self { conn, password_secret }
-    }
-}
 
 impl<'a> UserManagementOps for UserManagement<'a> {
-    fn authenticate(&self, user_identifier: &str, password: &str) -> Result<bool, UserManagementError> {
+    fn get_user(&self, user_identifier: &str, password: &str) -> Result<UserInfo, UserManagementError> {
         debug!("Authenticating user: {:?}", user_identifier);
         let user = schema::user::table
             .filter(schema::user::columns::username.eq(&user_identifier))
@@ -52,41 +40,30 @@ impl<'a> UserManagementOps for UserManagement<'a> {
                 }
             })?;
 
-        let time = Utc::now();
-        let mut verifier = Verifier::default();
-        let is_valid = verifier
-            .with_hash(&user.password)
-            .with_password(password)
-            .with_secret_key(&self.password_secret)
-            .verify()
-            .map_err(|err| {
-                error!("Could not verify user password with argon2 [{:?}]", &user.username);
-                UserManagementError::HashError(err)
-            })?;
-        debug!("Verifying user took: {:?}", Utc::now() - time);
+        let is_valid = self
+            .authentication
+            .verify_password(&user.password, password)?;
 
         if is_valid {
             info!("Password authentication passed for {:?}", &user.username);
+            Ok(UserInfo {
+                user_id: user.user_id,
+                username: user.username,
+                email: user.email,
+                display_name: user.display_name,
+            })
         } else {
             info!("Password authentication failed for {:?}", &user.username);
+            Err(UserManagementError::Unauthorized)
         }
-
-        Ok(is_valid)
     }
 
     fn add_user(&self, user: &NewUser) -> Result<User, UserManagementError> {
-        let time = Utc::now();
-        let mut hasher = Hasher::default();
-        let hashed_pass = hasher
-            .with_password(&user.password)
-            .with_secret_key(&self.password_secret)
-            .hash()
-            .map_err(|err| {
-                error!("Could not hash user password with argon2 [{:?}]", &user.username);
-                UserManagementError::HashError(err)
-            })?;
+        info!("Creating new user {:?}", &user);
 
-        debug!("Hashing password took: {:?}", Utc::now() - time);
+        let hashed_pass = self
+            .authentication
+            .hash_password(&user.password)?;
 
         let raw_user = dbdata::NewRawUser {
             username: user.username.to_owned(),
@@ -256,7 +233,32 @@ impl<'a> UserManagementOps for UserManagement<'a> {
     }
 
     fn add_permission(&self, permission: &Permission) -> Result<Permission, UserManagementError> {
-        unimplemented!()
+        let permission_json = serde_json::to_value(permission)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &permission, &err);
+                UserManagementError::Unknown
+            })?;
+
+        let permission_value = dbdata::NewRawPermission {
+            data: permission_json,
+        };
+
+        let raw_permission = diesel::insert_into(schema::permission::table)
+            .values(&permission_value)
+            .get_result::<dbdata::RawPermission>(self.conn)
+            .map_err(|err| {
+                println!("Could not create permission err: {:?}", &err);
+
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+        let permission: Permission = serde_json::from_value(raw_permission.data)
+            .map_err(|err| {
+                error!("Could not deserialize error: {:?}", &err);
+                UserManagementError::Unknown
+            })?;
+
+        Ok(permission)
     }
 
     fn rename_permission(&self, old_permission: &Permission, new_permission: &Permission) -> Result<Permission, UserManagementError> {

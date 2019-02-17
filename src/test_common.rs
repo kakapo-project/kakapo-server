@@ -28,11 +28,11 @@ use scripting::Scripting;
 use serde::Serialize;
 use data::auth::InvitationToken;
 use data::auth::Invitation;
-use model::auth::send_mail::EmailError;
+use auth::send_mail::EmailError;
 use diesel::r2d2::Pool;
 use model::actions;
 use diesel::Connection;
-use model::auth::send_mail::EmailOps;
+use auth::send_mail::EmailOps;
 use connection::AppStateLike;
 use actix::Addr;
 use connection::executor::Executor;
@@ -69,6 +69,9 @@ pub fn build_server() -> TestServer {
             .db("test")
             .script_path("./local")
             .token_secret(TEST_KEY)
+            .issuer("THE_ISSUER")
+            .token_duration(600)
+            .refresh_token_duration(60 * 60 * 24 * 7)
             .num_threads(1)
             .done();
 
@@ -243,7 +246,16 @@ pub fn with_state<F>(f: F)
     };
 
     let pub_sub = MockPubSub {};
-    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets, pub_sub);
+    let state = ActionState::new(
+        pooled_conn,
+        Scripting::new(script_path),
+        Some(claims),
+        secrets,
+        pub_sub,
+        "THE_ISSUER".to_string(),
+        500,
+        60 * 60 * 24 * 7,
+    );
 
     let mock_state = MockState(state);
     let conn = &mock_state.0.database;
@@ -272,7 +284,16 @@ pub fn with_state_no_transaction<F>(f: F)
     };
 
     let pub_sub = MockPubSub {};
-    let state = ActionState::new(pooled_conn, Scripting::new(script_path), Some(claims), secrets, pub_sub);
+    let state = ActionState::new(
+        pooled_conn,
+        Scripting::new(script_path),
+        Some(claims),
+        secrets,
+        pub_sub,
+        "THE_ISSUER".to_string(),
+        500,
+        60 * 60 * 24 * 7,
+    );
 
     let mock_state = MockState(state);
 

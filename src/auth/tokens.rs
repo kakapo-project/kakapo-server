@@ -13,7 +13,7 @@ impl Token {
     pub fn new() -> Result<Self, Error> {
         let mut rng = OsRng::new()?;
         let mut bytes = vec![];
-        for _ in 0..4 {
+        for _ in 0..128 {
             let next_int = rng.next_u32();
 
             bytes.push((next_int & 0xFF) as u8);
@@ -26,6 +26,6 @@ impl Token {
     }
 
     pub fn as_string(&self) -> String {
-        base64::encode(&self.bytes)
+        base64::encode_config(&self.bytes, base64::URL_SAFE)
     }
 }

@@ -8,11 +8,8 @@ use diesel::RunQueryDsl;
 use connection::executor::Conn;
 use data::claims::AuthClaims;
 use std::iter::FromIterator;
+use model::state::Authorization;
 
-pub struct Authorization<'a> {
-    pub conn: &'a Conn,
-    pub claims: &'a Option<AuthClaims>,
-}
 
 impl<'a> Authorization<'a> {
     fn get_user_permissions(&self, user_id: i64) -> Result<Vec<Permission>, UserManagementError> {

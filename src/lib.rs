@@ -39,6 +39,7 @@ extern crate tokio_core;
 extern crate uuid;
 
 // Mods
+mod auth;
 mod view;
 mod model;
 mod scripting;
@@ -116,6 +117,7 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_run_server() {
         run();
     }

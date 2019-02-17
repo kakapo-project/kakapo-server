@@ -22,6 +22,15 @@ CREATE TABLE "invitation" (
     CHECK ("email" LIKE '%_@__%.__%') -- has false positives but no false negatives
 );
 
+CREATE TABLE "session" (
+    "session_id"              BIGSERIAL PRIMARY KEY,
+    "token"                   VARCHAR NOT NULL,
+    "user_id"                 BIGINT REFERENCES "user" NOT NULL,
+    "created_at"              TIMESTAMP NOT NULL DEFAULT NOW(),
+    "expires_at"              TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '1 DAY')
+);
+
+
 CREATE TABLE "scope" (
     "scope_id"                BIGSERIAL PRIMARY KEY,
     "name"                    VARCHAR NOT NULL UNIQUE,

@@ -18,7 +18,7 @@ use data::claims::AuthClaims;
 use scripting::Scripting;
 use data::Named;
 use model::entity::update_state::UpdatePermissionFunctions;
-use metastore::user_management::UserManagement;
+use model::state::UserManagement;
 
 pub trait RawEntityTypes
     where

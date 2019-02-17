@@ -19,17 +19,14 @@ use model::actions::error::Error;
 use connection::executor::Conn;
 use connection::executor::Secrets;
 
-use metastore::authorization::Authorization;
-use metastore::user_management::UserManagement;
-
 use model::entity::EntityRetrieverController;
 use model::entity::EntityModifierController;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::table::TableAction;
 use model::table::TableActionFunctions;
-use model::auth::send_mail::EmailSender;
-use model::auth::send_mail::EmailOps;
+use auth::send_mail::EmailSender;
+use auth::send_mail::EmailOps;
 use model::state::authorization::AuthorizationOps;
 use model::state::authentication::AuthenticationOps;
 use model::state::user_management::UserManagementOps;
@@ -47,6 +44,9 @@ pub struct ActionState {
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
     pub pub_sub: Arc<PubSubOps>,
+    pub jwt_issuer: String,
+    pub jwt_duration: i64,
+    pub jwt_refresh_duration: i64,
 }
 
 impl fmt::Debug for ActionState {
@@ -105,16 +105,18 @@ pub trait StateFunctions<'a>
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
 }
 
-pub struct Authentication;
-
-impl AuthenticationOps for Authentication {
-
-}
 
 impl<'a> StateFunctions<'a> for ActionState {
-    type Authentication = Authentication;
+    type Authentication = Authentication<'a>;
     fn get_authentication(&'a self) -> Self::Authentication {
-        unimplemented!()
+        Authentication {
+            conn: &self.database,
+            password_secret: self.get_password_secret().to_owned(),
+            jwt_secret: self.get_token_secret().to_owned(),
+            jwt_duration: self.jwt_duration,
+            jwt_refresh_duration: self.jwt_refresh_duration,
+            jwt_issuer: self.jwt_issuer.to_owned(),
+        }
     }
 
     type Authorization = Authorization<'a>;
@@ -127,11 +129,11 @@ impl<'a> StateFunctions<'a> for ActionState {
 
     type UserManagement = UserManagement<'a>;
     fn get_user_management(&'a self) -> Self::UserManagement {
-        let password_secret = self.get_password_secret();
-        UserManagement::new(
-            &self.database,
-            password_secret.to_owned(),
-        )
+        let authentication = self.get_authentication();
+        UserManagement {
+            conn: &self.database,
+            authentication,
+        }
     }
 
     type EntityRetrieverFunctions = EntityRetrieverController<'a>;
@@ -144,12 +146,7 @@ impl<'a> StateFunctions<'a> for ActionState {
 
     type EntityModifierFunctions = EntityModifierController<'a>;
     fn get_entity_modifier_function(&'a self) -> Self::EntityModifierFunctions {
-        let password_secret = self.get_password_secret();
-        let user_management = UserManagement::new(
-            &self.database,
-            password_secret.to_owned(),
-        );
-
+        let user_management = self.get_user_management();
 
         EntityModifierController {
             conn: &self.database,
@@ -200,6 +197,9 @@ impl ActionState {
         claims: Option<AuthClaims>,
         secrets: Secrets,
         pub_sub: PS,
+        jwt_issuer: String,
+        jwt_duration: i64,
+        jwt_refresh_duration: i64,
     ) -> Self {
         Self {
             database,
@@ -207,10 +207,31 @@ impl ActionState {
             claims,
             secrets,
             pub_sub: Arc::new(pub_sub),
+            jwt_issuer, //TODO: put these in config
+            jwt_duration,
+            jwt_refresh_duration,
         }
     }
 }
 
+pub struct Authentication<'a> {
+    pub conn: &'a Conn,
+    pub password_secret: String,
+    pub jwt_secret: String,
+    pub jwt_duration: i64,
+    pub jwt_refresh_duration: i64,
+    pub jwt_issuer: String,
+}
+
+pub struct Authorization<'a> {
+    pub conn: &'a Conn,
+    pub claims: &'a Option<AuthClaims>,
+}
+
+pub struct UserManagement<'a> {
+    pub conn: &'a Conn,
+    pub authentication: Authentication<'a>
+}
 
 pub trait PubSubOps
     where Self: Send + Sync

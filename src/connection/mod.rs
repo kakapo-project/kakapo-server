@@ -34,6 +34,9 @@ pub struct AppStateBuilder {
     script_path_dir: Option<String>,
     token_secret_key: Option<String>,
     password_secret_key: Option<String>,
+    jwt_issuer: Option<String>,
+    jwt_token_duration: i64,
+    jwt_refresh_token_duration: i64,
     threads: usize,
 }
 
@@ -50,6 +53,9 @@ impl AppStateBuilder {
             script_path_dir: None,
             token_secret_key: None,
             password_secret_key: None,
+            jwt_issuer: None,
+            jwt_token_duration: 600,
+            jwt_refresh_token_duration: 60 * 60 * 24,
             threads: num_cpus::get(),
         }
     }
@@ -91,6 +97,21 @@ impl AppStateBuilder {
 
     pub fn password_secret(mut self, secret: &str) -> Self {
         self.password_secret_key = Some(secret.to_string());
+        self
+    }
+
+    pub fn issuer(mut self, iss: &str) -> Self {
+        self.jwt_issuer = Some(iss.to_string());
+        self
+    }
+
+    pub fn token_duration(mut self, duration: i64) -> Self {
+        self.jwt_token_duration = duration;
+        self
+    }
+
+    pub fn refresh_token_duration(mut self, duration: i64) -> Self {
+        self.jwt_refresh_token_duration = duration;
         self
     }
 

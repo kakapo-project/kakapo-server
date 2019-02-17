@@ -1,13 +1,13 @@
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthClaims {
-    iss: String,
-    sub: i64, // == user_id
-    iat: i64,
-    exp: i64,
-    username: String,
-    is_admin: bool,
-    role: Option<String>, //the default role that the user is interacting with
+    pub iss: String,
+    pub sub: i64, // == user_id
+    pub iat: i64,
+    pub exp: i64,
+    pub username: String,
+    pub is_admin: bool,
+    pub role: Option<String>, //the default role that the user is interacting with
 }
 
 impl AuthClaims {

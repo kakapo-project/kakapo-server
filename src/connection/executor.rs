@@ -22,11 +22,15 @@ pub struct Executor {
     pool: Pool<ConnectionManager<PgConnection>>,
     script_path: PathBuf,
     secrets: Secrets,
+
+    pub jwt_issuer: String,
+    pub jwt_token_duration: i64,
+    pub jwt_refresh_token_duration: i64,
 }
 
 impl fmt::Debug for Executor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Executor ...")
+        write!(f, "Executor")
     }
 }
 
@@ -64,6 +68,10 @@ impl Executor {
             pool,
             script_path,
             secrets,
+
+            jwt_issuer: info.jwt_issuer.unwrap_or_default(), //TODO: what is the default here?
+            jwt_token_duration: info.jwt_token_duration,
+            jwt_refresh_token_duration: info.jwt_refresh_token_duration,
         }
     }
 

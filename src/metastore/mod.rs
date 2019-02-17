@@ -1,6 +1,7 @@
 
 pub mod user_management;
 pub mod authorization;
+pub mod authentication;
 mod conversion;
 mod dbdata;
 

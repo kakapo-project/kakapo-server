@@ -98,6 +98,16 @@ table! {
 }
 
 table! {
+    session (session_id) {
+        session_id -> Int8,
+        token -> Varchar,
+        user_id -> Int8,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+    }
+}
+
+table! {
     table_schema (table_schema_id) {
         table_schema_id -> Int8,
         entity_id -> Int8,
@@ -184,6 +194,7 @@ joinable!(role_permission -> permission (permission_id));
 joinable!(role_permission -> role (role_id));
 joinable!(script -> entity (entity_id));
 joinable!(script -> user (modified_by));
+joinable!(session -> user (user_id));
 joinable!(table_schema -> entity (entity_id));
 joinable!(table_schema -> user (modified_by));
 joinable!(table_schema_transaction -> table_schema (table_schema_id));
@@ -204,6 +215,7 @@ allow_tables_to_appear_in_same_query!(
     role_permission,
     scope,
     script,
+    session,
     table_schema,
     table_schema_transaction,
     tag,
