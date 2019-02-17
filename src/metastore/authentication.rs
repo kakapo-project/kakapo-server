@@ -102,7 +102,7 @@ impl<'a> AuthenticationOps for Authentication<'a> {
             exp: (now + Duration::seconds(duration)).timestamp(),
             username: user.username,
             is_admin: is_admin,
-            role: None, //the default role that the user is interacting with
+            role: None, //TODO: make sure the role is here
         };
 
         let jwt = jsonwebtoken::encode(&jsonwebtoken::Header::default(), &claims, self.jwt_secret.as_ref())

@@ -1,16 +1,27 @@
 #![feature(specialization)]
 
-mod docker_utils;
 pub mod error;
 pub mod update_state;
 
+use std::fs;
+use std::env;
 use std::path::PathBuf;
+use std::process::Command;
+use std::process::Stdio;
+use std::io::Write;
+use std::io::Read;
+use std::str::from_utf8;
+
+use tempfile;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use scripting::docker_utils as Run;
 use scripting::error::ScriptError;
+use data::Script;
+use data::Named;
+
+
 
 /// Roadmap for scripts
 /// - Better permissioning
@@ -24,13 +35,25 @@ use scripting::error::ScriptError;
 /// - More efficient updates (i.e. don't upload the entire script all the time)
 
 pub trait ScriptFunctions {
-    fn run(&self, script_name: &str, params: &serde_json::Value) -> Result<serde_json::Value, ScriptError>;
+    fn run(&self, script: &Script, params: &serde_json::Value) -> Result<ScriptResult, ScriptError>;
 }
 
 #[derive(Clone, Debug)]
 pub struct Scripting {
     script_home: PathBuf,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptResult {
+    pub successful: bool,
+    pub stdout: String,
+    pub stderr: String,
+    pub output: serde_json::Value,
+}
+
+const PYTHON: &'static str = "python3";
+const SCRIPT_NAME: &'static str = "script.py";
 
 impl Scripting {
     pub fn new(script_home: PathBuf) -> Self {
@@ -42,40 +65,75 @@ impl Scripting {
     pub fn get_home(&self) -> PathBuf {
         self.script_home.to_owned()
     }
+
+    pub fn get_script_home(&self, script_name: &str) -> PathBuf {
+        let mut path = self.get_home();
+        path.push(script_name);
+
+        path
+    }
+
+    pub fn get_script_path(&self, script_name: &str) -> PathBuf {
+        let mut path = self.get_home();
+        path.push(script_name);
+        path.push(SCRIPT_NAME);
+
+        path
+    }
 }
 
 impl ScriptFunctions for Scripting {
 
-    fn run(&self, script_name: &str, params: &serde_json::Value) -> Result<serde_json::Value, ScriptError> {
+    fn run(&self, script: &Script, params: &serde_json::Value) -> Result<ScriptResult, ScriptError> {
         let script_home = &self.script_home;
-        //check if image exists
-        //run container >> sudo docker run -v {{tmpfile}}:/var/commfile.txt {{name}}
+        let path = self.get_script_home(script.my_name());
 
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let sys = py.import("sys")
-            .map_err(|_| ScriptError::Unknown)?;
-        let version: String = sys.get("version")
-            .and_then(|res| res.extract())
-            .map_err(|_| ScriptError::Unknown)?;
+        env::set_current_dir(path)
+            .map_err(|err| ScriptError::IOError(err.to_string()))?;
 
-        let locals = PyDict::new(py);
-        let import = py.import("os")
-            .map_err(|_| ScriptError::Unknown)?;
+        let mut temp = tempfile::NamedTempFile::new()
+            .map_err(|err| ScriptError::IOError(err.to_string()))?;
 
-        locals
-            .set_item("os", import)
-            .map_err(|_| ScriptError::Unknown)?;
-        let eval = py
-            .eval("os.getenv('USER') or os.getenv('USERNAME')", None, Some(&locals))
-            .map_err(|_| ScriptError::Unknown)?;
-        let user: String = eval
-            .extract()
-            .map_err(|_| ScriptError::Unknown)?;
+        let io_file_path = temp.path().to_str()
+            .ok_or_else(|| ScriptError::IOError("Could not convert path to string".to_string()))?
+            .to_owned();
+        let mut io_file = temp.as_file_mut();
 
-        println!("Hello {}, I'm Python {}", user, version);
+        let params_text = serde_json::to_string(&params)
+            .map_err(|err| ScriptError::IOError(err.to_string()))?;
+        io_file.write_all(&params_text.as_bytes())
+            .map_err(|err| ScriptError::IOError(err.to_string()))?;
 
-        unimplemented!();
+        let output = Command::new(PYTHON)
+            .arg(SCRIPT_NAME)
+            .arg(&io_file_path)
+            .output()
+            .map_err(|err| ScriptError::ExecuteError(err.to_string()))?;
 
+        let is_successful = output.status.success();
+
+        if is_successful {
+            info!("Ran script successfully");
+            let output_str = fs::read_to_string(io_file_path).unwrap_or_default();
+            let output_value = serde_json::from_str(&output_str).unwrap_or_default();
+            debug!("output_value: {:?}", &output_value);
+
+            Ok(ScriptResult {
+                successful: is_successful,
+                stdout: from_utf8(&output.stdout).unwrap_or_default().to_string(),
+                stderr: from_utf8(&output.stderr).unwrap_or_default().to_string(),
+                output: output_value,
+            })
+
+        } else {
+            warn!("Could not run the script successfuly, failed with error");
+
+            Ok(ScriptResult {
+                successful: is_successful,
+                stdout: from_utf8(&output.stdout).unwrap_or_default().to_string(),
+                stderr: from_utf8(&output.stderr).unwrap_or_default().to_string(),
+                output: serde_json::Value::default(),
+            })
+        }
     }
 }

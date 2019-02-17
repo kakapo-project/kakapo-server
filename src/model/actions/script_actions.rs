@@ -17,6 +17,7 @@ use model::actions::ActionResult;
 use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
 use scripting::ScriptFunctions;
+use scripting::ScriptResult;
 
 // Script Action
 #[derive(Debug)]
@@ -49,7 +50,7 @@ impl<S> Action<S> for RunScript<S>
     where
         for<'a> S: StateFunctions<'a>,
 {
-    type Ret = RunScriptResult;
+    type Ret = ScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         state
             .get_entity_retreiver_functions()
@@ -62,10 +63,10 @@ impl<S> Action<S> for RunScript<S>
             .and_then(|script| {
                 state
                     .get_script_runner()
-                    .run(&script.my_name(), &self.param)
+                    .run(&script, &self.param)
                     .map_err(Error::Script)
             })
-            .and_then(|res| ActionRes::new("RunScript", RunScriptResult(res)))
+            .and_then(|res| ActionRes::new("RunScript", res))
     }
 }
 
@@ -87,7 +88,19 @@ mod test {
             let script: data::Script = from_value(json!({
                 "name": script_name.to_owned(),
                 "description": "table description",
-                "text": "print('Hello World')"
+                "text": r#"
+import sys
+import os
+
+print('Hello World')
+print('Bye World', file=sys.stderr)
+
+filename = sys.argv[1]
+with open(filename, 'r') as f:
+    print(f.read())
+with open(filename, 'w') as f:
+    f.write('{"bye": "world"}')
+                "#
             })).unwrap();
 
             let create_action = entity_actions::CreateEntity::<data::Script, MockState>::new(script);
@@ -97,8 +110,11 @@ mod test {
             let params = json!({"Hello": "World"});
             let create_action = RunScript::<MockState>::new(script_name, params);
             let result = create_action.call(&state);
-
-            println!("FINAL RESULT: {:?}", &result);
+            let data = result.unwrap().get_data();
+            assert_eq!(data.successful, true);
+            assert_eq!(data.stdout, "Hello World\n{\"Hello\":\"World\"}\n");
+            assert_eq!(data.stderr, "Bye World\n");
+            assert_eq!(data.output, json!({"bye": "world"}));
         });
     }
 }

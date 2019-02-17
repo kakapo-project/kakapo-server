@@ -32,6 +32,7 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate openssl;
 extern crate pyo3;
+extern crate tempfile;
 #[macro_use]
 extern crate time_test;
 extern crate tokio;
