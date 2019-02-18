@@ -21,7 +21,9 @@ use pubsub::error::BroadcastError;
 
 const BEARER: &'static str = "Bearer ";
 
-pub struct ActionWrapper<A: Action> {
+pub struct ActionWrapper<A>
+    where A: Action
+{
     action: Result<A, serde_json::Error>,
     auth_header: Option<Vec<u8>>,
 }
@@ -34,7 +36,9 @@ impl<A> fmt::Debug for ActionWrapper<A>
     }
 }
 
-impl<A: Action + Send> ActionWrapper<A> {
+impl<A> ActionWrapper<A>
+    where A: Action + Send
+{
     pub fn new(auth_header: Option<&[u8]>, action: Result<A, serde_json::Error>) -> Self {
         Self {
             action,

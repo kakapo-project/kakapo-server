@@ -16,7 +16,6 @@ use actix_web::client::ClientResponse;
 
 use super::AppState as KakapoState;
 use super::AppStateBuilder as KakapoStateBuilder;
-use super::KakapoRouter;
 use model::state::ActionState;
 use model::state::StateFunctions;
 use model::state::GetSecrets;
@@ -39,6 +38,8 @@ use connection::executor::Executor;
 use model::state::PubSubOps;
 use data::channels::Channels;
 use pubsub::error::BroadcastError;
+use view::route_builder::RouteBuilder;
+use view::extensions::ProcedureExt;
 
 pub fn random_identifier() -> String {
     let uuid = Uuid::new_v4();
@@ -60,27 +61,33 @@ pub fn init_logger() {
 }
 
 pub fn build_server() -> TestServer {
-    let server_builder: TestServerBuilder<TestState, _> = TestServer::build_with_state(|| {
-        let state = KakapoStateBuilder::new()
-            .host("localhost")
-            .port(5432)
-            .user("test")
-            .pass("password")
-            .db("test")
-            .script_path("./local")
-            .token_secret(TEST_KEY)
-            .issuer("THE_ISSUER")
-            .token_duration(600)
-            .refresh_token_duration(60 * 60 * 24 * 7)
-            .num_threads(1)
-            .done();
 
-        TestState(state)
+    let mut state = KakapoStateBuilder::new()
+        .host("localhost")
+        .port(5432)
+        .user("test")
+        .pass("password")
+        .db("test")
+        .script_path("./local")
+        .token_secret(TEST_KEY)
+        .issuer("THE_ISSUER")
+        .token_duration(600)
+        .refresh_token_duration(60 * 60 * 24 * 7)
+        .num_threads(1)
+        .done();
+
+    let route_builder = RouteBuilder::build(&mut state);
+    let route_builder_copy = route_builder.clone();
+
+    let final_state = TestState(Box::new(state));
+
+    let server_builder: TestServerBuilder<TestState, _> = TestServer::build_with_state(move || {
+        final_state.clone()
     });
 
     server_builder
-        .start(|app| {
-            app.kakapo_routes();
+        .start(move |app| {
+            app.add_routes(&route_builder_copy);
         })
 }
 
@@ -120,8 +127,8 @@ pub const TEST_KEY: &'static str = "TEST_SECRET_TEST_SECRET";
 pub const MASTER_KEY_TOKEN: &'static str = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjkyMjMzNzIwMzY4NTQ3NzU4MDcsImlhdCI6MCwiaXNBZG1pbiI6dHJ1ZSwiaXNzIjoidGVzdCIsInJvbGUiOm51bGwsInN1YiI6MSwidXNlcm5hbWUiOiJBZG1pblRlc3QifQ.pgSE-K4RTaWMhVfny2LwUp3f0TEHS6y-vciDcH1c2y8";
 
 
-#[derive(Debug)]
-pub struct TestState(KakapoState);
+#[derive(Clone, Debug)]
+pub struct TestState(Box<KakapoState>);
 
 
 impl AppStateLike for TestState {

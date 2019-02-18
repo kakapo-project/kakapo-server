@@ -71,31 +71,6 @@ use env_logger::Target;
 use log::LevelFilter;
 
 
-pub trait KakapoRouter<S>
-    where
-        S: AppStateLike + 'static,
-{
-    fn kakapo_routes(&mut self) -> &mut Self;
-}
-
-impl<S> KakapoRouter<S> for CorsBuilder<S>
-    where
-        S: AppStateLike + 'static,
-{
-    fn kakapo_routes(&mut self) -> &mut Self {
-        view::Router::<S>::router(self)
-    }
-}
-
-impl<S> KakapoRouter<S> for TestApp<S>
-    where
-        S: AppStateLike + 'static,
-{
-    fn kakapo_routes(&mut self) -> &mut Self {
-        view::Router::<S>::router(self)
-    }
-}
-
 pub fn run() {
 
     Builder::new()
