@@ -38,7 +38,6 @@ use connection::executor::Executor;
 use model::state::PubSubOps;
 use data::channels::Channels;
 use pubsub::error::BroadcastError;
-use view::route_builder::RouteBuilder;
 use view::extensions::ProcedureExt;
 
 pub fn random_identifier() -> String {
@@ -76,9 +75,6 @@ pub fn build_server() -> TestServer {
         .num_threads(1)
         .done();
 
-    let route_builder = RouteBuilder::build(&mut state);
-    let route_builder_copy = route_builder.clone();
-
     let final_state = TestState(Box::new(state));
 
     let server_builder: TestServerBuilder<TestState, _> = TestServer::build_with_state(move || {
@@ -87,7 +83,7 @@ pub fn build_server() -> TestServer {
 
     server_builder
         .start(move |app| {
-            app.add_routes(&route_builder_copy);
+            app.add_routes();
         })
 }
 

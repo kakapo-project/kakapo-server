@@ -29,12 +29,6 @@ type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NoQuery {}
 
-pub struct ProcedureBuilderContainer<S>
-    where S: AppStateLike
-{
-    f: Box<impl ProcedureBuilder>
-}
-
 /// Build `Action` from an http request
 pub trait ProcedureBuilder<S, JP, QP, A>
     where
@@ -54,7 +48,6 @@ pub trait ProcedureBuilder<S, JP, QP, A>
     /// an Action
     fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error>;
 
-    fn to_container(self) -> ProcedureBuilderContainer<S>;
 }
 
 /// can use lambdas instead of procedure builder
@@ -70,12 +63,6 @@ impl<S, JP, QP, A, F> ProcedureBuilder<S, JP, QP, A> for F
 {
     fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error> {
         self(json_param, query_params)
-    }
-
-    fn to_container(self) -> ProcedureBuilderContainer<S> {
-        ProcedureBuilderContainer {
-            f: Box::new(self)
-        }
     }
 }
 

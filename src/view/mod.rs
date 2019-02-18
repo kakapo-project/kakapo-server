@@ -4,7 +4,6 @@ mod action_wrapper;
 mod procedure;
 mod error;
 mod routes;
-pub mod route_builder;
 pub mod extensions;
 
 use std::result::Result;

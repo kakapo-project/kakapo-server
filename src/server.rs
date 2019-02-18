@@ -11,7 +11,6 @@ use actix_web::App;
 use AppStateBuilder;
 
 use view::extensions::ProcedureExt;
-use view::route_builder::RouteBuilder;
 
 pub fn serve() {
     let server_addr = "127.0.0.1:8080";
@@ -28,8 +27,6 @@ pub fn serve() {
             .num_threads(1)
             .done();
 
-        let route_builder = RouteBuilder::build(&mut state);
-
         App::with_state(state)
             .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
             .middleware(Logger::new(r#"Requested [%r] FROM %a "%{User-Agent}i""#))
@@ -40,7 +37,7 @@ pub fn serve() {
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
-                .add_routes(&route_builder)
+                .add_routes()
                 .register())
     });
 
