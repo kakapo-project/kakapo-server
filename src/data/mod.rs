@@ -146,30 +146,30 @@ pub enum Value {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawTableDataColumns {
-    keys: Vec<String>,
-    values: Vec<String>
+    pub keys: Vec<String>,
+    pub values: Vec<String>
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawTableDataData {
-    keys: Vec<IndexableValue>,
-    values: Vec<Value>
+    pub keys: Vec<IndexableValue>,
+    pub values: Vec<Value>
 }
 
 /// Default return value from a query
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawTableData  {
-    columns: RawTableDataColumns,
-    data: Vec<RawTableDataData>,
+    pub columns: RawTableDataColumns,
+    pub data: Vec<RawTableDataData>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyValuePairObject {
-    keys: LinkedHashMap<String, IndexableValue>,
-    values: LinkedHashMap<String, Value>,
+    pub keys: LinkedHashMap<String, IndexableValue>,
+    pub values: LinkedHashMap<String, Value>,
 }
 
 

@@ -27,6 +27,7 @@ use diesel::serialize::Output;
 use diesel::serialize::ToSql;
 use diesel::serialize::IsNull;
 use database::DatabaseFunctions;
+use database::error_parser;
 
 struct InternalRawConnection {
     pub internal_connection: NonNull<pq_sys::PGconn>,
@@ -175,14 +176,39 @@ impl ResultWrapper {
         }
     }
 
-    pub fn print_error(&self) -> () {
+    fn print_error(&self) -> () {
         unsafe {
-            let error_enum = pq_sys::PQresultStatus(self.p());
-            println!("status: {:?}", error_enum);
-            if format!("{:?}", error_enum) == "PGRES_FATAL_ERROR" {
-                let r = pq_sys::PQresultErrorMessage(self.p());
-                println!("error: {:?}", CString::from_raw(r));
-            }
+            let r = pq_sys::PQresultErrorMessage(self.p());
+            error!("{:?}", CString::from_raw(r));
+        }
+    }
+
+    fn raw_error(&self) -> DbError {
+        let field = 'C' as i32;
+        let ptr = unsafe { pq_sys::PQresultErrorField(self.p(), field as raw::c_int) };
+        if ptr.is_null() {
+            return DbError::Unknown;
+        }
+
+        let c_str = unsafe { CStr::from_ptr(ptr) };
+        if let Ok(res) = c_str.to_str() {
+            let description = error_parser::parse_pg_error_code(res);
+            DbError::QueryError(description.to_string())
+        } else {
+            DbError::Unknown
+        }
+    }
+
+    pub fn get_error(&self) -> Option<DbError> {
+        let error_enum = unsafe { pq_sys::PQresultStatus(self.p()) };
+        match error_enum {
+            pq_sys::PGRES_COMMAND_OK | pq_sys::PGRES_TUPLES_OK => None,
+            pq_sys::PGRES_EMPTY_QUERY => Some(DbError::EmptyQuery),
+            pq_sys::PGRES_FATAL_ERROR => Some(self.raw_error()),
+            _ => {
+                self.print_error();
+                Some(DbError::Unknown)
+            },
         }
     }
 }
@@ -325,12 +351,61 @@ impl DatabaseFunctions for Conn {
                 DbError::Unknown
             })?;
 
-        result.print_error();
+        if let Some(err) = result.get_error(){
+            return Err(err);
+        }
 
         let table_data = data::RawTableData::new_and_fill(columns, data);
-
-        println!("result: {:?}", &table_data);
-
         Ok(table_data)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use test_common::random_identifier;
+    use serde_json::from_value;
+    use test_common::*;
+    use model::state::StateFunctions;
+
+    #[test]
+    fn test_run_successful_commands() {
+        with_state(|state| {
+            let table_name = format!("temp_table{}", random_identifier());
+
+            let conn = state.get_database();
+
+            let result = conn.exec(&format!("CREATE TABLE {} (col_a INTEGER, col_b INTEGER);", &table_name), vec![]).unwrap();
+            let result = conn.exec(&format!("INSERT INTO {}(col_a, col_b) VALUES (1, 2);", &table_name), vec![]).unwrap();
+
+
+            let result = conn.exec(&format!("SELECT * FROM {};", &table_name), vec![]).unwrap();
+            assert_eq!(result.columns.values, ["col_a", "col_b"]);
+            let data: Vec<Vec<Value>> = result.data.into_iter().map(|x| x.values).collect();
+            assert_eq!(data, [[Value::Integer(1), Value::Integer(2)]]);
+
+
+            let result = conn.exec(&format!("INSERT INTO {}(col_a, col_b) VALUES (10, 20);", &table_name), vec![]).unwrap();
+            let result = conn.exec(&format!("SELECT * FROM {} ORDER BY col_a;", &table_name), vec![]).unwrap();
+            assert_eq!(result.columns.values, ["col_a", "col_b"]);
+            let data: Vec<Vec<Value>> = result.data.into_iter().map(|x| x.values).collect();
+            assert_eq!(data, [[Value::Integer(1), Value::Integer(2)], [Value::Integer(10), Value::Integer(20)]]);
+        })
+    }
+
+    #[test]
+    fn test_run_unsuccessful_commands() {
+        with_state(|state| {
+            let table_name = format!("temp_table{}", random_identifier());
+
+            let conn = state.get_database();
+
+            let result = conn.exec(&format!("CREATE TABLE {} (col_a INTEGER, col_b INTEGER);", &table_name), vec![]);
+
+            let result = conn.exec(&format!("INSERT INTO {}(col_a, col_b) VALUES (1, 'A NUmber');", &table_name), vec![]).unwrap_err();
+            assert_eq!(result, DbError::QueryError("Invalid text representation".to_string()));
+
+        })
     }
 }
