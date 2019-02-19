@@ -26,6 +26,7 @@ use connection::AppStateLike;
 use AppState;
 use view::routes::users;
 use view::routes::manage;
+use view::websocket;
 
 // use actix_web::dev::QueryConfig; //NOTE: for some reason this can't be imported, probably actix_web issue
 
@@ -50,6 +51,9 @@ pub trait ProcedureExt<S>
             Json<JP>: FromRequest<S, Config = JsonConfig<S>>,
             Query<QP>: FromRequest<S>,
             <A as Action>::Ret: Send + Serialize;
+
+    /// Add the socket routes
+    fn add_socket(&mut self, path: &str) -> &mut Self;
 
     /// Add all the routes for the actix web server
     fn add_routes(&mut self) -> &mut Self;
@@ -88,6 +92,11 @@ impl<S> ProcedureExt<S> for CorsBuilder<S>
         })
     }
 
+    fn add_socket(&mut self, path: &str) -> &mut Self {
+        self.resource(path, |r| r.f(websocket::handler))
+    }
+
+    //TODO: put this in a macro, we are using this in the sockets as well
     fn add_routes(&mut self) -> &mut Self {
         self
             .add_route("/manage/getAllTables", manage::get_all_tables)
@@ -138,6 +147,8 @@ impl<S> ProcedureExt<S> for CorsBuilder<S>
 
             .add_route("/users/attachRoleForUser", users::attach_role_for_user)
             .add_route("/users/detachRoleForUser", users::detach_role_for_user)
+
+            .add_socket("/listen")
     }
 }
 
@@ -172,6 +183,10 @@ impl<S> ProcedureExt<S> for TestApp<S>
         })
     }
 
+    fn add_socket(&mut self, path: &str) -> &mut Self {
+        self.resource(path, |r| r.f(websocket::handler))
+    }
+
     fn add_routes(&mut self) -> &mut Self {
         self
             .add_route("/manage/getAllTables", manage::get_all_tables)
@@ -222,5 +237,7 @@ impl<S> ProcedureExt<S> for TestApp<S>
 
             .add_route("/users/attachRoleForUser", users::attach_role_for_user)
             .add_route("/users/detachRoleForUser", users::detach_role_for_user)
+
+            .add_socket("/listen")
     }
 }

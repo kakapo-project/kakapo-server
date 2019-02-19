@@ -39,6 +39,11 @@ use model::state::PubSubOps;
 use data::channels::Channels;
 use pubsub::error::BroadcastError;
 use view::extensions::ProcedureExt;
+use actix_web::ws::ClientReader;
+use actix_web::ws::ClientWriter;
+use futures::Stream;
+use actix_web::ws::Message;
+
 
 pub fn random_identifier() -> String {
     let uuid = Uuid::new_v4();
@@ -61,24 +66,23 @@ pub fn init_logger() {
 
 pub fn build_server() -> TestServer {
 
-    let mut state = KakapoStateBuilder::new()
-        .host("localhost")
-        .port(5432)
-        .user("test")
-        .pass("password")
-        .db("test")
-        .script_path("./local")
-        .token_secret(TEST_KEY)
-        .issuer("THE_ISSUER")
-        .token_duration(600)
-        .refresh_token_duration(60 * 60 * 24 * 7)
-        .num_threads(1)
-        .done();
-
-    let final_state = TestState(Box::new(state));
-
     let server_builder: TestServerBuilder<TestState, _> = TestServer::build_with_state(move || {
-        final_state.clone()
+
+        let mut state = KakapoStateBuilder::new()
+            .host("localhost")
+            .port(5432)
+            .user("test")
+            .pass("password")
+            .db("test")
+            .script_path("./local")
+            .token_secret(TEST_KEY)
+            .issuer("THE_ISSUER")
+            .token_duration(600)
+            .refresh_token_duration(60 * 60 * 24 * 7)
+            .num_threads(1)
+            .done();
+
+        TestState(Box::new(state))
     });
 
     server_builder
@@ -102,6 +106,20 @@ pub fn send_message(server: &mut TestServer, endpoint: &str, json_request: &serd
 
     (response, body)
 }
+
+pub fn send_ws_message(server: &mut TestServer, json_request: &serde_json::Value) -> (Option<Message>, ClientReader) {
+    let (reader, mut writer) = server
+        .ws_at("/listen")
+        .unwrap();
+    let json_str: String = serde_json::to_string(json_request).unwrap();
+    writer.text(json_str);
+
+    let fut = reader.into_future();
+    let res = server.execute(fut).unwrap();
+
+    res
+}
+
 
 pub fn print_response(response: &ClientResponse, body: &serde_json::Value) {
     println!("HEADER: \n{:?}\nRESPONSE: \n{}", response, serde_json::to_string_pretty(body).unwrap());

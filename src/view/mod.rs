@@ -3,7 +3,8 @@
 mod action_wrapper;
 mod procedure;
 mod error;
-mod routes;
+pub mod routes;
+mod websocket;
 pub mod extensions;
 
 use std::result::Result;

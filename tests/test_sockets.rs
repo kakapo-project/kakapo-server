@@ -46,22 +46,27 @@ use kakapo_api::test_common::*;
 
 
 #[test]
-fn test_get_table() {
+fn test_create_connection() {
+
+    init_logger();
+
     let mut server = build_server();
     let id = random_identifier();
+
     let query_name = format!("my_query_{}", id);
-
-
     let json_request = json!({
-        "name": query_name,
-        "description": "blah blah blah",
-        "statement": "SELECT * FROM a_table"
+        "action": "call",
+        "procedure": "createQuery",
+        "params": {},
+        "data": {
+            "name": query_name,
+            "description": "blah blah blah",
+            "statement": "SELECT * FROM a_table"
+        }
     });
-    let endpoint = "/manage/createQuery";
 
-    let (response, body) = send_message(&mut server, endpoint, &json_request);
 
-    assert_eq!(body["result"], json!("created"));
-    assert_eq!(body["new"]["name"], json!(query_name));
-
+    let (message, reader) = send_ws_message(&mut server, &json_request);
+    println!("message: {:?}", &message);
+    println!("reader : {:?}", &reader);
 }

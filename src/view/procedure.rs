@@ -23,6 +23,7 @@ use connection::AppStateLike;
 
 use model::actions::Action;
 use view::action_wrapper::ActionWrapper;
+use view::error::Error::TooManyConnections;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 
@@ -103,6 +104,48 @@ impl<S, JP, QP, PB, A> ProcedureHandler<S, JP, QP, PB, A>
             phantom_data: std::marker::PhantomData,
         }
     }
+}
+
+
+/// For use by the websockets
+pub fn call_action<S, PB, JP, QP, A>(procedure_builder: PB, state: &S, data: JP, query: QP) -> Result<serde_json::Value, serde_json::Value>
+    where
+        PB: ProcedureBuilder<S, JP, QP, A> + Clone + 'static,
+        JP: Debug,
+        QP: Debug,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
+        A: Action + 'static,
+        <A as Action>::Ret: Serialize,
+        S: AppStateLike,
+{
+
+    let action = procedure_builder
+        .build(data, query);
+
+    //TODO: auth
+
+    debug!("calling action asynchronously");
+    state
+        .connect()
+        .send(ActionWrapper::new(None, action))
+        .wait()
+        .or_else(|err| Err(TooManyConnections))
+        .and_then(|res| match res {
+            Ok(ok_res) => {
+                let serialized = ok_res.get_data();
+                debug!("Responding with message: {:?}", &serialized);
+                Ok(HttpResponse::Ok()
+                    .json(serialized))
+            },
+            Err(err) => {
+                debug!("Responding with error message: {:?}", &err);
+                Ok(HttpResponse::InternalServerError()
+                    .json(json!({ "error": err.to_string() })))
+            }
+        });
+
+    Ok(json!(null))
 }
 
 pub fn procedure_handler_function<S, JP, QP, PB, A>(

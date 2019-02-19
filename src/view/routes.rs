@@ -10,6 +10,8 @@ use serde_json::Value;
 use serde_json::Error;
 use serde_json::from_value;
 use connection::AppStateLike;
+use view::procedure::ProcedureBuilder;
+use view::procedure::call_action;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -300,6 +302,52 @@ pub mod users {
         let role: RoleData = from_value(data)?;
         let get_user: GetUser = from_value(query)?;
         Ok(actions::DetachRoleForUser::<_>::new(get_user.user_identifier, role.name))
+    }
+
+}
+
+
+pub fn call_procedure<S>(
+    procedure: &str,
+    state: &S,
+    query: serde_json::Value,
+    data: serde_json::Value
+) -> Result<serde_json::Value, serde_json::Value>
+    where
+        S: AppStateLike + 'static
+{
+
+    //TODO: put this in a macro, we are using this in the routes as well
+    match procedure {
+        "getAllTables" => call_action(manage::get_all_tables, state, data, query),
+        "getAllQueries" => call_action(manage::get_all_queries, state, data, query),
+        "getAllScripts" => call_action(manage::get_all_scripts, state, data, query),
+
+        "getTable" => call_action(manage::get_table, state, data, query),
+        "getQuery" => call_action(manage::get_query, state, data, query),
+        "getScript" => call_action(manage::get_script, state, data, query),
+
+        "createTable" => call_action(manage::create_table, state, data, query),
+        "createQuery" => call_action(manage::create_query, state, data, query),
+        "createScript" => call_action(manage::create_script, state, data, query),
+
+        "updateTable" => call_action(manage::update_table, state, data, query),
+        "updateQuery" => call_action(manage::update_query, state, data, query),
+        "updateScript" => call_action(manage::update_script, state, data, query),
+
+        "deleteTable" => call_action(manage::delete_table, state, data, query),
+        "deleteQuery" => call_action(manage::delete_query, state, data, query),
+        "deleteScript" => call_action(manage::delete_script, state, data, query),
+
+        "queryTableData" => call_action(manage::query_table_data, state, data, query),
+        "insertTableData" => call_action(manage::insert_table_data, state, data, query),
+        "modifyTableData" => call_action(manage::modify_table_data, state, data, query),
+        "removeTableData" => call_action(manage::remove_table_data, state, data, query),
+
+        "runQuery" => call_action(manage::run_query, state, data, query),
+        "runScript" => call_action(manage::run_script, state, data, query),
+
+        _ => Err(json!({"error": "Could not understand command"})),
     }
 
 }
