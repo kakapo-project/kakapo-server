@@ -6,6 +6,8 @@ use std::marker::PhantomData;
 
 use uuid::Uuid;
 
+use futures::Future;
+
 use actix_web::ws;
 
 use actix::ActorContext;
@@ -16,7 +18,10 @@ use pubsub::input::WsInputData;
 use view::routes;
 
 use AppStateLike;
-
+use view::action_wrapper::ActionWrapper;
+use view::routes::CallAction;
+use view::procedure::ProcedureBuilder;
+use model::actions::Action;
 
 impl<S> Actor for WsClientSession<S>
     where
@@ -99,7 +104,7 @@ impl<S> WsClientSession<S>
 
     fn handle_message(&mut self, ctx: &mut ws::WebsocketContext<Self, S>, input: WsInputData) {
         debug!("receiving message: {:?}", &input);
-        let message = match input {
+        match input {
             //TODO:...
             // - Authenticate
             // - GetSubscribers
@@ -107,22 +112,70 @@ impl<S> WsClientSession<S>
             // - Unsubscribe from
             WsInputData::Call { procedure, params, data } => {
                 let state = ctx.state();
-                routes::call_procedure(&procedure, state, params, data)
-                    .and_then(|res| {
-                        info!("action message error");
-                        let message = serde_json::to_string(&res).unwrap_or_default();
-                        Ok(message)
-                    })
-                    .or_else::<serde_json::Value, _>(|err| {
-                        info!("action message ok");
-                        let message = serde_json::to_string(&err).unwrap_or_default();
-                        Ok(message)
-                    })
-                    .unwrap_or_default()
+                let callback = WsCallback { state, data, params, };
+                routes::call_procedure(&procedure, callback);
             },
         };
+    }
+}
 
-        debug!("sending back message: {:?}", &message);
-        ctx.text(message);
+struct WsCallback<'a, S>
+    where S: AppStateLike
+{
+    state: &'a S,
+    data: serde_json::Value,
+    params: serde_json::Value,
+}
+
+impl<'a, S> CallAction<S> for WsCallback<'a, S>
+    where S: AppStateLike
+{
+    /// For use by the websockets
+    fn call<PB, A>(&self, procedure_builder: PB) -> ()
+        where
+            PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
+            S: AppStateLike + 'static,
+            A: Action + 'static,
+    {
+
+        let action = procedure_builder
+            .build(self.data.to_owned(), self.params.to_owned());
+
+        //TODO: auth
+
+        debug!("calling action asynchronously");
+        self.state
+            .connect()
+            //FIXME: ... it deadlocks here
+            .send(ActionWrapper::new(None, action))
+            .and_then(|res| match res {
+                Ok(ok_res) => {
+                    //let serialized = ok_res.get_data();
+                    debug!("Responding with message: {:?}", &ok_res);
+                    Ok(())
+                },
+                Err(err) => {
+                    debug!("Responding with error message: {:?}", &err);
+                    Ok(())
+                }
+            });
+
+        /*
+        .and_then(|res| {
+            info!("action message error");
+            let message = serde_json::to_string(&res).unwrap_or_default();
+            Ok(message)
+        })
+        .or_else::<serde_json::Value, _>(|err| {
+            info!("action message ok");
+            let message = serde_json::to_string(&err).unwrap_or_default();
+            Ok(message)
+        })
+        .unwrap_or_default()
+        */
+    }
+
+    fn error(&self) -> () {
+        unimplemented!()
     }
 }

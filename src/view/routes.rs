@@ -11,7 +11,6 @@ use serde_json::Error;
 use serde_json::from_value;
 use connection::AppStateLike;
 use view::procedure::ProcedureBuilder;
-use view::procedure::call_action;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -306,48 +305,52 @@ pub mod users {
 
 }
 
+pub trait CallAction<S> {
+    fn call<PB, A>(&self, procedure_builder: PB) -> ()
+        where
+            PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
+            S: AppStateLike + 'static,
+            A: Action + 'static;
 
-pub fn call_procedure<S>(
-    procedure: &str,
-    state: &S,
-    query: serde_json::Value,
-    data: serde_json::Value
-) -> Result<serde_json::Value, serde_json::Value>
+    fn error(&self) -> ();
+}
+
+pub fn call_procedure<CB, S>(procedure: &str, cb: CB) -> ()
     where
-        S: AppStateLike + 'static
+        S: AppStateLike + 'static,
+        CB: CallAction<S>,
 {
-
     //TODO: put this in a macro, we are using this in the routes as well
     match procedure {
-        "getAllTables" => call_action(manage::get_all_tables, state, data, query),
-        "getAllQueries" => call_action(manage::get_all_queries, state, data, query),
-        "getAllScripts" => call_action(manage::get_all_scripts, state, data, query),
+        "getAllTables" => cb.call(manage::get_all_tables),
+        "getAllQueries" => cb.call(manage::get_all_queries),
+        "getAllScripts" => cb.call(manage::get_all_scripts),
 
-        "getTable" => call_action(manage::get_table, state, data, query),
-        "getQuery" => call_action(manage::get_query, state, data, query),
-        "getScript" => call_action(manage::get_script, state, data, query),
+        "getTable" => cb.call(manage::get_table),
+        "getQuery" => cb.call(manage::get_query),
+        "getScript" => cb.call(manage::get_script),
 
-        "createTable" => call_action(manage::create_table, state, data, query),
-        "createQuery" => call_action(manage::create_query, state, data, query),
-        "createScript" => call_action(manage::create_script, state, data, query),
+        "createTable" => cb.call(manage::create_table),
+        "createQuery" => cb.call(manage::create_query),
+        "createScript" => cb.call(manage::create_script),
 
-        "updateTable" => call_action(manage::update_table, state, data, query),
-        "updateQuery" => call_action(manage::update_query, state, data, query),
-        "updateScript" => call_action(manage::update_script, state, data, query),
+        "updateTable" => cb.call(manage::update_table),
+        "updateQuery" => cb.call(manage::update_query),
+        "updateScript" => cb.call(manage::update_script),
 
-        "deleteTable" => call_action(manage::delete_table, state, data, query),
-        "deleteQuery" => call_action(manage::delete_query, state, data, query),
-        "deleteScript" => call_action(manage::delete_script, state, data, query),
+        "deleteTable" => cb.call(manage::delete_table),
+        "deleteQuery" => cb.call(manage::delete_query),
+        "deleteScript" => cb.call(manage::delete_script),
 
-        "queryTableData" => call_action(manage::query_table_data, state, data, query),
-        "insertTableData" => call_action(manage::insert_table_data, state, data, query),
-        "modifyTableData" => call_action(manage::modify_table_data, state, data, query),
-        "removeTableData" => call_action(manage::remove_table_data, state, data, query),
+        "queryTableData" => cb.call(manage::query_table_data),
+        "insertTableData" => cb.call(manage::insert_table_data),
+        "modifyTableData" => cb.call(manage::modify_table_data),
+        "removeTableData" => cb.call(manage::remove_table_data),
 
-        "runQuery" => call_action(manage::run_query, state, data, query),
-        "runScript" => call_action(manage::run_script, state, data, query),
+        "runQuery" => cb.call(manage::run_query),
+        "runScript" => cb.call(manage::run_script),
 
-        _ => Err(json!({"error": "Could not understand command"})),
+        _ => cb.error(),
     }
 
 }
