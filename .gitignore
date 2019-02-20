@@ -12,6 +12,7 @@ www/
 
 # testing
 /coverage
+/rls
 
 # production
 /build

@@ -1,6 +1,7 @@
 
 pub mod error;
 mod input;
+mod routes;
 
 use std::marker::PhantomData;
 
@@ -9,19 +10,24 @@ use uuid::Uuid;
 use futures::Future;
 
 use actix_web::ws;
+use actix_web::HttpResponse;
 
 use actix::ActorContext;
 use actix::StreamHandler;
 use actix::Actor;
-
-use pubsub::input::WsInputData;
-use view::routes;
+use actix::fut;
+use actix::WrapFuture;
+use actix::ActorFuture;
+use actix::ContextFutureSpawner;
 
 use AppStateLike;
 use view::action_wrapper::ActionWrapper;
-use view::routes::CallAction;
 use view::procedure::ProcedureBuilder;
+use view::error::Error::TooManyConnections;
 use model::actions::Action;
+
+use pubsub::input::WsInputData;
+use pubsub::routes::CallAction;
 
 impl<S> Actor for WsClientSession<S>
     where
@@ -87,6 +93,8 @@ pub struct WsClientSession<S>
         S: AppStateLike + 'static,
 {
     pub id: Uuid,
+    data: serde_json::Value,
+    params: serde_json::Value,
     phantom_data: PhantomData<(S)>,
 }
 
@@ -98,6 +106,8 @@ impl<S> WsClientSession<S>
         let id = Uuid::new_v4();
         Self {
             id,
+            data: json!(null),
+            params: json!(null),
             phantom_data: PhantomData,
         }
     }
@@ -111,27 +121,22 @@ impl<S> WsClientSession<S>
             // - Subscribe to
             // - Unsubscribe from
             WsInputData::Call { procedure, params, data } => {
-                let state = ctx.state();
-                let callback = WsCallback { state, data, params, };
-                routes::call_procedure(&procedure, callback);
+                self.data = data; // This should be ok, since we only have one thread per WsClientSession
+                self.params = params;
+
+                let result = routes::call_procedure(&procedure, self, ctx);
+                debug!("finished calling procedure {:?}", &result);
+
             },
         };
     }
 }
 
-struct WsCallback<'a, S>
-    where S: AppStateLike
-{
-    state: &'a S,
-    data: serde_json::Value,
-    params: serde_json::Value,
-}
-
-impl<'a, S> CallAction<S> for WsCallback<'a, S>
+impl<S> CallAction<S> for WsClientSession<S>
     where S: AppStateLike
 {
     /// For use by the websockets
-    fn call<PB, A>(&self, procedure_builder: PB) -> ()
+    fn call<PB, A>(&mut self, procedure_builder: PB, ctx: &mut ws::WebsocketContext<WsClientSession<S>, S>)
         where
             PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
             S: AppStateLike + 'static,
@@ -144,21 +149,26 @@ impl<'a, S> CallAction<S> for WsCallback<'a, S>
         //TODO: auth
 
         debug!("calling action asynchronously");
-        self.state
+        ctx.state()
             .connect()
-            //FIXME: ... it deadlocks here
             .send(ActionWrapper::new(None, action))
-            .and_then(|res| match res {
-                Ok(ok_res) => {
-                    //let serialized = ok_res.get_data();
-                    debug!("Responding with message: {:?}", &ok_res);
-                    Ok(())
-                },
-                Err(err) => {
-                    debug!("Responding with error message: {:?}", &err);
-                    Ok(())
+            .into_actor(self)
+            .then(|res, actor, ctx| {
+                match res {
+                    Ok(ok_res) => {
+                        //let serialized = ok_res.get_data();
+                        debug!("Responding with message: {:?}", &ok_res);
+                        ctx.text("hi");
+                    },
+                    Err(err) => {
+                        debug!("Responding with error message: {:?}", &err);
+                        ctx.text("hello");
+                    }
                 }
-            });
+
+                fut::ok(())
+            })
+            .wait(ctx);
 
         /*
         .and_then(|res| {
@@ -173,9 +183,13 @@ impl<'a, S> CallAction<S> for WsCallback<'a, S>
         })
         .unwrap_or_default()
         */
+
     }
 
-    fn error(&self) -> () {
+    fn error(&mut self, ctx: &mut ws::WebsocketContext<WsClientSession<S>, S>)
+        where
+            S: AppStateLike + 'static
+    {
         unimplemented!()
     }
 }

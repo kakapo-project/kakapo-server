@@ -1,8 +1,8 @@
 
 
 
-mod error;
-mod websocket;
+pub mod error;
+pub mod websocket;
 
 pub mod procedure;
 pub mod routes;
