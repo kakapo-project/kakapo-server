@@ -43,12 +43,11 @@ use actix_web::client::ClientResponse;
 use std::sync::Arc;
 use std::str;
 use kakapo_api::test_common::*;
+use actix_web::ws::Message::Text;
 
 
 #[test]
-fn test_create_connection() {
-
-    init_logger();
+fn test_sanity_websocket_connection() {
 
     let mut server = build_server();
     let id = random_identifier();
@@ -66,7 +65,84 @@ fn test_create_connection() {
     });
 
 
-    let (message, reader) = send_ws_message(&mut server, &json_request);
-    println!("message: {:?}", &message);
-    println!("reader : {:?}", &reader);
+    let (message, _reader, _writer) = send_new_ws_message(&mut server, &json_request);
+    let message = message.unwrap();
+
+    if let Text(final_msg) = message {
+        let final_msg: serde_json::Value = serde_json::from_str(&final_msg).unwrap();
+        assert_eq!(final_msg, json!({"error": "Not authorized"}))
+    } else {
+        panic!("Expected a text message");
+    }
+}
+
+#[test]
+fn test_websocket_connection_outdated_token() {
+
+    let mut server = build_server();
+    let id = random_identifier();
+
+    let json_request = json!({
+        "action": "authenticate",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0Iiwic3ViIjoxLCJpYXQiOjAsImV4cCI6MTI2MjM0NzIwMCwidXNlcm5hbWUiOiJBZG1pblRlc3QiLCJpc0FkbWluIjp0cnVlLCJyb2xlIjpudWxsfQ.ajRQEvl948E_4UgNd4OMGLzpU38fizzNIfH_8U_micQ",
+    }); //The token here is an outdated token, similar permissions as the master token, but expired in 2010
+
+
+    let (message, _reader, _writer) = send_new_ws_message(&mut server, &json_request);
+    let message = message.unwrap();
+
+    if let Text(final_msg) = message {
+        let final_msg: serde_json::Value = serde_json::from_str(&final_msg).unwrap();
+        assert_eq!(final_msg, json!({"error": "Could not authenticate token"}))
+    } else {
+        panic!("Expected a text message");
+    }
+}
+
+#[test]
+fn test_websocket_connection() {
+
+    init_logger();
+
+    let mut server = build_server();
+    let id = random_identifier();
+
+    let json_request = json!({
+        "action": "authenticate",
+        "token": MASTER_KEY_TOKEN_RAW,
+    });
+
+
+    let (message, mut reader, mut writer) = send_new_ws_message(&mut server, &json_request);
+    let message = message.unwrap();
+
+    if let Text(final_msg) = message {
+        let final_msg: serde_json::Value = serde_json::from_str(&final_msg).unwrap();
+        assert_eq!(final_msg, json!("authenticated"))
+    } else {
+        panic!("Expected a text message");
+    }
+
+    let query_name = format!("my_query_{}", id);
+    let json_request = json!({
+        "action": "call",
+        "procedure": "createQuery",
+        "params": {},
+        "data": {
+            "name": query_name,
+            "description": "blah blah blah",
+            "statement": "SELECT * FROM a_table"
+        }
+    });
+
+
+    let message = send_ws_message(&mut writer, &mut reader, &mut server, &json_request);
+    let message = message.unwrap();
+
+    if let Text(final_msg) = message {
+        let final_msg: serde_json::Value = serde_json::from_str(&final_msg).unwrap();
+        println!("final mesg: {:?}", &final_msg);
+    } else {
+        panic!("Expected a text message");
+    }
 }

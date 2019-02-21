@@ -18,7 +18,6 @@ use super::AppState as KakapoState;
 use super::AppStateBuilder as KakapoStateBuilder;
 use model::state::ActionState;
 use model::state::StateFunctions;
-use model::state::GetSecrets;
 use diesel::r2d2::ConnectionManager;
 use diesel::pg::PgConnection;
 use data::claims::AuthClaims;
@@ -43,6 +42,7 @@ use actix_web::ws::ClientReader;
 use actix_web::ws::ClientWriter;
 use futures::Stream;
 use actix_web::ws::Message;
+use connection::GetSecrets;
 
 
 pub fn random_identifier() -> String {
@@ -107,7 +107,7 @@ pub fn send_message(server: &mut TestServer, endpoint: &str, json_request: &serd
     (response, body)
 }
 
-pub fn send_ws_message(server: &mut TestServer, json_request: &serde_json::Value) -> (Option<Message>, ClientReader) {
+pub fn send_new_ws_message(server: &mut TestServer, json_request: &serde_json::Value) -> (Option<Message>, ClientReader, ClientWriter) {
     let (reader, mut writer) = server
         .ws_at("/listen")
         .unwrap();
@@ -117,9 +117,19 @@ pub fn send_ws_message(server: &mut TestServer, json_request: &serde_json::Value
     let fut = reader.into_future();
     let res = server.execute(fut).unwrap();
 
-    res
+    (res.0, res.1, writer)
 }
 
+pub fn send_ws_message(writer: &mut ClientWriter, reader: &mut ClientReader, server: &mut TestServer, json_request: &serde_json::Value) -> Option<Message> {
+
+    let json_str: String = serde_json::to_string(json_request).unwrap();
+    writer.text(json_str);
+
+    let fut = reader.into_future();
+    let res = server.execute(fut).unwrap();
+
+    res.0
+}
 
 pub fn print_response(response: &ClientResponse, body: &serde_json::Value) {
     println!("HEADER: \n{:?}\nRESPONSE: \n{}", response, serde_json::to_string_pretty(body).unwrap());
@@ -138,6 +148,7 @@ pub fn print_response(response: &ClientResponse, body: &serde_json::Value) {
 // with key "TEST_SECRET_TEST_SECRET"
 
 pub const TEST_KEY: &'static str = "TEST_SECRET_TEST_SECRET";
+pub const MASTER_KEY_TOKEN_RAW: &'static str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjkyMjMzNzIwMzY4NTQ3NzU4MDcsImlhdCI6MCwiaXNBZG1pbiI6dHJ1ZSwiaXNzIjoidGVzdCIsInJvbGUiOm51bGwsInN1YiI6MSwidXNlcm5hbWUiOiJBZG1pblRlc3QifQ.pgSE-K4RTaWMhVfny2LwUp3f0TEHS6y-vciDcH1c2y8";
 pub const MASTER_KEY_TOKEN: &'static str = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjkyMjMzNzIwMzY4NTQ3NzU4MDcsImlhdCI6MCwiaXNBZG1pbiI6dHJ1ZSwiaXNzIjoidGVzdCIsInJvbGUiOm51bGwsInN1YiI6MSwidXNlcm5hbWUiOiJBZG1pblRlc3QifQ.pgSE-K4RTaWMhVfny2LwUp3f0TEHS6y-vciDcH1c2y8";
 
 
@@ -148,6 +159,16 @@ pub struct TestState(Box<KakapoState>);
 impl AppStateLike for TestState {
     fn connect(&self) -> &Addr<Executor> {
         self.0.connect()
+    }
+}
+
+impl GetSecrets for TestState {
+    fn get_token_secret(&self) -> String {
+        self.0.get_token_secret()
+    }
+
+    fn get_password_secret(&self) -> String {
+        self.0.get_password_secret()
     }
 }
 

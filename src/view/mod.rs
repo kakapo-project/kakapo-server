@@ -8,6 +8,7 @@ pub mod procedure;
 pub mod routes;
 pub mod action_wrapper;
 pub mod extensions;
+pub mod bearer_token;
 
 use std::result::Result;
 use std::result::Result::Ok;

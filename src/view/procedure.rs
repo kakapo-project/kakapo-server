@@ -130,10 +130,14 @@ pub fn procedure_handler_function<S, JP, QP, PB, A>(
     let state = req.state();
 
     let auth_header = req.headers().get(header::AUTHORIZATION).map(|x| x.as_bytes());
+    let mut action_wrapper = ActionWrapper::new(action);
+    if let Some(auth) = auth_header {
+        action_wrapper = action_wrapper.with_auth(auth);
+    }
 
     state
         .connect()
-        .send(ActionWrapper::new(auth_header, action))
+        .send(action_wrapper)
         .from_err()
         .and_then(|res| match res {
             Ok(ok_res) => {

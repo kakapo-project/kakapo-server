@@ -12,12 +12,12 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::state::ActionState;
-use model::state::GetSecrets;
 use model::state::StateFunctions;
 use model::state::user_management::UserManagementOps;
 use model::state::authentication::AuthenticationOps;
 
 use auth::send_mail::EmailOps;
+use connection::GetSecrets;
 
 #[derive(Debug)]
 pub struct Login<S = ActionState> {

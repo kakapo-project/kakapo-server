@@ -18,8 +18,8 @@ use data::channels::Channels;
 use model::state::PubSubOps;
 use serde::Serialize;
 use pubsub::error::BroadcastError;
+use view::bearer_token::parse_bearer_token;
 
-const BEARER: &'static str = "Bearer ";
 
 pub struct ActionWrapper<A>
     where A: Action
@@ -39,32 +39,30 @@ impl<A> fmt::Debug for ActionWrapper<A>
 impl<A> ActionWrapper<A>
     where A: Action + Send
 {
-    pub fn new(auth_header: Option<&[u8]>, action: Result<A, serde_json::Error>) -> Self {
+    pub fn new(action: Result<A, serde_json::Error>) -> Self {
         Self {
             action,
-            auth_header: auth_header.map(|x| x.to_owned()),
+            auth_header: None,
         }
     }
 
-    fn parse_bearer_token(data: String) -> Option<String> {
-        let is_bearer = data.starts_with(BEARER);
-        if !is_bearer {
-            error!("must be a Bearer token");
-            None
-        } else {
-            let (_, token_str) = data.split_at(BEARER.len());
-
-            Some(token_str.to_string())
+    pub fn with_auth(self, auth: &[u8]) -> Self {
+        Self {
+            action: self.action,
+            auth_header: Some(auth.to_owned()),
         }
     }
+
+
 
     fn decode_token(&self, token_secret: String) -> Option<AuthClaims> {
         let auth_header = self.auth_header.to_owned();
 
         auth_header
             .and_then(|bytes| str::from_utf8(&bytes).ok().map(|x| x.to_string()))
-            .and_then(|data| Self::parse_bearer_token(data))
+            .and_then(|data| parse_bearer_token(data))
             .and_then(|auth| {
+                println!("AUTH: {:?}", &auth);
                 let decoded = jsonwebtoken::decode::<AuthClaims>(
                     &auth,
                     token_secret.as_ref(),
@@ -123,10 +121,8 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
     type Result = ActionResult<A::Ret>;
 
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
-        debug!("handling call : {:?}", &msg);
 
         let auth_claims = msg.decode_token(self.get_token_secret());
-
         let action_req = msg.get_action()?;
 
         let conn = self.get_connection();
@@ -189,7 +185,7 @@ mod test {
 
             let f = executor
                 .connect()
-                .send(ActionWrapper::new(None, Ok(action)))
+                .send(ActionWrapper::new(Ok(action)))
                 .map_err(|_| ())
                 .map(|res| {
                     assert_eq!(res.unwrap().get_data(), "Hello World!");
@@ -204,17 +200,17 @@ mod test {
     #[test]
     fn test_parse_bearer_token() {
         let input = "Bearer MY_🐻_TOKEN_HERE";
-        let output = ActionWrapper::<TestAction>::parse_bearer_token(input.to_string());
+        let output = parse_bearer_token(input.to_string());
 
         assert_eq!(output.unwrap(), "MY_🐻_TOKEN_HERE");
 
         let input = "Basic usename_and_password_here";
-        let output = ActionWrapper::<TestAction>::parse_bearer_token(input.to_string());
+        let output = parse_bearer_token(input.to_string());
 
         assert_eq!(output, None);
 
         let input = "..";
-        let output = ActionWrapper::<TestAction>::parse_bearer_token(input.to_string());
+        let output = parse_bearer_token(input.to_string());
 
         assert_eq!(output, None);
     }
