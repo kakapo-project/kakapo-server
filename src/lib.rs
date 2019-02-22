@@ -50,7 +50,6 @@ mod connection;
 mod metastore;
 mod pubsub;
 mod server;
-//mod sockets;
 
 //#[cfg(test)]
 pub mod test_common;

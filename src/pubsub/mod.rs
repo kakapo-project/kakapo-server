@@ -44,6 +44,7 @@ use actix::Handler;
 use actix::SystemService;
 use std::collections::HashSet;
 use data::channels::Channels;
+use pubsub::server::UserSession;
 
 impl<S> Actor for WsClientSession<S>
     where
@@ -130,6 +131,7 @@ pub struct WsClientSession<S>
     subscriptions: HashSet<Channels>,
     last_beat: DateTime<Utc>,
     auth_header: Option<Vec<u8>>,
+    user_id: i64,
     phantom_data: PhantomData<(S)>,
 }
 
@@ -144,6 +146,7 @@ impl<S> WsClientSession<S>
             subscriptions: HashSet::new(),
             last_beat: Utc::now(),
             auth_header: None,
+            user_id: 0,
             phantom_data: PhantomData,
         }
     }
@@ -161,7 +164,7 @@ impl<S> WsClientSession<S>
                 self.send_unsubscribe_message(channel, ctx);
             },
             WsInputData::ListSubscribers { channel } => {
-
+                unimplemented!(); //TODO: also need a way to get list of new joins and exits
             },
             WsInputData::Call { procedure, params, data } => {
                 debug!("calling procedure: {:?}", &procedure);
@@ -253,6 +256,7 @@ impl<S> WsClientSession<S>
             Ok(x) => {
                 let bearer_token = to_bearer_token(token); //need it to be a bearer token for the action wrapper to handle it
                 self.auth_header = Some(bearer_token.as_bytes().to_vec());
+                self.user_id = x.claims.get_user_id();
 
                 let message = json!("authenticated");
                 let message = serde_json::to_string(&message).unwrap_or_default();
@@ -278,7 +282,12 @@ impl<S> WsClientSession<S>
             let message = serde_json::to_string(&message).unwrap_or_default();
             ctx.text(message);
         } else {
-            let subscribe_msg = SubscribeMessage(channel.to_owned(), self.id.to_owned(), ctx.address().recipient());
+            let user_session = UserSession {
+                user_id: self.user_id.to_owned(),
+                rec: ctx.address().recipient(),
+            };
+
+            let subscribe_msg = SubscribeMessage(channel.to_owned(), self.id.to_owned(), user_session);
             WsServer::from_registry()
                 .send(subscribe_msg)
                 .into_actor(self)
