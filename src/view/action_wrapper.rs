@@ -62,7 +62,6 @@ impl<A> ActionWrapper<A>
             .and_then(|bytes| str::from_utf8(&bytes).ok().map(|x| x.to_string()))
             .and_then(|data| parse_bearer_token(data))
             .and_then(|auth| {
-                println!("AUTH: {:?}", &auth);
                 let decoded = jsonwebtoken::decode::<AuthClaims>(
                     &auth,
                     token_secret.as_ref(),

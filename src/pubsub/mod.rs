@@ -37,10 +37,13 @@ use chrono::Utc;
 use chrono::DateTime;
 use pubsub::routes::CallParams;
 use pubsub::server::SubscribeMessage;
+use pubsub::server::UnsubscribeMessage;
 use pubsub::server::ActionMessage;
 use pubsub::server::WsServer;
 use actix::Handler;
 use actix::SystemService;
+use std::collections::HashSet;
+use data::channels::Channels;
 
 impl<S> Actor for WsClientSession<S>
     where
@@ -124,6 +127,7 @@ pub struct WsClientSession<S>
         S: AppStateLike + 'static,
 {
     pub id: Uuid,
+    subscriptions: HashSet<Channels>,
     last_beat: DateTime<Utc>,
     auth_header: Option<Vec<u8>>,
     phantom_data: PhantomData<(S)>,
@@ -137,6 +141,7 @@ impl<S> WsClientSession<S>
         let id = Uuid::new_v4();
         Self {
             id,
+            subscriptions: HashSet::new(),
             last_beat: Utc::now(),
             auth_header: None,
             phantom_data: PhantomData,
@@ -147,46 +152,13 @@ impl<S> WsClientSession<S>
         match input {
             WsInputData::Authenticate { token } => {
                 info!("Authenticating ws user");
-
-                let token_secret = ctx.state().get_token_secret();
-                let decoded = jsonwebtoken::decode::<AuthClaims>(
-                    &token,
-                    token_secret.as_ref(),
-                    &jsonwebtoken::Validation::default());
-
-                match decoded {
-                    Ok(x) => {
-                        let bearer_token = to_bearer_token(token); //need it to be a bearer token for the action wrapper to handle it
-                        self.auth_header = Some(bearer_token.as_bytes().to_vec());
-
-                        let message = json!("authenticated");
-                        let message = serde_json::to_string(&message).unwrap_or_default();
-                        ctx.text(message);
-                    },
-                    Err(err) => {
-                        error!("encountered error trying to decode token: {:?}", &err);
-                        let message = json!({
-                            "error": "Could not authenticate token"
-                        });
-                        let message = serde_json::to_string(&message).unwrap_or_default();
-                        ctx.text(message);
-                    }
-                }
+                self.authenticating_user(token, ctx);
             },
             WsInputData::SubscribeTo { channel } => {
-                let subscribe_msg = SubscribeMessage(channel, self.id.to_owned(), ctx.address().recipient());
-
-                WsServer::from_registry()
-                    .send(subscribe_msg)
-                    .into_actor(self)
-                    .then(|res, actor, ctx| {
-
-                        fut::ok(())
-                    })
-                    .wait(ctx); //TODO: is spawn better here?
+                self.send_subscribe_message(channel, ctx);
             },
             WsInputData::UnsubscribeFrom { channel } => {
-
+                self.send_unsubscribe_message(channel, ctx);
             },
             WsInputData::ListSubscribers { channel } => {
 
@@ -262,5 +234,110 @@ impl<S> CallAction<S> for WsClientSession<S>
             S: AppStateLike + 'static
     {
         unimplemented!()
+    }
+}
+
+
+impl<S> WsClientSession<S>
+    where S: AppStateLike
+{
+
+    fn authenticating_user(&mut self, token: String, ctx: &mut ws::WebsocketContext<Self, S>) {
+        let token_secret = ctx.state().get_token_secret();
+        let decoded = jsonwebtoken::decode::<AuthClaims>(
+            &token,
+            token_secret.as_ref(),
+            &jsonwebtoken::Validation::default());
+
+        match decoded {
+            Ok(x) => {
+                let bearer_token = to_bearer_token(token); //need it to be a bearer token for the action wrapper to handle it
+                self.auth_header = Some(bearer_token.as_bytes().to_vec());
+
+                let message = json!("authenticated");
+                let message = serde_json::to_string(&message).unwrap_or_default();
+                ctx.text(message);
+            },
+            Err(err) => {
+                error!("encountered error trying to decode token: {:?}", &err);
+                let message = json!({
+                            "error": "Could not authenticate token"
+                        });
+                let message = serde_json::to_string(&message).unwrap_or_default();
+                ctx.text(message);
+            }
+        }
+    }
+
+    fn send_subscribe_message(&mut self, channel: Channels, ctx: &mut ws::WebsocketContext<Self, S>) {
+        if self.subscriptions.contains(&channel) {
+            warn!("User already subscribed to {:?}", &channel);
+            let message = json!({
+                        "error": "Already subscribed"
+                    });
+            let message = serde_json::to_string(&message).unwrap_or_default();
+            ctx.text(message);
+        } else {
+            let subscribe_msg = SubscribeMessage(channel.to_owned(), self.id.to_owned(), ctx.address().recipient());
+            WsServer::from_registry()
+                .send(subscribe_msg)
+                .into_actor(self)
+                .then(|res, actor, ctx| {
+                    match res {
+                        Ok(id) => {
+                            let message = json!("subscribed");
+                            let message = serde_json::to_string(&message).unwrap_or_default();
+                            actor.subscriptions.insert(channel);
+                            ctx.text(message);
+                        },
+                        Err(err) => {
+                            error!("Encountered error subscribing: {}", &err.to_string());
+                            let message = json!({
+                                        "error": err.to_string()
+                                    });
+                            let message = serde_json::to_string(&message).unwrap_or_default();
+                            ctx.text(message);
+                        }
+                    }
+                    fut::ok(())
+                })
+                .wait(ctx); //TODO: is spawn better here?
+        }
+    }
+
+    fn send_unsubscribe_message(&mut self, channel: Channels, ctx: &mut ws::WebsocketContext<Self, S>) {
+        if !self.subscriptions.contains(&channel) {
+            warn!("User not subscribed to {:?}", &channel);
+            let message = json!({
+                        "error": "Not subscribed"
+                    });
+            let message = serde_json::to_string(&message).unwrap_or_default();
+            ctx.text(message);
+        } else {
+            let unsubscribe_msg = UnsubscribeMessage(channel.to_owned(), self.id.to_owned());
+            WsServer::from_registry()
+                .send(unsubscribe_msg)
+                .into_actor(self)
+                .then(move |res, actor, ctx| {
+                    match res {
+                        Ok(id) => {
+                            let message = json!("unsubscribed");
+                            let message = serde_json::to_string(&message).unwrap_or_default();
+                            actor.subscriptions.remove(&channel);
+                            ctx.text(message);
+                        },
+                        Err(err) => {
+                            error!("Encountered error unsubscribing: {}", &err.to_string());
+                            let message = json!({
+                                        "error": err.to_string()
+                                    });
+                            let message = serde_json::to_string(&message).unwrap_or_default();
+                            ctx.text(message);
+                        }
+                    }
+                    fut::ok(())
+                })
+                .wait(ctx); //TODO: is spawn better here?
+        }
     }
 }

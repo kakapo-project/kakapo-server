@@ -23,6 +23,19 @@ impl Handler<SubscribeMessage> for WsServer {
     }
 }
 
+#[derive(Clone, Message, Debug)]
+#[rtype(result = "Uuid")]
+pub struct UnsubscribeMessage(pub Channels, pub Uuid);
+
+impl Handler<UnsubscribeMessage> for WsServer {
+    type Result = MessageResult<UnsubscribeMessage>;
+
+    fn handle(&mut self, msg: UnsubscribeMessage, _ctx: &mut Self::Context) -> Self::Result {
+        let UnsubscribeMessage(channels, client_id) = msg;
+
+        MessageResult(client_id)
+    }
+}
 
 type Client = Recipient<ActionMessage>;
 type SubscribersCollection = HashMap<Uuid, Client>;

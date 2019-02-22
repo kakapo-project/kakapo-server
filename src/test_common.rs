@@ -107,7 +107,7 @@ pub fn send_message(server: &mut TestServer, endpoint: &str, json_request: &serd
     (response, body)
 }
 
-pub fn send_new_ws_message(server: &mut TestServer, json_request: &serde_json::Value) -> (Option<Message>, ClientReader, ClientWriter) {
+pub fn send_new_ws_message(server: &mut TestServer, json_request: &serde_json::Value) -> (Message, ClientReader, ClientWriter) {
     let (reader, mut writer) = server
         .ws_at("/listen")
         .unwrap();
@@ -117,10 +117,10 @@ pub fn send_new_ws_message(server: &mut TestServer, json_request: &serde_json::V
     let fut = reader.into_future();
     let res = server.execute(fut).unwrap();
 
-    (res.0, res.1, writer)
+    (res.0.unwrap(), res.1, writer)
 }
 
-pub fn send_ws_message(writer: &mut ClientWriter, reader: &mut ClientReader, server: &mut TestServer, json_request: &serde_json::Value) -> Option<Message> {
+pub fn send_ws_message(writer: &mut ClientWriter, reader: &mut ClientReader, server: &mut TestServer, json_request: &serde_json::Value) -> Message {
 
     let json_str: String = serde_json::to_string(json_request).unwrap();
     writer.text(json_str);
@@ -128,7 +128,14 @@ pub fn send_ws_message(writer: &mut ClientWriter, reader: &mut ClientReader, ser
     let fut = reader.into_future();
     let res = server.execute(fut).unwrap();
 
-    res.0
+    res.0.unwrap()
+}
+
+pub fn ws_message_from_reader(reader: &mut ClientReader, server: &mut TestServer) -> Message {
+    let fut = reader.into_future();
+    let res = server.execute(fut).unwrap();
+
+    res.0.unwrap()
 }
 
 pub fn print_response(response: &ClientResponse, body: &serde_json::Value) {
