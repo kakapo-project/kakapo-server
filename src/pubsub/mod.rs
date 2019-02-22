@@ -3,6 +3,7 @@ pub mod error;
 mod permissions;
 mod input;
 mod routes;
+mod server;
 
 use std::marker::PhantomData;
 
@@ -20,6 +21,7 @@ use actix::fut;
 use actix::WrapFuture;
 use actix::ActorFuture;
 use actix::ContextFutureSpawner;
+use actix::AsyncContext;
 
 use AppStateLike;
 use view::action_wrapper::ActionWrapper;
@@ -31,6 +33,14 @@ use pubsub::input::WsInputData;
 use pubsub::routes::CallAction;
 use data::claims::AuthClaims;
 use view::bearer_token::to_bearer_token;
+use chrono::Utc;
+use chrono::DateTime;
+use pubsub::routes::CallParams;
+use pubsub::server::SubscribeMessage;
+use pubsub::server::ActionMessage;
+use pubsub::server::WsServer;
+use actix::Handler;
+use actix::SystemService;
 
 impl<S> Actor for WsClientSession<S>
     where
@@ -47,12 +57,26 @@ impl<S> Actor for WsClientSession<S>
     }
 }
 
+impl<S> Handler<ActionMessage> for WsClientSession<S>
+    where
+        S: AppStateLike + 'static,
+{
+    type Result = ();
+
+    fn handle(&mut self, msg: ActionMessage, ctx: &mut Self::Context) {
+        info!("handling message: {:?}", &msg);
+    }
+}
 
 impl<S> StreamHandler<ws::Message, ws::ProtocolError> for WsClientSession<S>
     where
         S: AppStateLike + 'static,
 {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+
+        //updating the heartbeat
+        self.last_beat = Utc::now();
+
         match msg {
             ws::Message::Text(text) => {
                 let _ = serde_json::from_str(&text)
@@ -77,6 +101,11 @@ impl<S> StreamHandler<ws::Message, ws::ProtocolError> for WsClientSession<S>
             },
             ws::Message::Binary(_) => {
                 warn!("binary websocket messages not currently supported");
+                let message = json!({
+                    "error": "Binary format not supported"
+                });
+                let message = serde_json::to_string(&message).unwrap_or_default();
+                ctx.text(message);
             },
             ws::Message::Ping(_) => {
                 //TODO....
@@ -95,8 +124,7 @@ pub struct WsClientSession<S>
         S: AppStateLike + 'static,
 {
     pub id: Uuid,
-    data: serde_json::Value,
-    params: serde_json::Value,
+    last_beat: DateTime<Utc>,
     auth_header: Option<Vec<u8>>,
     phantom_data: PhantomData<(S)>,
 }
@@ -109,8 +137,7 @@ impl<S> WsClientSession<S>
         let id = Uuid::new_v4();
         Self {
             id,
-            data: json!(null),
-            params: json!(null),
+            last_beat: Utc::now(),
             auth_header: None,
             phantom_data: PhantomData,
         }
@@ -118,7 +145,6 @@ impl<S> WsClientSession<S>
 
     fn handle_message(&mut self, ctx: &mut ws::WebsocketContext<Self, S>, input: WsInputData) {
         match input {
-            //TODO:...
             WsInputData::Authenticate { token } => {
                 info!("Authenticating ws user");
 
@@ -147,9 +173,17 @@ impl<S> WsClientSession<S>
                     }
                 }
             },
-            /*
             WsInputData::SubscribeTo { channel } => {
+                let subscribe_msg = SubscribeMessage(channel, self.id.to_owned(), ctx.address().recipient());
 
+                WsServer::from_registry()
+                    .send(subscribe_msg)
+                    .into_actor(self)
+                    .then(|res, actor, ctx| {
+
+                        fut::ok(())
+                    })
+                    .wait(ctx); //TODO: is spawn better here?
             },
             WsInputData::UnsubscribeFrom { channel } => {
 
@@ -157,13 +191,13 @@ impl<S> WsClientSession<S>
             WsInputData::ListSubscribers { channel } => {
 
             },
-            */
             WsInputData::Call { procedure, params, data } => {
                 debug!("calling procedure: {:?}", &procedure);
-                self.data = data; // This should be ok, since we only have one thread per WsClientSession
-                self.params = params;
+                let mut call_params = CallParams {
+                    data, params, ctx
+                };
 
-                let result = routes::call_procedure(&procedure, self, ctx);
+                let result = routes::call_procedure(&procedure, self, &mut call_params);
                 debug!("finished calling procedure {:?}", &result);
             },
         };
@@ -174,7 +208,7 @@ impl<S> CallAction<S> for WsClientSession<S>
     where S: AppStateLike
 {
     /// For use by the websockets
-    fn call<PB, A>(&mut self, procedure_builder: PB, ctx: &mut ws::WebsocketContext<WsClientSession<S>, S>)
+    fn call<'a, PB, A>(&mut self, procedure_builder: PB, call_params: &mut CallParams<'a, S>)
         where
             PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
             S: AppStateLike + 'static,
@@ -182,7 +216,7 @@ impl<S> CallAction<S> for WsClientSession<S>
     {
 
         let action = procedure_builder
-            .build(self.data.to_owned(), self.params.to_owned());
+            .build(call_params.data.to_owned(), call_params.params.to_owned());
 
         let mut action_wrapper = ActionWrapper::new(action);
 
@@ -190,7 +224,9 @@ impl<S> CallAction<S> for WsClientSession<S>
             action_wrapper = action_wrapper.with_auth(&auth);
         }
 
-        ctx.state()
+        call_params
+            .ctx
+            .state()
             .connect()
             .send(action_wrapper)
             .into_actor(self)
@@ -218,10 +254,10 @@ impl<S> CallAction<S> for WsClientSession<S>
 
                 fut::ok(())
             })
-            .wait(ctx);
+            .wait(&mut call_params.ctx); //TODO: is spawn better here?
     }
 
-    fn error(&mut self, ctx: &mut ws::WebsocketContext<WsClientSession<S>, S>)
+    fn error<'a>(&mut self, call_params: &mut CallParams<'a, S>)
         where
             S: AppStateLike + 'static
     {

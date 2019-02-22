@@ -1,6 +1,6 @@
 use model::entity::RawEntityTypes;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Channels {
     AllTables,
     AllQueries,
