@@ -23,7 +23,6 @@ use serde::Serialize;
 use connection::executor::Executor;
 use actix_web::test::TestApp;
 use connection::AppStateLike;
-use AppState;
 use view::routes::users;
 use view::routes::manage;
 use view::websocket;

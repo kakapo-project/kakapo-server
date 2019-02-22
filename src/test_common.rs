@@ -36,13 +36,13 @@ use actix::Addr;
 use connection::executor::Executor;
 use model::state::PubSubOps;
 use data::channels::Channels;
-use pubsub::error::BroadcastError;
 use view::extensions::ProcedureExt;
 use actix_web::ws::ClientReader;
 use actix_web::ws::ClientWriter;
 use futures::Stream;
 use actix_web::ws::Message;
 use connection::GetSecrets;
+use model::state::error::BroadcastError;
 
 
 pub fn random_identifier() -> String {

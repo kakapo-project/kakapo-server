@@ -35,9 +35,9 @@ use scripting::ScriptFunctions;
 use scripting::Scripting;
 
 use data::claims::AuthClaims;
-use pubsub::error::BroadcastError;
 use data::channels::Channels;
 use connection::GetSecrets;
+use model::state::error::BroadcastError;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated

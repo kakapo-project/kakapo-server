@@ -10,14 +10,9 @@ use data::claims::AuthClaims;
 use model::actions::ActionResult;
 use model::actions::error::Error;
 use scripting::Scripting;
-use std::sync::Arc;
 use std::str;
 use jsonwebtoken;
 use std::fmt;
-use data::channels::Channels;
-use model::state::PubSubOps;
-use serde::Serialize;
-use pubsub::error::BroadcastError;
 use view::bearer_token::parse_bearer_token;
 
 
@@ -86,21 +81,6 @@ impl<A> ActionWrapper<A>
 #[derive(Clone, Debug)]
 pub struct PublishCallback {
 
-}
-
-impl PubSubOps for PublishCallback {
-    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError> {
-        info!("publishing: to channels: {:?}", &channels);
-        debug!("publishing results: {:?} => {:?}", &action_name, &action_result);
-        //TODO: ...
-        Ok(())
-    }
-
-    fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError> {
-        info!("subscribing: to channels: {:?}", &channels);
-        //TODO: ...
-        Ok(())
-    }
 }
 
 

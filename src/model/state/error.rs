@@ -18,3 +18,9 @@ pub enum UserManagementError {
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }
+
+#[derive(Debug, Fail, PartialEq, Eq)]
+pub enum BroadcastError {
+    #[fail(display = "An unknown error occurred")]
+    Unknown,
+}

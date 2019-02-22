@@ -23,7 +23,6 @@ use connection::AppStateLike;
 
 use model::actions::Action;
 use view::action_wrapper::ActionWrapper;
-use view::error::Error::TooManyConnections;
 
 type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 

@@ -1,9 +1,9 @@
 
-pub mod error;
 mod permissions;
 mod input;
 mod routes;
 mod server;
+mod action_receiver;
 
 use std::marker::PhantomData;
 

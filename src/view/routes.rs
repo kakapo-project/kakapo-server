@@ -2,15 +2,12 @@
 use model::actions;
 
 use view::procedure::NoQuery;
-use view::extensions::ProcedureExt;
 use data;
-use actix_web::middleware::cors::CorsBuilder;
 use model::actions::Action;
 use serde_json::Value;
 use serde_json::Error;
 use serde_json::from_value;
 use connection::AppStateLike;
-use view::procedure::ProcedureBuilder;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
