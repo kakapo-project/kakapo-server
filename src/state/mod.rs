@@ -40,6 +40,8 @@ use scripting::Scripting;
 use data::claims::AuthClaims;
 use data::channels::Channels;
 use data::channels::Subscription;
+use data::auth::User;
+use data::Message;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -250,6 +252,15 @@ pub trait PubSubOps {
     fn subscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError>;
 
     fn unsubscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError>;
+
+    fn get_subscribers(&self, channel: Channels) -> Result<Vec<User>, BroadcastError>;
+
+    fn get_messages(
+        &self,
+        channel: Channels,
+        start_time: chrono::NaiveDateTime,
+        end_time: chrono::NaiveDateTime,
+    ) -> Result<Vec<Message>, BroadcastError>;
 }
 
 impl GetSecrets for ActionState {

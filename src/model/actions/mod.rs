@@ -25,6 +25,7 @@ pub use model::actions::entity_actions::*;
 pub use model::actions::table_actions::*;
 pub use model::actions::query_actions::*;
 pub use model::actions::script_actions::*;
+pub use model::actions::pub_sub_actions::*;
 
 
 #[derive(Debug, Clone)]

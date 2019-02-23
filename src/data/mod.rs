@@ -457,6 +457,13 @@ impl Named for View {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Message {
+    pub data: serde_json::Value,
+    pub timestamp: chrono::NaiveDateTime,
+    //TODO: maybe add the user as well
+}
+
 
 #[cfg(test)]
 mod test {

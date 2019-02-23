@@ -68,6 +68,15 @@ struct PasswordResetRequest {
     pub new_password: String,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct TimeRange {
+    #[serde(rename = "start")]
+    pub start_time: chrono::NaiveDateTime,
+    #[serde(rename = "end")]
+    pub end_time: chrono::NaiveDateTime,
+}
+
 
 pub mod manage {
     use super::*;
@@ -199,6 +208,39 @@ pub mod manage {
     }
 }
 
+pub mod pubsub {
+    use super::*;
+
+    pub fn subscribe_to(data: Value, query: Value) -> Result<impl Action, Error> {
+        let channel: data::channels::Channels = from_value(data)?;
+        let get_user: GetUser = from_value(query)?;
+
+        Ok(actions::SubscribeTo::<_>::new(get_user.user_identifier, channel))
+    }
+
+    pub fn unsubscribe_from(data: Value, query: Value) -> Result<impl Action, Error> {
+        let channel: data::channels::Channels = from_value(data)?;
+        let get_user: GetUser = from_value(query)?;
+
+        Ok(actions::UnsubscribeFrom::<_>::new(get_user.user_identifier, channel))
+    }
+
+    pub fn get_subscribers(data: Value, query: Value) -> Result<impl Action, Error> {
+        let channel: data::channels::Channels = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+
+        Ok(actions::GetSubscribers::<_>::new(channel))
+    }
+
+    pub fn get_messages(data: Value, query: Value) -> Result<impl Action, Error> {
+        let channel: data::channels::Channels = from_value(data)?;
+        let range: TimeRange = from_value(query)?;
+
+        Ok(actions::GetMessages::<_>::new(channel, range.start_time, range.end_time))
+
+    }
+}
+
 pub mod users {
     use super::*;
 
@@ -301,3 +343,4 @@ pub mod users {
     }
 
 }
+

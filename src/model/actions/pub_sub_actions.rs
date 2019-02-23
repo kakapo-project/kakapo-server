@@ -141,7 +141,54 @@ impl<S> Action<S> for GetSubscribers<S>
 {
     type Ret = Vec<data::auth::User>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        ActionRes::new("GetAllSubscribers", vec![])
+        state
+            .get_pub_sub()
+            .get_subscribers(self.channel.to_owned())
+            .map_err(|err| Error::PublishError(err))
+            .and_then(|res| ActionRes::new("GetAllSubscribers", res))
+    }
+}
+
+#[derive(Debug)]
+pub struct GetMessages<S = ActionState>  {
+    pub channel: Channels,
+    pub start_time: chrono::NaiveDateTime,
+    pub end_time: chrono::NaiveDateTime,
+    pub phantom_data: PhantomData<(S)>,
+}
+
+impl<S> GetMessages<S>
+    where
+            for<'a> S: StateFunctions<'a>,
+{
+    pub fn new(channel: Channels, start_time: chrono::NaiveDateTime, end_time: chrono::NaiveDateTime) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+        let permission = channel.required_permission();
+        let action = Self {
+            channel,
+            start_time,
+            end_time,
+            phantom_data: PhantomData,
+        };
+
+        let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission =
+            WithPermissionRequired::new(action_with_transaction, permission);
+
+        action_with_permission
+    }
+}
+
+impl<S> Action<S> for GetMessages<S>
+    where
+            for<'a> S: StateFunctions<'a>,
+{
+    type Ret = Vec<data::Message>;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        state
+            .get_pub_sub()
+            .get_messages(self.channel.to_owned(), self.start_time.to_owned(), self.end_time.to_owned())
+            .map_err(|err| Error::PublishError(err))
+            .and_then(|res| ActionRes::new("GetMessages", res))
     }
 }
 

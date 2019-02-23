@@ -15,6 +15,8 @@ use data::auth::User;
 use state::error::BroadcastError;
 use state::PubSubOps;
 use state::PublishCallback;
+use data::Message;
+use diesel::types;
 
 impl<'a> PubSubOps for PublishCallback<'a> {
 
@@ -69,6 +71,83 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         };
 
         Ok(Subscription { user, channel })
+    }
+
+    fn get_subscribers(&self, channel: Channels) -> Result<Vec<User>, BroadcastError> {
+        info!("getting all subscribers from channels: {:?}", &channel);
+
+        let query = r#"
+        SELECT
+            DISTINCT ON("user"."user_id")
+            "user".* FROM "user"
+        INNER JOIN "user_channel"
+            ON "user"."user_id" = "user_channel"."user_id"
+        INNER JOIN "channel"
+            ON "user_channel"."channel_id" = "channel"."channel_id"
+        WHERE "channel"."data" = $1;
+        "#;
+
+        let channel_json = serde_json::to_value(&channel)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &channel, &err);
+                BroadcastError::Unknown
+            })?;
+        let raw_users: Vec<dbdata::RawUser> = diesel::sql_query(query)
+            .bind::<types::Json, _>(&channel_json)
+            .load(self.conn)
+            .map_err(|err| BroadcastError::InternalError(err.to_string()))?;
+
+        let users: Vec<User> = raw_users
+            .into_iter()
+            .map(|raw_user| User {
+                username: raw_user.username,
+                email: raw_user.email,
+                display_name: raw_user.display_name,
+            })
+            .collect();
+
+        Ok(users)
+    }
+
+    fn get_messages(
+        &self,
+        channel: Channels,
+        start_time: chrono::NaiveDateTime,
+        end_time: chrono::NaiveDateTime,
+    ) -> Result<Vec<Message>, BroadcastError> {
+        let query = r#"
+        SELECT
+            "message".* FROM "message"
+        INNER JOIN "channel"
+            ON "message"."channel_id" = "channel"."channel_id"
+        WHERE "channel"."data" = $1 AND "message"."sent_at" >= $2 AND "message"."sent_at" < $3
+        ORDER BY "message"."sent_at" DESC;
+        "#;
+
+        let channel_json = serde_json::to_value(&channel)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &channel, &err);
+                BroadcastError::Unknown
+            })?;
+
+        let raw_messages: Vec<dbdata::RawMessage> = diesel::sql_query(query)
+            .bind::<types::Json, _>(&channel_json)
+            .bind::<types::Timestamp, _>(&start_time)
+            .bind::<types::Timestamp, _>(&end_time)
+            .load(self.conn)
+            .map_err(|err| BroadcastError::InternalError(err.to_string()))?;
+
+
+        let messages: Vec<Message> = raw_messages
+            .into_iter()
+            .map(|raw_message| Message {
+                data: raw_message.data,
+                timestamp: raw_message.sent_at,
+            })
+            .collect();
+
+        Ok(messages)
+
     }
 }
 
