@@ -1,13 +1,15 @@
+use std::fmt::Debug;
+
 use model::entity::results::*;
 use model::entity::error::EntityError;
-use data;
-
-use std::fmt::Debug;
 use model::entity::EntityModifierController;
 use model::entity::RawEntityTypes;
+
+use data;
 use data::permissions::Permission;
 use data::Named;
-use model::state::user_management::UserManagementOps;
+
+use state::user_management::UserManagementOps;
 
 pub trait UpdateActionFunctions
     where Self: UpdatePermissionFunctions

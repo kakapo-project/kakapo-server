@@ -367,7 +367,7 @@ mod test {
     use test_common::random_identifier;
     use serde_json::from_value;
     use test_common::*;
-    use model::state::StateFunctions;
+    use state::StateFunctions;
 
     #[test]
     fn test_run_successful_commands() {

@@ -27,6 +27,12 @@ DROP TABLE "entity_usage";
 
 DROP TABLE "entity";
 
+DROP TABLE "message";
+
+DROP TABLE "user_channel";
+
+DROP TABLE "channel";
+
 DROP TABLE "scope";
 
 DROP TABLE "session";

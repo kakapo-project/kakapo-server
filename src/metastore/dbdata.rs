@@ -5,16 +5,19 @@ use serde::Serialize;
 use chrono::NaiveDateTime;
 use serde_json;
 
-use data::schema::entity;
-use data::schema::table_schema;
-use data::schema::query;
-use data::schema::script;
-use data::schema::view;
-use data::schema::user;
-use data::schema::permission;
-use data::schema::role;
-use data::schema::invitation;
-use data::schema::session;
+use metastore::schema::entity;
+use metastore::schema::table_schema;
+use metastore::schema::query;
+use metastore::schema::script;
+use metastore::schema::view;
+use metastore::schema::user;
+use metastore::schema::permission;
+use metastore::schema::role;
+use metastore::schema::invitation;
+use metastore::schema::session;
+use metastore::schema::channel;
+use metastore::schema::user_channel;
+use metastore::schema::message;
 
 use data::permissions::Permission;
 use data::Named;
@@ -307,4 +310,49 @@ impl RawPermission {
             Err(err) => None,
         }
     }
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "channel"]
+pub struct NewRawChannel {
+    pub data: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
+#[table_name = "channel"]
+pub struct RawChannel {
+    pub channel_id: i64,
+    pub data: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "user_channel"]
+pub struct NewRawUserChannel {
+    pub user_id: i64,
+    pub channel_id: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
+#[table_name = "user_channel"]
+pub struct RawUserChannel {
+    pub user_channel_id: i64,
+    pub user_id: i64,
+    pub channel_id: i64,
+    pub subscribed_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "message"]
+pub struct NewRawMessage {
+    pub channel_id: i64,
+    pub data: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
+#[table_name = "message"]
+pub struct RawMessage {
+    pub message_id: i64,
+    pub channel_id: i64,
+    pub data: serde_json::Value,
+    pub sent_at: chrono::NaiveDateTime,
 }

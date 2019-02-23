@@ -1,5 +1,5 @@
 
-use model::state::ActionState;
+use state::ActionState;
 use model::entity::RawEntityTypes;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

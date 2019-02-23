@@ -3,21 +3,22 @@ use std::marker::PhantomData;
 
 use data;
 use data::Named;
-use model::actions::results::*;
-use model::actions::error::Error;
 
-use model::state::ActionState;
 use data::permissions::Permission;
 
 use model::actions::decorator::*;
-
+use model::actions::results::*;
+use model::actions::error::Error;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
+
 use scripting::ScriptFunctions;
 use scripting::ScriptResult;
+
+use state::StateFunctions;
+use state::ActionState;
 
 // Script Action
 #[derive(Debug)]

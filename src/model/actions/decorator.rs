@@ -1,20 +1,21 @@
 
 use std::result::Result::Ok;
 use std::marker::PhantomData;
+use std::fmt;
+use std::collections::HashSet;
 
-use model::actions::error::Error;
-use model::state::ActionState;
 use data::channels::Channels;
 use data::permissions::*;
 
+use model::actions::error::Error;
 use model::actions::Action;
 use model::actions::ActionResult;
-use std::collections::HashSet;
 use model::actions::OkAction;
-use std::fmt;
-use model::state::StateFunctions;
-use model::state::authorization::AuthorizationOps;
-use model::state::PubSubOps;
+
+use state::StateFunctions;
+use state::authorization::AuthorizationOps;
+use state::PubSubOps;
+use state::ActionState;
 
 #[derive(Debug, Clone)]
 enum Requirements {
@@ -301,7 +302,7 @@ pub struct WithDispatch<A, S = ActionState>
         A: Action<S>,
 {
     action: A,
-    channels: Vec<Channels>,
+    channel: Channels,
     phantom_data: PhantomData<S>,
 }
 
@@ -323,15 +324,7 @@ impl<A, S> WithDispatch<A, S>
     pub fn new(action: A, channel: Channels) -> Self {
         Self {
             action,
-            channels: vec![channel],
-            phantom_data: PhantomData,
-        }
-    }
-
-    pub fn new_multi(action: A, channels: Vec<Channels>) -> Self {
-        Self {
-            action,
-            channels,
+            channel,
             phantom_data: PhantomData,
         }
     }
@@ -354,7 +347,7 @@ impl<A, S> Action<S> for WithDispatch<A, S>
         state
             .get_pub_sub()
             .publish(
-                self.channels.to_owned(),
+                self.channel.to_owned(),
                 result.get_name(),
                 &data_ref)
             .map_err(Error::PublishError)?;

@@ -7,22 +7,23 @@ use diesel::result::DatabaseErrorKind as DbErrKind;
 use chrono::Utc;
 use serde_json;
 
-use model::state::user_management::UserManagementOps;
 use auth::tokens::Token;
 
-use model::state::error::UserManagementError;
 use data::auth::InvitationToken;
 use data::auth::Role;
 use data::permissions::Permission;
 use data::auth::NewUser;
 use data::auth::UserInfo;
 use data::auth::User;
-use data::schema;
+use metastore::schema;
 
 use metastore::dbdata;
-use model::state::UserManagement;
 use connection::executor::Conn;
-use model::state::authentication::AuthenticationOps;
+
+use state::error::UserManagementError;
+use state::authentication::AuthenticationOps;
+use state::user_management::UserManagementOps;
+use state::UserManagement;
 
 
 impl<'a> UserManagementOps for UserManagement<'a> {

@@ -10,7 +10,8 @@ use model::entity::error::EntityError;
 use model::entity::update_state::UpdateActionFunctions;
 use model::entity::update_state::UpdatePermissionFunctions;
 use data::permissions::Permission;
-use model::state::user_management::UserManagementOps;
+
+use state::user_management::UserManagementOps;
 
 fn get_sql_data_type(data_type: &DataType) -> String {
     match data_type {

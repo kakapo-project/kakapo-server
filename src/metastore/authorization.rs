@@ -1,14 +1,17 @@
-use model::state::authorization::AuthorizationOps;
 use std::collections::HashSet;
+use std::iter::FromIterator;
+
 use data::permissions::Permission;
-use model::state::error::UserManagementError;
+use data::claims::AuthClaims;
+
 use metastore::dbdata::RawPermission;
 use diesel::sql_types::BigInt;
 use diesel::RunQueryDsl;
 use connection::executor::Conn;
-use data::claims::AuthClaims;
-use std::iter::FromIterator;
-use model::state::Authorization;
+
+use state::Authorization;
+use state::authorization::AuthorizationOps;
+use state::error::UserManagementError;
 
 
 impl<'a> Authorization<'a> {

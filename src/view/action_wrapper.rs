@@ -5,7 +5,7 @@ use connection::executor::Executor;
 use actix::dev::MessageResponse;
 
 use model::actions::Action;
-use model::state::ActionState;
+use state::ActionState;
 use data::claims::AuthClaims;
 use model::actions::ActionResult;
 use model::actions::error::Error;
@@ -14,6 +14,7 @@ use std::str;
 use jsonwebtoken;
 use std::fmt;
 use view::bearer_token::parse_bearer_token;
+use state::PublishCallback;
 
 
 pub struct ActionWrapper<A>
@@ -78,11 +79,6 @@ impl<A> ActionWrapper<A>
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct PublishCallback {
-
-}
-
 
 impl<A: Action + Send> Message for ActionWrapper<A>
     where
@@ -108,13 +104,11 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         let scripting = Scripting::new(self.get_scripts_path());
         let secrets = self.get_secrets();
 
-        let pub_sub = PublishCallback {};
         let state = ActionState::new(
             conn,
             scripting,
             auth_claims,
             secrets,
-            pub_sub,
             self.jwt_issuer.to_owned(),
             self.jwt_token_duration,
             self.jwt_refresh_token_duration,

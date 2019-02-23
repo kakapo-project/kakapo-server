@@ -1,5 +1,5 @@
 use actix_web::ws;
-use pubsub::WsClientSession;
+use broker::WsClientSession;
 use view::procedure::ProcedureBuilder;
 use AppStateLike;
 use model::actions::Action;

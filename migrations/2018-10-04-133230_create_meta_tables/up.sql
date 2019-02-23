@@ -38,6 +38,26 @@ CREATE TABLE "scope" (
     "scope_info"              JSON NOT NULL DEFAULT '{}'
 );
 
+CREATE TABLE "channel" (
+    "channel_id"              BIGSERIAL PRIMARY KEY,
+    "data"                    JSONB NOT NULL UNIQUE
+);
+
+CREATE TABLE "user_channel" ( -- This is the subscriptions
+    "user_channel_id"         BIGSERIAL PRIMARY KEY,
+    "user_id"                 BIGINT REFERENCES "user" NOT NULL, --TODO: maybe this should be session
+    "channel_id"              BIGINT REFERENCES "channel" NOT NULL,
+    "subscribed_at"           TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE ("user_id", "channel_id")
+);
+
+CREATE TABLE "message" (
+    "message_id"              BIGSERIAL PRIMARY KEY,
+    "channel_id"              BIGINT REFERENCES "channel" NOT NULL,
+    "data"                    JSONB NOT NULL,
+    "sent_at"                 TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- TODO: entity should be unique across `table_schema` and `query` and `script`
 CREATE TABLE "entity" (
     "entity_id"               BIGSERIAL PRIMARY KEY,
@@ -111,7 +131,8 @@ CREATE TABLE "tag" (
 CREATE TABLE "entity_tag" (
     "entity_tag_id"           BIGSERIAL PRIMARY KEY,
     "entity_id"               BIGINT REFERENCES "entity" NOT NULL,
-    "tag_id"                  BIGINT REFERENCES "tag" NOT NULL
+    "tag_id"                  BIGINT REFERENCES "tag" NOT NULL,
+    UNIQUE ("entity_id", "tag_id")
 );
 
 CREATE TABLE "role" (
@@ -124,7 +145,8 @@ CREATE TABLE "role" (
 CREATE TABLE "user_role" (
     "user_role_id"            BIGSERIAL PRIMARY KEY,
     "user_id"                 BIGINT REFERENCES "user" NOT NULL,
-    "role_id"                 BIGINT REFERENCES "role" NOT NULL
+    "role_id"                 BIGINT REFERENCES "role" NOT NULL,
+    UNIQUE ("user_id", "role_id")
 );
 
 CREATE TABLE "permission" (
@@ -135,7 +157,8 @@ CREATE TABLE "permission" (
 CREATE TABLE "role_permission" (
     "role_permission_id"      BIGSERIAL PRIMARY KEY,
     "role_id"                 BIGINT REFERENCES "role" NOT NULL,
-    "permission_id"           BIGINT REFERENCES "permission" NOT NULL
+    "permission_id"           BIGINT REFERENCES "permission" NOT NULL,
+    UNIQUE ("role_id", "permission_id")
 );
 
 CREATE TABLE "table_schema_transaction" (

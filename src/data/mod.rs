@@ -4,7 +4,6 @@ use linked_hash_map::LinkedHashMap;
 
 pub mod utils;
 pub mod auth;
-pub mod schema;
 pub mod methods;
 pub mod claims;
 pub mod channels;
@@ -457,92 +456,6 @@ impl Named for View {
         &self.name
     }
 }
-
-
-/*
-impl TableData {
-    fn get_rows_data_from_rows_flat_data(columns: Vec<String>, data: Vec<Vec<Value>>) -> Vec<BTreeMap<String, Value>>{
-        data.iter().map(|row| {
-
-            let mut row_data = BTreeMap::new();
-            for (name, value) in columns.iter().zip(row) {
-                row_data.insert(name.to_owned(), value.to_owned());
-            }
-
-            row_data
-        }).collect()
-    }
-
-    pub fn into_rows_data(self) -> TableData {
-        match self {
-            TableData::RowsFlatData { columns, data } => {
-                let rows_data = TableData::get_rows_data_from_rows_flat_data(columns, data);
-                TableData::RowsData(rows_data)
-            },
-            TableData::RowsData(_) => self,
-        }
-    }
-
-    pub fn into_rows_flat_data(self) -> TableData {
-        match self {
-            TableData::RowsFlatData { .. } => self,
-            TableData::RowsData(rows) => { //This is actually slow
-                let mut columns = BTreeMap::new();
-                for row in rows.iter() {
-                    for row_column in row.keys() {
-                        columns.insert(row_column.to_owned(), ());
-                    }
-                }
-                let mut data = vec![];
-                //TODO: handle case for missing values, right now it just puts null, but it should handle it as different
-                for row in rows.iter() {
-                    let mut new_row = vec![];
-                    for key in columns.keys() {
-                        let new_value = match row.get(key) {
-                            Some(value) => value.to_owned(),
-                            None => Value::Null,
-                        };
-                        new_row.push(new_value);
-                    }
-                    data.push(new_row);
-                }
-
-                TableData::RowsFlatData {
-                    columns: columns.keys().cloned().collect::<Vec<String>>(),
-                    data: data,
-                }
-            },
-        }
-    }
-
-    pub fn into_rows_data_vec(self) -> Vec<BTreeMap<String, Value>> {
-        match self {
-            TableData::RowsFlatData { columns, data } => {
-                TableData::get_rows_data_from_rows_flat_data(columns, data)
-            },
-            TableData::RowsData(x) => x,
-        }
-    }
-}
-
-impl Table {
-    pub fn get_key(&self) -> Option<String> {
-        let constraints = &self.schema.constraint;
-        let keys: Vec<String> = constraints.iter().flat_map(|constraint| {
-            match constraint {
-                Constraint::Key(x) => vec![x],
-                _ => vec![],
-            }
-        }).cloned().collect();
-
-        if keys.len() > 1 {
-            println!("ERROR: several keys exists, something is wrong with this table");
-        }
-        keys.iter().nth(0).map(|x| x.to_owned())
-    }
-}
-*/
-
 
 
 #[cfg(test)]

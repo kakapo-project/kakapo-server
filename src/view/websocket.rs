@@ -6,7 +6,7 @@ use actix_web::ws;
 
 
 use connection::AppStateLike;
-use pubsub::WsClientSession;
+use broker::WsClientSession;
 
 
 

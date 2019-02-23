@@ -11,10 +11,10 @@ use model::actions::decorator::*;
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::ActionState;
-use model::state::StateFunctions;
-use model::state::user_management::UserManagementOps;
-use model::state::authentication::AuthenticationOps;
+use state::ActionState;
+use state::StateFunctions;
+use state::user_management::UserManagementOps;
+use state::authentication::AuthenticationOps;
 
 use auth::send_mail::EmailOps;
 use connection::GetSecrets;
@@ -651,7 +651,7 @@ mod test {
     use model::actions::results::UserResult;
     use test_common::random_identifier;
     use serde_json::from_value;
-    use model::state::error::UserManagementError;
+    use state::error::UserManagementError;
     use test_common::*;
     use data::claims::AuthClaims;
 

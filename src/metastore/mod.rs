@@ -2,10 +2,13 @@
 pub mod user_management;
 pub mod authorization;
 pub mod authentication;
+pub mod pub_sub;
 mod conversion;
 mod dbdata;
+mod schema;
 
-use data::schema;
+use std::fmt::Debug;
+
 use data;
 
 use connection::executor::Conn;
@@ -20,10 +23,10 @@ use model::entity::ConvertRaw;
 use model::entity::error::EntityError;
 use model::entity::results::*;
 
-use model::state::ActionState;
+use state::ActionState;
 use model::entity::EntityModifierController;
 use model::entity::EntityRetrieverController;
-use std::fmt::Debug;
+
 
 //TODO: put all of this in internal
 pub trait EntityCrudOps

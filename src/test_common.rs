@@ -16,8 +16,8 @@ use actix_web::client::ClientResponse;
 
 use super::AppState as KakapoState;
 use super::AppStateBuilder as KakapoStateBuilder;
-use model::state::ActionState;
-use model::state::StateFunctions;
+use state::ActionState;
+use state::StateFunctions;
 use diesel::r2d2::ConnectionManager;
 use diesel::pg::PgConnection;
 use data::claims::AuthClaims;
@@ -34,7 +34,7 @@ use auth::send_mail::EmailOps;
 use connection::AppStateLike;
 use actix::Addr;
 use connection::executor::Executor;
-use model::state::PubSubOps;
+use state::PubSubOps;
 use data::channels::Channels;
 use view::extensions::ProcedureExt;
 use actix_web::ws::ClientReader;
@@ -42,7 +42,7 @@ use actix_web::ws::ClientWriter;
 use futures::Stream;
 use actix_web::ws::Message;
 use connection::GetSecrets;
-use model::state::error::BroadcastError;
+use state::error::BroadcastError;
 
 
 pub fn random_identifier() -> String {
@@ -247,7 +247,8 @@ impl<'a> StateFunctions<'a> for MockState {
         MockMailer
     }
 
-    fn get_pub_sub(&'a self) -> &Arc<PubSubOps> {
+    type PubSub = <ActionState as StateFunctions<'a>>::PubSub;
+    fn get_pub_sub(&'a self) -> Self::PubSub {
         self.0.get_pub_sub()
     }
 
@@ -257,18 +258,6 @@ impl<'a> StateFunctions<'a> for MockState {
             E: From<diesel::result::Error>
     {
         self.0.transaction(f)
-    }
-}
-
-struct MockPubSub {}
-
-impl PubSubOps for MockPubSub {
-    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError> {
-        Ok(())
-    }
-
-    fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError> {
-        Ok(())
     }
 }
 
@@ -294,13 +283,11 @@ pub fn with_state<F>(f: F)
         password_secret: "B".to_string(),
     };
 
-    let pub_sub = MockPubSub {};
     let state = ActionState::new(
         pooled_conn,
         Scripting::new(script_path),
         Some(claims),
         secrets,
-        pub_sub,
         "THE_ISSUER".to_string(),
         500,
         60 * 60 * 24 * 7,
@@ -332,13 +319,11 @@ pub fn with_state_no_transaction<F>(f: F)
         password_secret: "B".to_string(),
     };
 
-    let pub_sub = MockPubSub {};
     let state = ActionState::new(
         pooled_conn,
         Scripting::new(script_path),
         Some(claims),
         secrets,
-        pub_sub,
         "THE_ISSUER".to_string(),
         500,
         60 * 60 * 24 * 7,

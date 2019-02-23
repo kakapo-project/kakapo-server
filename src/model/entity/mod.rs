@@ -4,21 +4,26 @@ pub mod results;
 
 pub mod update_state;
 
-use model::entity::error::EntityError;
-use model::entity::results::*;
+use std::fmt::Debug;
+
+use connection::executor::Conn;
 
 use serde::Serialize;
 
-use metastore::EntityCrudOps;
+use data::claims::AuthClaims;
+use data::Named;
+
+use model::entity::error::EntityError;
+use model::entity::results::*;
 use model::entity::update_state::UpdateState;
 use model::entity::update_state::UpdateActionFunctions;
-use std::fmt::Debug;
-use connection::executor::Conn;
-use data::claims::AuthClaims;
+
+use metastore::EntityCrudOps;
+
 use scripting::Scripting;
-use data::Named;
 use model::entity::update_state::UpdatePermissionFunctions;
-use model::state::UserManagement;
+
+use state::UserManagement;
 
 pub trait RawEntityTypes
     where

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use data::permissions::Permission;
-use model::state::error::UserManagementError;
+
+use state::error::UserManagementError;
 
 pub trait AuthorizationOps {
     fn user_id(&self) -> Option<i64>;

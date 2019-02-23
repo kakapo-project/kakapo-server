@@ -18,6 +18,7 @@ use model::actions::error::Error;
 
 use connection::executor::Conn;
 use connection::executor::Secrets;
+use connection::GetSecrets;
 
 use model::entity::EntityRetrieverController;
 use model::entity::EntityModifierController;
@@ -27,24 +28,24 @@ use model::table::TableAction;
 use model::table::TableActionFunctions;
 use auth::send_mail::EmailSender;
 use auth::send_mail::EmailOps;
-use model::state::authorization::AuthorizationOps;
-use model::state::authentication::AuthenticationOps;
-use model::state::user_management::UserManagementOps;
+
+use state::authorization::AuthorizationOps;
+use state::authentication::AuthenticationOps;
+use state::user_management::UserManagementOps;
+use state::error::BroadcastError;
 
 use scripting::ScriptFunctions;
 use scripting::Scripting;
 
 use data::claims::AuthClaims;
 use data::channels::Channels;
-use connection::GetSecrets;
-use model::state::error::BroadcastError;
+use data::channels::Subscription;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
-    pub pub_sub: Arc<PubSubOps>,
     pub jwt_issuer: String,
     pub jwt_duration: i64,
     pub jwt_refresh_duration: i64,
@@ -61,6 +62,7 @@ pub trait StateFunctions<'a>
         Self: Debug + Send,
         Self::TableController: TableActionFunctions,
         Self::Scripting: ScriptFunctions,
+        Self::PubSub: PubSubOps,
         Self::EmailSender: EmailOps,
         //TODO: managementstore
         Self::EntityRetrieverFunctions: RetrieverFunctions,
@@ -100,7 +102,8 @@ pub trait StateFunctions<'a>
     type EmailSender;
     fn get_email_sender(&'a self) -> Self::EmailSender;
 
-    fn get_pub_sub(&'a self) -> &Arc<PubSubOps>;
+    type PubSub;
+    fn get_pub_sub(&'a self) -> Self::PubSub;
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: why is it a diesel::result::Error?
         where F: FnOnce() -> Result<G, E>, E: From<diesel::result::Error>;
@@ -179,8 +182,11 @@ impl<'a> StateFunctions<'a> for ActionState {
         EmailSender {}
     }
 
-    fn get_pub_sub(&'a self) -> &Arc<PubSubOps> {
-        &self.pub_sub
+    type PubSub = PublishCallback<'a>;
+    fn get_pub_sub(&'a self) -> Self::PubSub {
+        PublishCallback {
+            conn: &self.database,
+        }
     }
 
     fn transaction<G, E, F>(&self, f: F) -> Result<G, E> //TODO: should work for all state actions
@@ -192,12 +198,11 @@ impl<'a> StateFunctions<'a> for ActionState {
 
 impl ActionState {
     //TODO: this has too many parameters
-    pub fn new<PS: PubSubOps + 'static>(
+    pub fn new(
         database: Conn,
         scripting: Scripting,
         claims: Option<AuthClaims>,
         secrets: Secrets,
-        pub_sub: PS,
         jwt_issuer: String,
         jwt_duration: i64,
         jwt_refresh_duration: i64,
@@ -207,7 +212,6 @@ impl ActionState {
             scripting,
             claims,
             secrets,
-            pub_sub: Arc::new(pub_sub),
             jwt_issuer, //TODO: put these in config
             jwt_duration,
             jwt_refresh_duration,
@@ -234,12 +238,18 @@ pub struct UserManagement<'a> {
     pub authentication: Authentication<'a>
 }
 
-pub trait PubSubOps
-    where Self: Send + Sync
-{
-    fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError>;
+pub struct PublishCallback<'a> {
+    pub conn: &'a Conn,
+}
 
-    fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError>;
+pub trait PubSubOps {
+    //get messages
+
+    fn publish(&self, channel: Channels, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError>;
+
+    fn subscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError>;
+
+    fn unsubscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError>;
 }
 
 impl GetSecrets for ActionState {

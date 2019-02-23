@@ -12,7 +12,7 @@ use model::entity::EntityModifierController;
 use model::entity::RawEntityTypes;
 use model::entity::update_state::UpdateActionFunctions;
 use model::entity::update_state::UpdatePermissionFunctions;
-use model::state::user_management::UserManagementOps;
+use state::user_management::UserManagementOps;
 
 //TODO: there could be different types of script runners
 // docker, serverless, or local

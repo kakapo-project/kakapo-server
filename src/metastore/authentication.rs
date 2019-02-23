@@ -18,11 +18,12 @@ use data::auth::User;
 use data::auth::UserInfo;
 use data::auth::SessionToken;
 
-use model::state::authentication::AuthenticationOps;
-use model::state::user_management::UserManagementOps;
-use model::state::Authentication;
-use model::state::error::UserManagementError;
-use data::schema;
+use state::authentication::AuthenticationOps;
+use state::user_management::UserManagementOps;
+use state::Authentication;
+use state::error::UserManagementError;
+
+use metastore::schema;
 use auth::tokens::Token;
 use metastore::dbdata;
 use metastore;

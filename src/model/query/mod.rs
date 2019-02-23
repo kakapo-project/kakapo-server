@@ -1,15 +1,19 @@
 
 pub mod error;
 
-use model::state::ActionState;
+use std::fmt::Debug;
+
 use data;
-use model::query::error::QueryError;
 use data::Value;
 use data::QueryParams;
-use std::fmt::Debug;
-use model::state::StateFunctions;
-use model::state::authorization::AuthorizationOps;
+
 use database::DatabaseFunctions;
+
+use model::query::error::QueryError;
+
+use state::StateFunctions;
+use state::authorization::AuthorizationOps;
+use state::ActionState;
 
 #[derive(Debug, Clone)]
 pub struct QueryAction {}

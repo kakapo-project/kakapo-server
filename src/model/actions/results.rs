@@ -2,6 +2,8 @@
 
 use data;
 use data::auth::Invitation;
+use data::channels::Channels;
+use data::channels::Subscription;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct GetAllEntitiesResult<T>(pub Vec<T>);
@@ -87,3 +89,9 @@ pub struct RoleResult(pub data::auth::Role);
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AllRolesResult(pub Vec<data::auth::Role>);
+
+#[derive(Debug, Clone, Serialize)]
+pub enum SubscriptionResult {
+    Subscribed(Subscription),
+    Unsubscribed(Subscription),
+}

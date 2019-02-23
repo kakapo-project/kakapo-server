@@ -2,23 +2,22 @@
 use std::result::Result::Ok;
 use std::marker::PhantomData;
 
-use data;
-
 use model::actions::results::*;
 use model::actions::error::Error;
-use data::utils::TableDataFormat;
 use model::query;
 
-use model::state::ActionState;
+use data;
+use data::utils::TableDataFormat;
 use data::permissions::*;
 
 use model::actions::decorator::*;
-
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::StateFunctions;
 use model::entity::RetrieverFunctions;
+
+use state::StateFunctions;
+use state::ActionState;
 
 // Query Action
 #[derive(Debug)]

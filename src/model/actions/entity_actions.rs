@@ -15,8 +15,6 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 
-use model::state::StateFunctions;
-
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
 use model::entity::RawEntityTypes;
@@ -26,8 +24,9 @@ use model::entity::results::Updated;
 use model::entity::results::Deleted;
 use model::entity::update_state::UpdateActionFunctions;
 
-use model::state::ActionState;
-use model::state::authorization::AuthorizationOps;
+use state::StateFunctions;
+use state::ActionState;
+use state::authorization::AuthorizationOps;
 
 ///decorator for permission in listing items
 /// Only defined for GetAllEntities
@@ -196,10 +195,11 @@ impl<T, S> CreateEntity<T, S>
     pub fn new(data: T) -> WithPermissionFor<WithDispatch<WithTransaction<Self, S>, S>, S> {
 
         let name = data.my_name().to_owned();
+        let channel = Channels::entity::<T>(&name);
+
         let create_permission = Permission::create_entity::<T>();
         let update_permission = Permission::modify_entity::<T>(name);
         let on_duplicate = OnDuplicate::Ignore; //TODO:...
-        let channel = Channels::all_entities::<T>(); //TODO: on update this should have table as well
 
         let action = Self {
             data,
@@ -300,10 +300,7 @@ impl<T, S> UpdateEntity<T, S>
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(name: String, data: T) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
-        let channels = vec![
-            Channels::all_entities::<T>(),
-            Channels::entity::<T>(&name),
-        ];
+        let channel = Channels::entity::<T>(&name);
         let action = Self {
             name: name.to_owned(),
             data,
@@ -312,7 +309,7 @@ impl<T, S> UpdateEntity<T, S>
         };
 
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
+        let action_with_dispatch = WithDispatch::new(action_with_transaction, channel);
         let action_with_permission =
             WithPermissionRequired::new(action_with_dispatch, Permission::modify_entity::<T>(name));
 
@@ -380,10 +377,7 @@ impl<T, S> DeleteEntity<T, S>
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(name: String) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
-        let channels = vec![
-            Channels::all_entities::<T>(),
-            Channels::entity::<T>(&name),
-        ];
+        let channel = Channels::entity::<T>(&name);
         let action = Self {
             name: name.to_owned(),
             on_not_found: OnNotFound::Ignore,
@@ -391,7 +385,7 @@ impl<T, S> DeleteEntity<T, S>
         };
 
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
+        let action_with_dispatch = WithDispatch::new(action_with_transaction, channel);
         let action_with_permission =
             WithPermissionRequired::new(action_with_dispatch, Permission::modify_entity::<T>(name));
 

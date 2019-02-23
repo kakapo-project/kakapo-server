@@ -1,4 +1,4 @@
-use model::state::error::UserManagementError;
+use state::error::UserManagementError;
 use data::auth::NewUser;
 use data::auth::InvitationToken;
 use data::auth::User;

@@ -11,18 +11,19 @@ use data::utils::OnDuplicate;
 use data::utils::OnNotFound;
 use data::utils::TableDataFormat;
 
-use model::state::ActionState;
 use data::channels::Channels;
 use data::permissions::Permission;
 
 use model::actions::decorator::*;
-
 use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
-use model::state::StateFunctions;
+
 use model::entity::RetrieverFunctions;
 use model::table::TableActionFunctions;
+
+use state::ActionState;
+use state::StateFunctions;
 
 // Table Actions
 #[derive(Debug)]
@@ -95,7 +96,7 @@ impl<S> InsertTableData<S>
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
-        let channels = vec![Channels::table(&table_name)];
+        let channel = Channels::table(&table_name);
         let action = Self {
             table_name: table_name.to_owned(),
             data,
@@ -105,7 +106,7 @@ impl<S> InsertTableData<S>
         };
 
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
+        let action_with_dispatch = WithDispatch::new(action_with_transaction, channel);
         let action_with_permission =
             WithPermissionRequired::new(action_with_dispatch, Permission::modify_table_data(table_name));
 
@@ -159,7 +160,7 @@ impl<S> ModifyTableData<S>
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
-        let channels = vec![Channels::table(&table_name)];
+        let channel = Channels::table(&table_name);
         let action = Self {
             table_name: table_name.to_owned(),
             keyed_data,
@@ -169,7 +170,7 @@ impl<S> ModifyTableData<S>
         };
 
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
+        let action_with_dispatch = WithDispatch::new(action_with_transaction, channel);
         let action_with_permission =
             WithPermissionRequired::new(action_with_dispatch, Permission::modify_table_data(table_name));
 
@@ -222,7 +223,7 @@ impl<S> RemoveTableData<S>
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
-        let channels = vec![Channels::table(&table_name)];
+        let channel = Channels::table(&table_name);
         let action = Self {
             table_name: table_name.to_owned(),
             keys,
@@ -232,7 +233,7 @@ impl<S> RemoveTableData<S>
         };
 
         let action_with_transaction = WithTransaction::new(action);
-        let action_with_dispatch = WithDispatch::new_multi(action_with_transaction, channels);
+        let action_with_dispatch = WithDispatch::new(action_with_transaction, channel);
         let action_with_permission =
             WithPermissionRequired::new(action_with_dispatch, Permission::modify_table_data(table_name));
 
