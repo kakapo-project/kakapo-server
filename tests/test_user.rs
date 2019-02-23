@@ -1,6 +1,5 @@
 
 extern crate actix;
-extern crate actix_broker;
 extern crate actix_web;
 extern crate base64;
 extern crate bcrypt;
@@ -34,7 +33,6 @@ extern crate kakapo_api;
 
 use kakapo_api::AppState;
 use kakapo_api::AppStateLike;
-use kakapo_api::KakapoRouter;
 use actix_web::test::TestServerBuilder;
 use actix_web::HttpMessage;
 use actix_web::http::Method;

@@ -13,14 +13,20 @@ use actix::sync::SyncArbiter;
 
 use data::channels::Channels;
 
+pub trait GetSecrets {
+    fn get_token_secret(&self) -> String;
+    fn get_password_secret(&self) -> String;
+}
 
-pub trait AppStateLike {
+pub trait AppStateLike: GetSecrets {
     fn connect(&self) -> &Addr<executor::Executor>;
 }
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     connections: Addr<executor::Executor>,
+    token_secret: String, //This is duplicated here as well as inside the executor , because we need it both in the view (websocket) and in the model
+    password_secret: String, // TODO: find a better way
 }
 
 /// Builder for the AppState
@@ -121,13 +127,20 @@ impl AppStateBuilder {
     }
 
     pub fn done(self) -> AppState {
+        let token_secret = self.token_secret_key.clone().unwrap_or_default();
+        let password_secret = self.password_secret_key.clone().unwrap_or_default();
 
         let connections = SyncArbiter::start(
             self.threads,
             move || executor::Executor::create(self.clone()));
 
 
-        AppState { connections }
+
+        AppState {
+            connections,
+            token_secret,
+            password_secret,
+        }
     }
 }
 
@@ -138,3 +151,12 @@ impl AppStateLike for AppState {
     }
 }
 
+impl GetSecrets for AppState {
+    fn get_token_secret(&self) -> String {
+        self.token_secret.to_owned()
+    }
+
+    fn get_password_secret(&self) -> String {
+        self.password_secret.to_owned()
+    }
+}

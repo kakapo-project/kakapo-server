@@ -29,9 +29,16 @@ type AsyncResponse = Box<Future<Item=HttpResponse, Error=ActixError>>;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NoQuery {}
 
-
 /// Build `Action` from an http request
-pub trait ProcedureBuilder<S, JP, QP, A> {
+pub trait ProcedureBuilder<S, JP, QP, A>
+    where
+        JP: Debug,
+        QP: Debug,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
+        A: Action + 'static,
+        S: AppStateLike,
+{
     /// build an Action
     ///
     /// # Arguments
@@ -40,15 +47,21 @@ pub trait ProcedureBuilder<S, JP, QP, A> {
     /// # Returns
     /// an Action
     fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error>;
+
 }
 
 /// can use lambdas instead of procedure builder
-impl<S, A, F> ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> for F
+impl<S, JP, QP, A, F> ProcedureBuilder<S, JP, QP, A> for F
     where
-        F: FnOnce(serde_json::Value, serde_json::Value) -> Result<A, serde_json::Error>,
+        F: FnOnce(JP, QP) -> Result<A, serde_json::Error> + Clone,
+        JP: Debug,
+        QP: Debug,
+        Json<JP>: FromRequest<S>,
+        Query<QP>: FromRequest<S>,
+        A: Action + 'static,
         S: AppStateLike,
 {
-    fn build(self, json_param: serde_json::Value, query_params: serde_json::Value) -> Result<A, serde_json::Error> {
+    fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error> {
         self(json_param, query_params)
     }
 }
@@ -92,6 +105,7 @@ impl<S, JP, QP, PB, A> ProcedureHandler<S, JP, QP, PB, A>
     }
 }
 
+
 pub fn procedure_handler_function<S, JP, QP, PB, A>(
     procedure_handler: ProcedureHandler<S, JP, QP, PB, A>,
     req: HttpRequest<S>,
@@ -115,24 +129,26 @@ pub fn procedure_handler_function<S, JP, QP, PB, A>(
     let state = req.state();
 
     let auth_header = req.headers().get(header::AUTHORIZATION).map(|x| x.as_bytes());
+    let mut action_wrapper = ActionWrapper::new(action);
+    if let Some(auth) = auth_header {
+        action_wrapper = action_wrapper.with_auth(auth);
+    }
 
     state
         .connect()
-        .send(ActionWrapper::new(auth_header, action))
+        .send(action_wrapper)
         .from_err()
-        .and_then(|res| {
-            match res {
-                Ok(ok_res) => {
-                    let serialized = ok_res.get_data();
-                    debug!("Responding with message: {:?}", &serialized);
-                    Ok(HttpResponse::Ok()
-                        .json(serialized))
-                },
-                Err(err) => {
-                    debug!("Responding with error message: {:?}", &err);
-                    Ok(HttpResponse::InternalServerError()
-                        .json(json!({ "error": err.to_string() })))
-                }
+        .and_then(|res| match res {
+            Ok(ok_res) => {
+                let serialized = ok_res.get_data();
+                debug!("Responding with message: {:?}", &serialized);
+                Ok(HttpResponse::Ok()
+                    .json(serialized))
+            },
+            Err(err) => {
+                debug!("Responding with error message: {:?}", &err);
+                Ok(HttpResponse::InternalServerError()
+                    .json(json!({ "error": err.to_string() })))
             }
         })
         .responder()

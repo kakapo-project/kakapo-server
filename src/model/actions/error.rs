@@ -5,7 +5,7 @@ use model::state::error::UserManagementError;
 use auth::send_mail::EmailError;
 
 use scripting::error::ScriptError;
-use pubsub::error::BroadcastError;
+use model::state::error::BroadcastError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {

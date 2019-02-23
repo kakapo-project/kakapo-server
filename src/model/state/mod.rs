@@ -35,8 +35,9 @@ use scripting::ScriptFunctions;
 use scripting::Scripting;
 
 use data::claims::AuthClaims;
-use pubsub::error::BroadcastError;
 use data::channels::Channels;
+use connection::GetSecrets;
+use model::state::error::BroadcastError;
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
@@ -239,11 +240,6 @@ pub trait PubSubOps
     fn publish(&self, channels: Vec<Channels>, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError>;
 
     fn subscribe(&self, channels: Vec<Channels>) -> Result<(), BroadcastError>;
-}
-
-pub trait GetSecrets {
-    fn get_token_secret(&self) -> String;
-    fn get_password_secret(&self) -> String;
 }
 
 impl GetSecrets for ActionState {

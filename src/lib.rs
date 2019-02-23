@@ -2,7 +2,6 @@
 
 // Crates
 extern crate actix;
-extern crate actix_broker;
 extern crate actix_web;
 extern crate argonautica;
 extern crate base64;
@@ -31,7 +30,6 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate openssl;
-extern crate pyo3;
 extern crate tempfile;
 #[macro_use]
 extern crate time_test;
@@ -50,7 +48,6 @@ mod connection;
 mod metastore;
 mod pubsub;
 mod server;
-//mod sockets;
 
 //#[cfg(test)]
 pub mod test_common;
@@ -70,31 +67,6 @@ use env_logger::Builder;
 use env_logger::Target;
 use log::LevelFilter;
 
-
-pub trait KakapoRouter<S>
-    where
-        S: AppStateLike + 'static,
-{
-    fn kakapo_routes(&mut self) -> &mut Self;
-}
-
-impl<S> KakapoRouter<S> for CorsBuilder<S>
-    where
-        S: AppStateLike + 'static,
-{
-    fn kakapo_routes(&mut self) -> &mut Self {
-        view::Router::<S>::router(self)
-    }
-}
-
-impl<S> KakapoRouter<S> for TestApp<S>
-    where
-        S: AppStateLike + 'static,
-{
-    fn kakapo_routes(&mut self) -> &mut Self {
-        view::Router::<S>::router(self)
-    }
-}
 
 pub fn run() {
 

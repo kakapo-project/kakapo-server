@@ -70,4 +70,3 @@ pub trait Action<S = ActionState>
     fn call(&self, state: &S) -> ActionResult<Self::Ret>;
 }
 
-

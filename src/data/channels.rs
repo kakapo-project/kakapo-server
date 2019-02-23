@@ -1,6 +1,6 @@
 use model::entity::RawEntityTypes;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Channels {
     AllTables,
     AllQueries,
@@ -8,7 +8,8 @@ pub enum Channels {
     Table(String),
     Query(String),
     Script(String),
-    TableData(String),
+    //TODO: view
+    TableData(String), //TODO: this is tricky since the filter / query can go in as well
 }
 
 impl Channels {

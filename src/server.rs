@@ -4,12 +4,13 @@ use actix_web::middleware::Logger;
 use actix_web::http;
 use actix_web::middleware::cors::Cors;
 
-use KakapoRouter;
 use openssl::ssl::SslAcceptor;
 use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use actix_web::App;
 use AppStateBuilder;
+
+use view::extensions::ProcedureExt;
 
 pub fn serve() {
     let server_addr = "127.0.0.1:8080";
@@ -18,7 +19,7 @@ pub fn serve() {
     let mut server_cfg = actix_web::server::new(move || {
 
         let secret = "Hello World";
-        let state = AppStateBuilder::new()
+        let mut state = AppStateBuilder::new()
             .host("localhost")
             .port(5432)
             .user("test")
@@ -29,14 +30,14 @@ pub fn serve() {
         App::with_state(state)
             .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
             .middleware(Logger::new(r#"Requested [%r] FROM %a "%{User-Agent}i""#))
-            .configure(|app| Cors::for_app(app)
+            .configure(move |app| Cors::for_app(app)
                 //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
                 //.allowed_origin("http://localhost:8080")
                 .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                 .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                 .allowed_header(http::header::CONTENT_TYPE)
                 .max_age(3600)
-                .kakapo_routes()
+                .add_routes()
                 .register())
     });
 
