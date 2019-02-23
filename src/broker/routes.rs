@@ -4,6 +4,7 @@ use view::procedure::ProcedureBuilder;
 use AppStateLike;
 use model::actions::Action;
 use view::routes::manage;
+use view::routes::pubsub;
 
 pub struct CallParams<'a, S>
     where
@@ -60,6 +61,11 @@ pub fn call_procedure<'a, CB, S>(procedure: &str, cb: &mut CB, call_params: &mut
 
         "runQuery" => cb.call(manage::run_query, call_params),
         "runScript" => cb.call(manage::run_script, call_params),
+
+        "subscribeTo" => cb.call(pubsub::subscribe_to, call_params),
+        "unsubscribeFrom" => cb.call(pubsub::unsubscribe_from, call_params),
+        "getSubscribers" => cb.call(pubsub::get_subscribers, call_params),
+        "getMessages" => cb.call(pubsub::get_messages, call_params),
 
         _ => cb.error(call_params),
     }
