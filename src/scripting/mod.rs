@@ -14,9 +14,6 @@ use std::str::from_utf8;
 
 use tempfile;
 
-use pyo3::prelude::*;
-use pyo3::types::PyDict;
-
 use scripting::error::ScriptError;
 use data::Script;
 use data::Named;

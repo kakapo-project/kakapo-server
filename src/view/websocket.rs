@@ -5,7 +5,7 @@ use actix_web::Error;
 use actix_web::ws;
 
 
-use AppStateLike;
+use connection::AppStateLike;
 use pubsub::WsClientSession;
 
 
