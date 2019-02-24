@@ -36,6 +36,7 @@ extern crate time_test;
 extern crate tokio;
 extern crate tokio_core;
 extern crate uuid;
+extern crate core;
 
 // Mods
 mod auth;

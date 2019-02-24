@@ -1,10 +1,12 @@
 
 mod input;
 mod routes;
-mod server;
 
 use std::marker::PhantomData;
 use std::collections::HashSet;
+use std::time::Duration;
+use std::time::Instant;
+use std::iter;
 
 use uuid::Uuid;
 
@@ -24,8 +26,7 @@ use actix::AsyncContext;
 use actix::Handler;
 use actix::SystemService;
 
-use chrono::Utc;
-use chrono::DateTime;
+use chrono;
 
 use AppStateLike;
 use view::action_wrapper::ActionWrapper;
@@ -41,11 +42,16 @@ use data::channels::Channels;
 use broker::input::WsInputData;
 use broker::routes::CallAction;
 use broker::routes::CallParams;
-use broker::server::SubscribeMessage;
-use broker::server::UnsubscribeMessage;
-use broker::server::ActionMessage;
-use broker::server::WsServer;
-use broker::server::UserSession;
+use actix::System;
+
+
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(60); // 1 minute
+const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(600); // 10 minutes
+const HEARTBEAT_MESSAGE: &'static str = "Hello";
+
+const MESSAGE_INTERVAL: Duration = Duration::from_millis(500); // 500 milliseconds
+// How much time it should lag from now, This is so that if there is a time mismatch between the db and the server, it doesn't skip messages
+const MESSAGE_LAG: Duration = Duration::from_micros(50);
 
 
 impl<S> Actor for WsClientSession<S>
@@ -56,6 +62,8 @@ impl<S> Actor for WsClientSession<S>
 
     fn started(&mut self, ctx: &mut Self::Context) {
         info!("WsSession [{}] opened ", &self.id.to_hyphenated_ref());
+        self.start_heartbeat_process(ctx);
+        self.start_message_process(ctx);
     }
 
     fn stopped(&mut self, _ctx: &mut Self::Context) {
@@ -63,16 +71,53 @@ impl<S> Actor for WsClientSession<S>
     }
 }
 
-impl<S> Handler<ActionMessage> for WsClientSession<S>
+impl<S> WsClientSession<S>
     where
-        S: AppStateLike + 'static,
+        S: AppStateLike + 'static
 {
-    type Result = ();
+    fn start_heartbeat_process(&self, ctx: &mut <Self as Actor>::Context) {
+        ctx.run_later(HEARTBEAT_INTERVAL, move |act, ctx| {
+            if Instant::now().duration_since(act.last_beat) > HEARTBEAT_TIMEOUT {
+                info!("WsSession [{}] timed out",  &act.id.to_hyphenated_ref());
+                ctx.stop();
+            } else {
+                ctx.ping(HEARTBEAT_MESSAGE);
+            }
+        });
+    }
 
-    fn handle(&mut self, msg: ActionMessage, ctx: &mut Self::Context) {
-        info!("handling message: {:?}", &msg);
+    fn start_message_process(&mut self, ctx: &mut <Self as Actor>::Context) {
+
+        ctx.run_later(MESSAGE_INTERVAL, Self::message_process);
+    }
+
+
+    fn message_process(&mut self, ctx: &mut ws::WebsocketContext<Self, S>) {
+        let lag = chrono::Duration::from_std(MESSAGE_LAG)
+            .unwrap_or_else(|err| {
+                warn!("Could not understand MESSAGE_LAG, setting to 0: err: {:?}", &err);
+                chrono::Duration::milliseconds(0)
+            });
+
+        let now = chrono::Utc::now().naive_utc() - lag;
+        let last = self.last_message;
+        self.last_message = now;
+
+        let data = json!({
+
+        });
+        let params = json!({
+
+        });
+
+        let mut call_params = CallParams {
+            data, params, ctx
+        };
+
+        routes::call_procedure("getMessages", self, &mut call_params);
     }
 }
+
 
 impl<S> StreamHandler<ws::Message, ws::ProtocolError> for WsClientSession<S>
     where
@@ -81,7 +126,7 @@ impl<S> StreamHandler<ws::Message, ws::ProtocolError> for WsClientSession<S>
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
 
         //updating the heartbeat
-        self.last_beat = Utc::now();
+        self.last_beat = Instant::now();
 
         match msg {
             ws::Message::Text(text) => {
@@ -113,11 +158,14 @@ impl<S> StreamHandler<ws::Message, ws::ProtocolError> for WsClientSession<S>
                 let message = serde_json::to_string(&message).unwrap_or_default();
                 ctx.text(message);
             },
-            ws::Message::Ping(_) => {
-                //TODO....
+            ws::Message::Ping(x) => {
+                ctx.pong(&x);
             },
-            ws::Message::Pong(_) => {
-                //TODO:...
+            ws::Message::Pong(message) => {
+                if message != HEARTBEAT_MESSAGE {
+                    warn!("message out of sync, closing connection");
+                    ctx.stop();
+                }
             },
         }
     }
@@ -131,9 +179,11 @@ pub struct WsClientSession<S>
 {
     pub id: Uuid,
     subscriptions: HashSet<Channels>,
-    last_beat: DateTime<Utc>,
+
+    last_beat: Instant,
+    last_message: chrono::NaiveDateTime,
     auth_header: Option<Vec<u8>>,
-    user_id: i64,
+
     phantom_data: PhantomData<(S)>,
 }
 
@@ -146,9 +196,9 @@ impl<S> WsClientSession<S>
         Self {
             id,
             subscriptions: HashSet::new(),
-            last_beat: Utc::now(),
+            last_beat: Instant::now(),
+            last_message: chrono::Utc::now().naive_utc(),
             auth_header: None,
-            user_id: 0,
             phantom_data: PhantomData,
         }
     }
@@ -249,7 +299,6 @@ impl<S> WsClientSession<S>
             Ok(x) => {
                 let bearer_token = to_bearer_token(token); //need it to be a bearer token for the action wrapper to handle it
                 self.auth_header = Some(bearer_token.as_bytes().to_vec());
-                self.user_id = x.claims.get_user_id();
 
                 let message = json!("authenticated");
                 let message = serde_json::to_string(&message).unwrap_or_default();
@@ -258,8 +307,8 @@ impl<S> WsClientSession<S>
             Err(err) => {
                 error!("encountered error trying to decode token: {:?}", &err);
                 let message = json!({
-                            "error": "Could not authenticate token"
-                        });
+                    "error": "Could not authenticate token"
+                });
                 let message = serde_json::to_string(&message).unwrap_or_default();
                 ctx.text(message);
             }
