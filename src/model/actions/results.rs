@@ -91,6 +91,8 @@ pub struct RoleResult(pub data::auth::Role);
 pub struct AllRolesResult(pub Vec<data::auth::Role>);
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "type")]
 pub enum SubscriptionResult {
     Subscribed(Subscription),
     Unsubscribed(Subscription),

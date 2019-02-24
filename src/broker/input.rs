@@ -11,18 +11,6 @@ pub enum WsInputData {
         token: String,
     },
     #[serde(rename_all = "camelCase")]
-    SubscribeTo {
-        channel: Channels,
-    },
-    #[serde(rename_all = "camelCase")]
-    UnsubscribeFrom {
-        channel: Channels,
-    },
-    #[serde(rename_all = "camelCase")]
-    ListSubscribers {
-        channel: Channels,
-    },
-    #[serde(rename_all = "camelCase")]
     Call {
         procedure: String,
         params: serde_json::Value,

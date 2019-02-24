@@ -159,15 +159,6 @@ impl<S> WsClientSession<S>
                 info!("Authenticating ws user");
                 self.authenticating_user(token, ctx);
             },
-            WsInputData::SubscribeTo { channel } => {
-                self.send_subscribe_message(channel, ctx);
-            },
-            WsInputData::UnsubscribeFrom { channel } => {
-                self.send_unsubscribe_message(channel, ctx);
-            },
-            WsInputData::ListSubscribers { channel } => {
-                unimplemented!(); //TODO: also need a way to get list of new joins and exits
-            },
             WsInputData::Call { procedure, params, data } => {
                 debug!("calling procedure: {:?}", &procedure);
                 let mut call_params = CallParams {
@@ -272,83 +263,6 @@ impl<S> WsClientSession<S>
                 let message = serde_json::to_string(&message).unwrap_or_default();
                 ctx.text(message);
             }
-        }
-    }
-
-    fn send_subscribe_message(&mut self, channel: Channels, ctx: &mut ws::WebsocketContext<Self, S>) {
-        if self.subscriptions.contains(&channel) {
-            warn!("User already subscribed to {:?}", &channel);
-            let message = json!({
-                        "error": "Already subscribed"
-                    });
-            let message = serde_json::to_string(&message).unwrap_or_default();
-            ctx.text(message);
-        } else {
-            let user_session = UserSession {
-                user_id: self.user_id.to_owned(),
-                rec: ctx.address().recipient(),
-            };
-
-            let subscribe_msg = SubscribeMessage(channel.to_owned(), self.id.to_owned(), user_session);
-            WsServer::from_registry()
-                .send(subscribe_msg)
-                .into_actor(self)
-                .then(|res, actor, ctx| {
-                    match res {
-                        Ok(id) => {
-                            let message = json!("subscribed");
-                            let message = serde_json::to_string(&message).unwrap_or_default();
-                            actor.subscriptions.insert(channel);
-                            ctx.text(message);
-                        },
-                        Err(err) => {
-                            error!("Encountered error subscribing: {}", &err.to_string());
-                            let message = json!({
-                                        "error": err.to_string()
-                                    });
-                            let message = serde_json::to_string(&message).unwrap_or_default();
-                            ctx.text(message);
-                        }
-                    }
-                    fut::ok(())
-                })
-                .wait(ctx); //TODO: is spawn better here?
-        }
-    }
-
-    fn send_unsubscribe_message(&mut self, channel: Channels, ctx: &mut ws::WebsocketContext<Self, S>) {
-        if !self.subscriptions.contains(&channel) {
-            warn!("User not subscribed to {:?}", &channel);
-            let message = json!({
-                        "error": "Not subscribed"
-                    });
-            let message = serde_json::to_string(&message).unwrap_or_default();
-            ctx.text(message);
-        } else {
-            let unsubscribe_msg = UnsubscribeMessage(channel.to_owned(), self.id.to_owned());
-            WsServer::from_registry()
-                .send(unsubscribe_msg)
-                .into_actor(self)
-                .then(move |res, actor, ctx| {
-                    match res {
-                        Ok(id) => {
-                            let message = json!("unsubscribed");
-                            let message = serde_json::to_string(&message).unwrap_or_default();
-                            actor.subscriptions.remove(&channel);
-                            ctx.text(message);
-                        },
-                        Err(err) => {
-                            error!("Encountered error unsubscribing: {}", &err.to_string());
-                            let message = json!({
-                                        "error": err.to_string()
-                                    });
-                            let message = serde_json::to_string(&message).unwrap_or_default();
-                            ctx.text(message);
-                        }
-                    }
-                    fut::ok(())
-                })
-                .wait(ctx); //TODO: is spawn better here?
         }
     }
 }

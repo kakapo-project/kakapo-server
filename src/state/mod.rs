@@ -245,7 +245,6 @@ pub struct PublishCallback<'a> {
 }
 
 pub trait PubSubOps {
-    //get messages
 
     fn publish(&self, channel: Channels, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError>;
 
@@ -261,6 +260,9 @@ pub trait PubSubOps {
         start_time: chrono::NaiveDateTime,
         end_time: chrono::NaiveDateTime,
     ) -> Result<Vec<Message>, BroadcastError>;
+
+    // Some user permissions have been removed so they must be purged
+    fn permissions_removed(&self) -> Result<(), BroadcastError>;
 }
 
 impl GetSecrets for ActionState {

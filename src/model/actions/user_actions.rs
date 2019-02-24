@@ -15,6 +15,7 @@ use state::ActionState;
 use state::StateFunctions;
 use state::user_management::UserManagementOps;
 use state::authentication::AuthenticationOps;
+use state::PubSubOps;
 
 use auth::send_mail::EmailOps;
 use connection::GetSecrets;
@@ -228,6 +229,13 @@ impl<S> Action<S> for RemoveUser<S>
             .get_user_management()
             .remove_user(&self.user_identifier)
             .map_err(Error::UserManagement)
+            .and_then(|res| {
+                state
+                    .get_pub_sub()
+                    .permissions_removed()
+                    .map_err(Error::PublishError)?;
+                Ok(res)
+            })
             .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
     }
 }
@@ -431,6 +439,13 @@ impl<S> Action<S> for RemoveRole<S>
             .get_user_management()
             .remove_role(&self.rolename)
             .or_else(|err| Err(Error::UserManagement(err)))
+            .and_then(|res| {
+                state
+                    .get_pub_sub()
+                    .permissions_removed()
+                    .map_err(Error::PublishError)?;
+                Ok(res)
+            })
             .and_then(|res| ActionRes::new("RemoveRole", RoleResult(res)))
     }
 }
@@ -554,6 +569,13 @@ impl<S> Action<S> for DetachPermissionForRole<S>
             .get_user_management()
             .detach_permission_for_role(&self.permission, &self.rolename)
             .map_err(Error::UserManagement)
+            .and_then(|res| {
+                state
+                    .get_pub_sub()
+                    .permissions_removed()
+                    .map_err(Error::PublishError)?;
+                Ok(res)
+            })
             .and_then(|res| ActionRes::new("DetachPermissionForRole", RoleResult(res)))
     }
 }
@@ -640,6 +662,13 @@ impl<S> Action<S> for DetachRoleForUser<S>
             .get_user_management()
             .detach_role_for_user(&self.rolename, &self.user_identifier)
             .map_err(Error::UserManagement)
+            .and_then(|res| {
+                state
+                    .get_pub_sub()
+                    .permissions_removed()
+                    .map_err(Error::PublishError)?;
+                Ok(res)
+            })
             .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))
     }
 }

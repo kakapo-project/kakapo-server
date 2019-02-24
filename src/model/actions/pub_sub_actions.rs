@@ -19,6 +19,7 @@ use model::actions::ActionResult;
 use model::entity::RetrieverFunctions;
 use data::channels::Channels;
 use data::channels::Defaults;
+use data::channels::Sub;
 
 use state::PubSubOps;
 use state::ActionState;
@@ -26,7 +27,7 @@ use state::StateFunctions;
 
 #[derive(Debug)]
 pub struct SubscribeTo<S = ActionState>  {
-    pub user_identifier: String,
+    pub user_identifier: String, //TODO: why pass the user_identifier here?
     pub channel: Channels,
     pub phantom_data: PhantomData<(S)>,
 }
@@ -70,7 +71,7 @@ impl<S> Action<S> for SubscribeTo<S>
 
 #[derive(Debug)]
 pub struct UnsubscribeFrom<S = ActionState>  {
-    pub user_identifier: String,
+    pub user_identifier: String, //TODO: why pass the user_identifier here?
     pub channel: Channels,
     pub phantom_data: PhantomData<(S)>,
 }
@@ -199,7 +200,7 @@ impl Channels {
             Channels::Defaults(Defaults::Query(name)) => Permission::read_entity::<data::Query>(name.to_owned()),
             Channels::Defaults(Defaults::Script(name)) => Permission::read_entity::<data::Script>(name.to_owned()),
             Channels::Defaults(Defaults::TableData(name)) => Permission::get_table_data(name.to_owned()),
-            Channels::Subscribers(channel) => Channels::Defaults(channel.to_owned()).required_permission(),
+            Channels::Subscribers(Sub::Subscribers(channel)) => Channels::Defaults(channel.to_owned()).required_permission(),
         }
     }
 }

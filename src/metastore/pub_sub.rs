@@ -149,6 +149,10 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         Ok(messages)
 
     }
+
+    fn permissions_removed(&self) -> Result<(), BroadcastError> {
+        unimplemented!()
+    }
 }
 
 fn get_user(conn: &Conn, user_identifier: &String) -> Result<dbdata::RawUser, BroadcastError> {

@@ -141,6 +141,7 @@ fn test_websocket_connection() {
 fn test_websocket_flow() {
     let mut server = build_server();
     let id = random_identifier();
+    let query_name = format!("my_query_{}", id);
 
     let json_request = json!({
         "action": "authenticate",
@@ -152,15 +153,20 @@ fn test_websocket_flow() {
 
 
     let json_request = json!({
-        "action": "subscribeTo",
-        "channel": "AllQueries"
+        "action": "call",
+        "procedure": "subscribeTo",
+        "params": {
+            "username": "admin",
+        },
+        "data": {
+            "query": query_name.to_owned()
+        }
     });
 
     let message= send_ws_message(&mut writer1, &mut reader1, &mut server, &json_request);
-    assert_eq!(message.as_value(), json!("subscribed"));
+    assert_eq!(message.as_value()["type"].to_owned(), json!("subscribed"));
 
-    let id = random_identifier();
-    let query_name = format!("my_query_{}", id);
+
     let json_request = json!({
         "action": "call",
         "procedure": "createQuery",
