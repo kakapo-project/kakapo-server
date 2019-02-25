@@ -121,7 +121,7 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         INNER JOIN "user_channel"
             ON "message"."channel_id" = "user_channel"."channel_id"
         WHERE "user_channel"."user_id" = $1 AND "message"."sent_at" >= $2 AND "message"."sent_at" < $3
-        ORDER BY "message"."sent_at" DESC;
+        ORDER BY "message"."sent_at" ASC;
         "#;
 
         let raw_messages: Vec<dbdata::RawMessage> = diesel::sql_query(query)
