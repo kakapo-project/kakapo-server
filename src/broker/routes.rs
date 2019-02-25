@@ -6,31 +6,39 @@ use model::actions::Action;
 use view::routes::manage;
 use view::routes::pubsub;
 
-pub struct CallParams<'a, S>
+pub struct CallParams<'a, S, F>
     where
         S: AppStateLike + 'static,
+        //TODO: this is really annoying. You can probably fuck around with the lifetimes and generics enough to get this working
+        //more generally, but right now we have to pass in a static function, can't be a closure
+        for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
 {
     pub data: serde_json::Value,
     pub params: serde_json::Value,
     pub ctx: &'a mut ws::WebsocketContext<WsClientSession<S>, S>,
+    pub on_received: &'static F,
 }
 
+
 pub trait CallAction<S> {
-    fn call<'a, PB, A>(&mut self, procedure_builder: PB, call_params: &mut CallParams<'a, S>)
+    fn call<'a, PB, A, F>(&mut self, procedure_builder: PB, call_params: &'a mut CallParams<'a, S, F>)
         where
             PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
             S: AppStateLike + 'static,
-            A: Action + 'static;
+            A: Action + 'static,
+            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static;
 
-    fn error<'a>(&mut self, call_params: &mut CallParams<'a, S>)
+    fn error<'a, F>(&mut self, call_params: &'a mut CallParams<'a, S, F>)
         where
-            S: AppStateLike + 'static;
+            S: AppStateLike + 'static,
+            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static;
 }
 
-pub fn call_procedure<'a, CB, S>(procedure: &str, cb: &mut CB, call_params: &mut CallParams<'a, S>)
+pub fn call_procedure<'a, CB, S, F>(procedure: &str, cb: &mut CB, call_params: &'a mut CallParams<'a, S, F>)
     where
         S: AppStateLike + 'static,
         CB: CallAction<S>,
+        for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
 {
     //TODO: put this in a macro, we are using this in the routes as well
     match procedure {

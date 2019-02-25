@@ -47,14 +47,14 @@ pub trait EntityCrudOps
 
 const ADMIN_USER_ID: i64 = 1;
 
-fn get_user_id(controller: &EntityModifierController) -> i64 {
+fn get_user_id(controller: &EntityModifierController) -> Option<i64> {
     match controller.claims {
         None => {
-            warn!("This user does not have any id, however, the user is authorized. Setting content as admin");
-            ADMIN_USER_ID
+            error!("This user does not have any id, however, the user is authorized. This isn't normal behavior, look into this");
+            None
         },
         Some(claims) => {
-            claims.get_user_id()
+            Some(claims.get_user_id())
         }
     }
 }
@@ -75,22 +75,26 @@ macro_rules! make_crud_ops {
 
             fn create(state: &EntityModifierController, object: $EntityType) -> Result<Created<$EntityType>, EntityError> {
                 info!("create object: {:?}", &object);
-                $entity::create::<$EntityType>(state.conn, get_user_id(state), object)
+                let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::create::<$EntityType>(state.conn, user_id, object)
             }
 
             fn upsert(state: &EntityModifierController, object: $EntityType) -> Result<Upserted<$EntityType>, EntityError> {
                 info!("upsert object: {:?}", &object);
-                $entity::upsert::<$EntityType>(state.conn, get_user_id(state), object)
+                let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::upsert::<$EntityType>(state.conn, user_id, object)
             }
 
             fn update(state: &EntityModifierController, name_object: (&str, $EntityType)) -> Result<Updated<$EntityType>, EntityError> {
                 info!("update object: {:?}", &name_object);
-                $entity::update::<$EntityType>(state.conn, get_user_id(state), name_object)
+                let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::update::<$EntityType>(state.conn, user_id, name_object)
             }
 
             fn delete(state: &EntityModifierController, name: &str) -> Result<Deleted<$EntityType>, EntityError> {
                 info!("delete object: {:?}", &name);
-                $entity::delete::<$EntityType>(state.conn, get_user_id(state), name)
+                let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::delete::<$EntityType>(state.conn, user_id, name)
             }
         }
     );

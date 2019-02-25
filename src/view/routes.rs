@@ -213,16 +213,16 @@ pub mod pubsub {
 
     pub fn subscribe_to(data: Value, query: Value) -> Result<impl Action, Error> {
         let channel: data::channels::Channels = from_value(data)?;
-        let get_user: GetUser = from_value(query)?;
+        let _: NoQuery = from_value(query)?;
 
-        Ok(actions::SubscribeTo::<_>::new(get_user.user_identifier, channel))
+        Ok(actions::SubscribeTo::<_>::new(channel))
     }
 
     pub fn unsubscribe_from(data: Value, query: Value) -> Result<impl Action, Error> {
         let channel: data::channels::Channels = from_value(data)?;
-        let get_user: GetUser = from_value(query)?;
+        let _: NoQuery = from_value(query)?;
 
-        Ok(actions::UnsubscribeFrom::<_>::new(get_user.user_identifier, channel))
+        Ok(actions::UnsubscribeFrom::<_>::new(channel))
     }
 
     pub fn get_subscribers(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -233,10 +233,10 @@ pub mod pubsub {
     }
 
     pub fn get_messages(data: Value, query: Value) -> Result<impl Action, Error> {
-        let channel: data::channels::Channels = from_value(data)?;
+        let _: NoQuery = from_value(data)?;
         let range: TimeRange = from_value(query)?;
 
-        Ok(actions::GetMessages::<_>::new(channel, range.start_time, range.end_time))
+        Ok(actions::GetMessages::<_>::new(range.start_time, range.end_time))
 
     }
 }

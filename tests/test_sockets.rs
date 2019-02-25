@@ -155,9 +155,7 @@ fn test_websocket_flow() {
     let json_request = json!({
         "action": "call",
         "procedure": "subscribeTo",
-        "params": {
-            "username": "admin",
-        },
+        "params": {},
         "data": {
             "query": query_name.to_owned()
         }
@@ -165,7 +163,6 @@ fn test_websocket_flow() {
 
     let message= send_ws_message(&mut writer1, &mut reader1, &mut server, &json_request);
     assert_eq!(message.as_value()["type"].to_owned(), json!("subscribed"));
-
 
     let json_request = json!({
         "action": "call",
@@ -179,7 +176,8 @@ fn test_websocket_flow() {
     });
 
     let message1= send_ws_message(&mut writer2, &mut reader2, &mut server, &json_request);
-    println!("msg1: {:?}", &message1);
+    assert_eq!(message1.as_value()["new"]["name"], json!(query_name.to_owned()));
+
     let message2 = ws_message_from_reader(&mut reader1, &mut server);
-    println!("msg2: {:?}", &message2);
+    assert_eq!(message2.as_value()["data"]["new"]["name"], json!(query_name.to_owned()));
 }

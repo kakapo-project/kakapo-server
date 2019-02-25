@@ -9,17 +9,17 @@ use state::error::BroadcastError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     Entity(EntityError),
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     Table(TableError),
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     Script(ScriptError),
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     Query(QueryError),
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     EmailError(EmailError),
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     UserManagement(UserManagementError),
     #[fail(display = "Not authorized")]
     Unauthorized,
@@ -27,7 +27,7 @@ pub enum Error {
     NotFound,
     #[fail(display = "Already exists")]
     AlreadyExists,
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "{}", 0)]
     SerializationError(String),
     #[fail(display = "Could not publish {:?}", 0)]
     PublishError(BroadcastError),

@@ -1,8 +1,11 @@
 use data::auth::InvitationToken;
 use data::auth::Invitation;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EmailError;
+#[derive(Debug, Fail, Clone, PartialEq, Eq)]
+pub enum EmailError {
+    #[fail(display = "An unknown error occurred")]
+    Unknown,
+}
 
 pub struct EmailSender {}
 

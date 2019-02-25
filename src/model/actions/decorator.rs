@@ -104,8 +104,7 @@ impl<A, S> Action<S> for WithPermissionRequired<A, S>
 
         let user_permissions = state
             .get_authorization()
-            .permissions()
-            .unwrap_or_default();
+            .permissions();
         let is_permitted = self.permissions.is_permitted(&user_permissions);
 
         if is_permitted {
@@ -153,15 +152,15 @@ impl<A, S> Action<S> for WithLoginRequired<A, S>
             return self.action.call(state);
         }
 
-        let user_permissions = state
+        let is_logged_in = state
             .get_authorization()
-            .permissions();
-        match user_permissions {
-            None => {
-                debug!("Permission denied, required login");
-                Err(Error::Unauthorized)
-            },
-            Some(_) => self.action.call(state)
+            .is_logged_in();
+
+        if is_logged_in {
+            self.action.call(state)
+        } else {
+            debug!("Permission denied, required login");
+            Err(Error::Unauthorized)
         }
     }
 }
@@ -218,8 +217,7 @@ impl<A, S> Action<S> for WithPermissionFor<A, S>
 
         let user_permissions = state
             .get_authorization()
-            .permissions()
-            .unwrap_or_default();
+            .permissions();
 
         let all_permissions = state
             .get_authorization()

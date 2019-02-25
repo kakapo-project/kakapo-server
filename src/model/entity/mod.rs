@@ -12,6 +12,7 @@ use serde::Serialize;
 
 use data::claims::AuthClaims;
 use data::Named;
+use data::channels::GetEntityChannel;
 
 use model::entity::error::EntityError;
 use model::entity::results::*;
@@ -32,6 +33,7 @@ pub trait RawEntityTypes
         Self::NewData: GenerateRaw<Self>,
         Self: EntityCrudOps,
         Self: Named,
+        Self: GetEntityChannel,
 {
     const TYPE_NAME: &'static str;
     type Data;

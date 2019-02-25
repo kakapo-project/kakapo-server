@@ -41,10 +41,10 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         Ok(())
     }
 
-    fn subscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError> {
+    fn subscribe(&self, user_id: i64, channel: Channels) -> Result<Subscription, BroadcastError> {
         info!("subscribing to channels: {:?}", &channel);
 
-        let raw_user = get_user(self.conn, &user_id)?;
+        let raw_user = get_user(self.conn, user_id)?;
         let raw_channel = get_or_create_channel(self.conn, &channel)?;
         let raw_user_channel = create_user_channel(self.conn, raw_user.user_id, raw_channel.channel_id)?;
 
@@ -57,10 +57,10 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         Ok(Subscription { user, channel })
     }
 
-    fn unsubscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError> {
+    fn unsubscribe(&self, user_id: i64, channel: Channels) -> Result<Subscription, BroadcastError> {
         info!("unsubscribing from channels: {:?}", &channel);
 
-        let raw_user = get_user(self.conn, &user_id)?;
+        let raw_user = get_user(self.conn, user_id)?;
         let raw_channel = get_channel(self.conn, &channel)?;
         let raw_user_channel = remove_user_channel(self.conn, raw_user.user_id, raw_channel.channel_id)?;
 
@@ -111,27 +111,21 @@ impl<'a> PubSubOps for PublishCallback<'a> {
 
     fn get_messages(
         &self,
-        channel: Channels,
+        user_id: i64,
         start_time: chrono::NaiveDateTime,
         end_time: chrono::NaiveDateTime,
     ) -> Result<Vec<Message>, BroadcastError> {
         let query = r#"
         SELECT
-            "message".* FROM "message"
-        INNER JOIN "channel"
-            ON "message"."channel_id" = "channel"."channel_id"
-        WHERE "channel"."data" = $1 AND "message"."sent_at" >= $2 AND "message"."sent_at" < $3
+            * FROM "message"
+        INNER JOIN "user_channel"
+            ON "message"."channel_id" = "user_channel"."channel_id"
+        WHERE "user_channel"."user_id" = $1 AND "message"."sent_at" >= $2 AND "message"."sent_at" < $3
         ORDER BY "message"."sent_at" DESC;
         "#;
 
-        let channel_json = serde_json::to_value(&channel)
-            .map_err(|err| {
-                error!("Could not serialize value {:?} error: {:?}", &channel, &err);
-                BroadcastError::Unknown
-            })?;
-
         let raw_messages: Vec<dbdata::RawMessage> = diesel::sql_query(query)
-            .bind::<types::Json, _>(&channel_json)
+            .bind::<types::BigInt, _>(user_id)
             .bind::<types::Timestamp, _>(&start_time)
             .bind::<types::Timestamp, _>(&end_time)
             .load(self.conn)
@@ -155,14 +149,12 @@ impl<'a> PubSubOps for PublishCallback<'a> {
     }
 }
 
-fn get_user(conn: &Conn, user_identifier: &String) -> Result<dbdata::RawUser, BroadcastError> {
-    debug!("Authenticating user: {:?}", user_identifier);
+fn get_user(conn: &Conn, user_id: i64) -> Result<dbdata::RawUser, BroadcastError> {
     schema::user::table
-        .filter(schema::user::columns::username.eq(&user_identifier))
-        .or_filter(schema::user::columns::email.eq(&user_identifier))
+        .filter(schema::user::columns::user_id.eq(user_id))
         .get_result::<dbdata::RawUser>(conn)
         .map_err(|err| {
-            info!("Could not find user: {:?}", &user_identifier);
+            info!("Could not find user: {:?}", &user_id);
             match err {
                 DbError::NotFound => BroadcastError::UserNotFound,
                 _ => BroadcastError::InternalError(err.to_string()),

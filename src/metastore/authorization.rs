@@ -14,6 +14,59 @@ use state::authorization::AuthorizationOps;
 use state::error::UserManagementError;
 
 
+impl<'a> AuthorizationOps for Authorization<'a> {
+
+    fn is_logged_in(&self) -> bool {
+        self.claims.is_some()
+    }
+
+    //TODO: maybe ths should be in authentication, but a lot of these should be moved around between authentication, authorization and user management
+    fn user_id(&self) -> Option<i64> {
+        self.claims
+            .to_owned()
+            .map(|x| x.get_user_id())
+    }
+
+    fn is_admin(&self) -> bool {
+        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
+    }
+
+    fn permissions(&self) -> HashSet<Permission> {
+        let user_id = match self.user_id() {
+            Some(x) => x,
+            None => return HashSet::new()
+        };
+
+        let raw_permissions_result = self.get_user_permissions(user_id);
+        let raw_permissions = match raw_permissions_result {
+            Ok(res) => res,
+            Err(err) => {
+                error!("encountered an error when trying to get all permissions: {:?}", err);
+                vec![]
+            }
+        };
+
+        HashSet::from_iter(raw_permissions)
+    }
+
+    fn all_permissions(&self) -> HashSet<Permission> {
+        let raw_permissions_result = self.get_all_permissions();
+        let raw_permissions = match raw_permissions_result {
+            Ok(res) => res,
+            Err(err) => {
+                error!("encountered an error when trying to get all permissions: {:?}", err);
+                vec![]
+            }
+        };
+
+        HashSet::from_iter(raw_permissions)
+    }
+
+    fn username(&self) -> Option<String> {
+        self.claims.to_owned().map(|x| x.get_username())
+    }
+}
+
 impl<'a> Authorization<'a> {
     fn get_user_permissions(&self, user_id: i64) -> Result<Vec<Permission>, UserManagementError> {
         let query = r#"
@@ -54,48 +107,5 @@ impl<'a> Authorization<'a> {
 
         let permissions: Vec<Permission> = result.into_iter().flat_map(|x| x.as_permission()).collect();
         Ok(permissions)
-    }
-}
-
-impl<'a> AuthorizationOps for Authorization<'a> {
-
-    fn user_id(&self) -> Option<i64> {
-        self.claims.to_owned().map(|x| x.get_user_id())
-    }
-
-    fn is_admin(&self) -> bool {
-        self.claims.to_owned().map(|x| x.is_user_admin()).unwrap_or(false)
-    }
-
-    fn permissions(&self) -> Option<HashSet<Permission>> {
-        self.user_id().map(|user_id| {
-            let raw_permissions_result = self.get_user_permissions(user_id);
-            let raw_permissions = match raw_permissions_result {
-                Ok(res) => res,
-                Err(err) => {
-                    error!("encountered an error when trying to get all permissions: {:?}", err);
-                    vec![]
-                }
-            };
-
-            HashSet::from_iter(raw_permissions)
-        })
-    }
-
-    fn all_permissions(&self) -> HashSet<Permission> {
-        let raw_permissions_result = self.get_all_permissions();
-        let raw_permissions = match raw_permissions_result {
-            Ok(res) => res,
-            Err(err) => {
-                error!("encountered an error when trying to get all permissions: {:?}", err);
-                vec![]
-            }
-        };
-
-        HashSet::from_iter(raw_permissions)
-    }
-
-    fn username(&self) -> Option<String> {
-        self.claims.to_owned().map(|x| x.get_username())
     }
 }

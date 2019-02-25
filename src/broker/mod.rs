@@ -76,14 +76,18 @@ impl<S> WsClientSession<S>
         S: AppStateLike + 'static
 {
     fn start_heartbeat_process(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_later(HEARTBEAT_INTERVAL, move |act, ctx| {
-            if Instant::now().duration_since(act.last_beat) > HEARTBEAT_TIMEOUT {
-                info!("WsSession [{}] timed out",  &act.id.to_hyphenated_ref());
-                ctx.stop();
-            } else {
-                ctx.ping(HEARTBEAT_MESSAGE);
-            }
-        });
+        ctx.run_later(HEARTBEAT_INTERVAL, Self::heartbeat_process);
+    }
+
+    fn heartbeat_process(&mut self, ctx: &mut ws::WebsocketContext<Self, S>) {
+        if Instant::now().duration_since(self.last_beat) > HEARTBEAT_TIMEOUT {
+            info!("WsSession [{}] timed out",  &self.id.to_hyphenated_ref());
+            ctx.stop();
+        } else {
+            ctx.ping(HEARTBEAT_MESSAGE);
+        }
+
+        ctx.run_later(HEARTBEAT_INTERVAL, Self::heartbeat_process);
     }
 
     fn start_message_process(&mut self, ctx: &mut <Self as Actor>::Context) {
@@ -91,6 +95,17 @@ impl<S> WsClientSession<S>
         ctx.run_later(MESSAGE_INTERVAL, Self::message_process);
     }
 
+    fn process_message_when_callback_is_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: serde_json::Value) {
+        let messages = res
+            .as_array() //Assumes that the getMessages returns an array
+            .unwrap_or(&vec![])
+            .into_iter()
+            .for_each(|message_res| {
+                //TODO: need the action name
+                let message = serde_json::to_string(&message_res).unwrap_or_default();
+                ctx.text(message);
+            });
+    }
 
     fn message_process(&mut self, ctx: &mut ws::WebsocketContext<Self, S>) {
         let lag = chrono::Duration::from_std(MESSAGE_LAG)
@@ -103,18 +118,22 @@ impl<S> WsClientSession<S>
         let last = self.last_message;
         self.last_message = now;
 
-        let data = json!({
-
-        });
+        let data = json!({});
         let params = json!({
-
+            "start": last,
+            "end": now,
         });
 
-        let mut call_params = CallParams {
-            data, params, ctx
-        };
+        {
+            let mut call_params = CallParams {
+                data, params, ctx,
+                on_received: &Self::process_message_when_callback_is_ok
+            };
 
-        routes::call_procedure("getMessages", self, &mut call_params);
+            routes::call_procedure("getMessages", self, &mut call_params);
+        }
+
+        ctx.run_later(MESSAGE_INTERVAL, Self::message_process);
     }
 }
 
@@ -203,6 +222,12 @@ impl<S> WsClientSession<S>
         }
     }
 
+    fn callback_when_action_is_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: serde_json::Value) {
+        //TODO: need the action name
+        let message = serde_json::to_string(&res).unwrap_or_default();
+        ctx.text(message);
+    }
+
     fn handle_message(&mut self, ctx: &mut ws::WebsocketContext<Self, S>, input: WsInputData) {
         match input {
             WsInputData::Authenticate { token } => {
@@ -212,7 +237,8 @@ impl<S> WsClientSession<S>
             WsInputData::Call { procedure, params, data } => {
                 debug!("calling procedure: {:?}", &procedure);
                 let mut call_params = CallParams {
-                    data, params, ctx
+                    data, params, ctx,
+                    on_received: &Self::callback_when_action_is_ok,
                 };
 
                 let result = routes::call_procedure(&procedure, self, &mut call_params);
@@ -226,11 +252,12 @@ impl<S> CallAction<S> for WsClientSession<S>
     where S: AppStateLike
 {
     /// For use by the websockets
-    fn call<'a, PB, A>(&mut self, procedure_builder: PB, call_params: &mut CallParams<'a, S>)
+    fn call<'a, PB, A, F>(&mut self, procedure_builder: PB, call_params: &mut CallParams<'a, S, F>)
         where
             PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
             S: AppStateLike + 'static,
             A: Action + 'static,
+            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
     {
 
         let action = procedure_builder
@@ -242,20 +269,21 @@ impl<S> CallAction<S> for WsClientSession<S>
             action_wrapper = action_wrapper.with_auth(&auth);
         }
 
+        let on_received = call_params.on_received;
+
         call_params
             .ctx
             .state()
             .connect()
             .send(action_wrapper)
             .into_actor(self)
-            .then(|res, actor, ctx| {
+            .then(move |res, actor, ctx| {
                 match res {
                     Ok(ok_res) => match ok_res {
                         Ok(res) => {
                             info!("action message ok");
-                            //TODO: need the action name
-                            let message = serde_json::to_string(&res.get_data()).unwrap_or_default();
-                            ctx.text(message);
+                            let res_value = serde_json::to_value(&res.get_data()).unwrap_or_default();
+                            (&on_received)(ctx, res_value);
                         },
                         Err(err) => {
                             info!("action message error");
@@ -275,11 +303,13 @@ impl<S> CallAction<S> for WsClientSession<S>
             .wait(&mut call_params.ctx); //TODO: is spawn better here?
     }
 
-    fn error<'a>(&mut self, call_params: &mut CallParams<'a, S>)
+    fn error<'a, F>(&mut self, call_params: &'a mut CallParams<'a, S, F>)
         where
-            S: AppStateLike + 'static
+            S: AppStateLike + 'static,
+            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
     {
-        unimplemented!()
+        let message = serde_json::to_string(&json!({"error": "Did not understand procedure"})).unwrap_or_default();
+        call_params.ctx.text(message)
     }
 }
 

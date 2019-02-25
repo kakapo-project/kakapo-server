@@ -248,15 +248,15 @@ pub trait PubSubOps {
 
     fn publish(&self, channel: Channels, action_name: String, action_result: &serde_json::Value) -> Result<(), BroadcastError>;
 
-    fn subscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError>;
+    fn subscribe(&self, user_id: i64, channel: Channels) -> Result<Subscription, BroadcastError>;
 
-    fn unsubscribe(&self, user_id: String, channel: Channels) -> Result<Subscription, BroadcastError>;
+    fn unsubscribe(&self, user_id: i64, channel: Channels) -> Result<Subscription, BroadcastError>;
 
     fn get_subscribers(&self, channel: Channels) -> Result<Vec<User>, BroadcastError>;
 
     fn get_messages(
         &self,
-        channel: Channels,
+        user_id: i64,
         start_time: chrono::NaiveDateTime,
         end_time: chrono::NaiveDateTime,
     ) -> Result<Vec<Message>, BroadcastError>;

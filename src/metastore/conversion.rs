@@ -21,6 +21,8 @@ use metastore::dbdata::NewRawView;
 use model::entity::ConvertRaw;
 use model::entity::GenerateRaw;
 use model::entity::RawEntityTypes;
+use data::channels::GetEntityChannel;
+use data::channels::Defaults;
 
 
 impl ConvertRaw<data::Table> for dbdata::RawTable {

@@ -1,5 +1,6 @@
 use model::entity::RawEntityTypes;
 use data::auth::User;
+use data;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -7,7 +8,7 @@ pub enum Defaults {
     Table(String),
     Query(String),
     Script(String),
-    //TODO: view
+    View(String),
     TableData(String), //TODO: this is tricky since the filter / query can go in as well
 }
 
@@ -33,12 +34,43 @@ pub struct Subscription {
     pub channel: Channels,
 }
 
+pub trait GetEntityChannel {
+    fn entity_channel(name: &str) -> Defaults;
+}
+
+
+impl GetEntityChannel for data::Table {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::Table(name.to_string())
+    }
+}
+
+impl GetEntityChannel for data::Query {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::Query(name.to_string())
+    }
+}
+
+impl GetEntityChannel for data::Script {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::Script(name.to_string())
+    }
+}
+
+impl GetEntityChannel for data::View {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::View(name.to_string())
+    }
+}
+
+
 impl Channels {
 
     pub fn entity<T>(name: &str) -> Self
-        where T: RawEntityTypes,
+        where T: GetEntityChannel,
     {
-        Channels::Defaults(Defaults::Table(name.to_string()))
+        let entity_channel = T::entity_channel(name);
+        Channels::Defaults(entity_channel)
     }
 
     pub fn table(table_name: &str) -> Self {

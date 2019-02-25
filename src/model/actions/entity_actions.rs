@@ -65,8 +65,7 @@ impl<A, T, S> Action<S> for WithFilterListByPermission<A, T, S>
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         let user_permissions = state
             .get_authorization()
-            .permissions()
-            .unwrap_or_default();
+            .permissions();
         let raw_results = self.action.call(state)?;
         let raw_results_name = raw_results.get_name();
 
