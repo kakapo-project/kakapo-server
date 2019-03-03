@@ -110,16 +110,16 @@ impl<T> UpdateState<T> for Deleted<T>
 
 ///Nothing needed here
 ///maybe have stored procedures here for some speedup
-impl UpdateActionFunctions for data::Query {
-    fn create_entity(controller: &EntityModifierController, new: &data::Query) -> Result<(), EntityError> {
+impl UpdateActionFunctions for data::DataQueryEntity {
+    fn create_entity(controller: &EntityModifierController, new: &data::DataQueryEntity) -> Result<(), EntityError> {
         Ok(())
     }
 
-    fn update_entity(controller: &EntityModifierController, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
+    fn update_entity(controller: &EntityModifierController, old: &data::DataQueryEntity, new: &data::DataQueryEntity) -> Result<(), EntityError> {
         Ok(())
     }
 
-    fn delete_entity(controller: &EntityModifierController, old: &data::Query) -> Result<(), EntityError> {
+    fn delete_entity(controller: &EntityModifierController, old: &data::DataQueryEntity) -> Result<(), EntityError> {
         Ok(())
     }
 }
@@ -139,11 +139,58 @@ impl UpdateActionFunctions for data::View {
     }
 }
 
-impl UpdatePermissionFunctions for data::Query {
-    fn create_permission(controller: &EntityModifierController, new: &data::Query) -> Result<(), EntityError> {
+//TODO: brind some othe the stuff from table here
+///Nothing needed here
+impl UpdateActionFunctions for data::DataStoreEntity {
+    fn create_entity(controller: &EntityModifierController, new: &data::DataStoreEntity) -> Result<(), EntityError> {
+        match controller.domain_conn {
+            Ok(conn) => {
+                conn.on_datastore_created(new)
+                    .map_err(|err| EntityError::InternalError(err.to_string()))?;
+            },
+            Err(err) => {
+                warn!("Could not get the controller for updating the state: {:?}", &err);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn update_entity(controller: &EntityModifierController, old: &data::DataStoreEntity, new: &data::DataStoreEntity) -> Result<(), EntityError> {
+        match controller.domain_conn {
+            Ok(conn) => {
+                conn.on_datastore_updated(old, new)
+                    .map_err(|err| EntityError::InternalError(err.to_string()))?;
+            },
+            Err(err) => {
+                warn!("Could not get the controller for updating the state: {:?}", &err);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn delete_entity(controller: &EntityModifierController, old: &data::DataStoreEntity) -> Result<(), EntityError> {
+        match controller.domain_conn {
+            Ok(conn) => {
+                conn.on_datastore_deleted(old)
+                    .map_err(|err| EntityError::InternalError(err.to_string()))?;
+            },
+            Err(err) => {
+                warn!("Could not get the controller for updating the state: {:?}", &err);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl UpdatePermissionFunctions for data::DataQueryEntity {
+    fn create_permission(controller: &EntityModifierController, new: &data::DataQueryEntity) -> Result<(), EntityError> {
+        /* TODO:...
         let permission_list = vec![
-            Permission::read_entity::<data::Query>(new.my_name().to_owned()),
-            Permission::modify_entity::<data::Query>(new.my_name().to_owned()),
+            Permission::read_entity::<Query>(new.my_name().to_owned()),
+            Permission::modify_entity::<Query>(new.my_name().to_owned()),
             Permission::run_query(new.my_name().to_owned()),
         ];
 
@@ -160,43 +207,44 @@ impl UpdatePermissionFunctions for data::Query {
                     .add_permission(&permission);
             },
         };
-
+        */
         Ok(())
     }
 
-    fn update_permission(controller: &EntityModifierController, old: &data::Query, new: &data::Query) -> Result<(), EntityError> {
+    fn update_permission(controller: &EntityModifierController, old: &data::DataQueryEntity, new: &data::DataQueryEntity) -> Result<(), EntityError> {
+        /* TODO:...
         let old_name = old.my_name().to_owned();
         let new_name = new.my_name().to_owned();
 
         let permission_list = vec![
-            (
-                Permission::read_entity::<data::Query>(old_name.to_owned()),
-                Permission::read_entity::<data::Query>(new_name.to_owned()),
-            ),
-            (
-                Permission::modify_entity::<data::Query>(old_name.to_owned()),
-                Permission::modify_entity::<data::Query>(new_name.to_owned()),
-            ),
-            (
-                Permission::run_query(old_name.to_owned()),
-                Permission::run_query(new_name.to_owned()),
-            )
+           (
+               Permission::read_entity::<Query>(old_name.to_owned()),
+               Permission::read_entity::<Query>(new_name.to_owned()),
+           ),
+           (
+               Permission::modify_entity::<Query>(old_name.to_owned()),
+               Permission::modify_entity::<Query>(new_name.to_owned()),
+           ),
+           (
+               Permission::run_query(old_name.to_owned()),
+               Permission::run_query(new_name.to_owned()),
+           )
         ];
 
         for (old_permission, new_permission) in permission_list {
-            controller
-                .user_management
-                .rename_permission(&old_permission, &new_permission);
+           controller
+               .user_management
+               .rename_permission(&old_permission, &new_permission);
         }
-
+       */
         Ok(())
     }
 
-    fn delete_permission(controller: &EntityModifierController, old: &data::Query) -> Result<(), EntityError> {
-
+    fn delete_permission(controller: &EntityModifierController, old: &data::DataQueryEntity) -> Result<(), EntityError> {
+        /* TODO:...
         let permission_list = vec![
-            Permission::read_entity::<data::Query>(old.my_name().to_owned()),
-            Permission::modify_entity::<data::Query>(old.my_name().to_owned()),
+            Permission::read_entity::<Query>(old.my_name().to_owned()),
+            Permission::modify_entity::<Query>(old.my_name().to_owned()),
             Permission::run_query(old.my_name().to_owned()),
         ];
 
@@ -205,11 +253,90 @@ impl UpdatePermissionFunctions for data::Query {
                 .user_management
                 .remove_permission(&permission);
         }
-
+        */
         Ok(())
     }
 }
 
+///mdodify table permissions in database here
+impl UpdatePermissionFunctions for data::DataStoreEntity {
+    fn create_permission(controller: &EntityModifierController, new: &data::DataStoreEntity) -> Result<(), EntityError> {
+        /* TODO:...
+        let permission_list = vec![
+            Permission::read_entity::<Table>(new.my_name().to_owned()),
+            Permission::modify_entity::<Table>(new.my_name().to_owned()),
+            Permission::get_table_data(new.my_name().to_owned()),
+            Permission::modify_table_data(new.my_name().to_owned()),
+        ];
+
+        //TODO: assuming that we are going to attach it to the user permission, that should go inside the kakapo_postgres
+        match controller.get_role_name() {
+            Some(rolename) => for permission in permission_list {
+                controller
+                    .user_management
+                    .attach_permission_for_role(&permission, &rolename);
+            },
+            None => for permission in permission_list {
+                controller
+                    .user_management
+                    .add_permission(&permission);
+            },
+        };
+        */
+        Ok(())
+    }
+
+    fn update_permission(controller: &EntityModifierController, old: &data::DataStoreEntity, new: &data::DataStoreEntity) -> Result<(), EntityError> {
+        /* TODO:...
+        let old_name = old.my_name().to_owned();
+        let new_name = new.my_name().to_owned();
+
+        let permission_list = vec![
+            (
+                Permission::read_entity::<Table>(old_name.to_owned()),
+                Permission::read_entity::<Table>(new_name.to_owned()),
+            ),
+            (
+                Permission::modify_entity::<Table>(old_name.to_owned()),
+                Permission::modify_entity::<Table>(new_name.to_owned()),
+            ),
+            (
+                Permission::get_table_data(old_name.to_owned()),
+                Permission::get_table_data(new_name.to_owned()),
+            ),
+            (
+                Permission::modify_table_data(old_name.to_owned()),
+                Permission::modify_table_data(new_name.to_owned()),
+            )
+        ];
+
+        for (old_permission, new_permission) in permission_list {
+            controller
+                .user_management
+                .rename_permission(&old_permission, &new_permission);
+        }
+        */
+        Ok(())
+    }
+
+    fn delete_permission(controller: &EntityModifierController, old: &data::DataStoreEntity) -> Result<(), EntityError> {
+        /* TODO:...
+        let permission_list = vec![
+            Permission::read_entity::<Table>(old.my_name().to_owned()),
+            Permission::modify_entity::<Table>(old.my_name().to_owned()),
+            Permission::get_table_data(old.my_name().to_owned()),
+            Permission::modify_table_data(old.my_name().to_owned()),
+        ];
+
+        for permission in permission_list {
+            controller
+                .user_management
+                .remove_permission(&permission);
+        }
+        */
+        Ok(())
+    }
+}
 
 ///Nothing needed here
 impl UpdatePermissionFunctions for data::View {

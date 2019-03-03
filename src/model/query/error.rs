@@ -1,4 +1,3 @@
-use database::error::DbError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum QueryError {
@@ -12,10 +11,4 @@ pub enum QueryError {
     SerializationError,
     #[fail(display = "An unknown error occurred")]
     Unknown,
-}
-
-impl QueryError {
-    pub fn db_error(err: DbError) -> Self {
-        unimplemented!()
-    }
 }

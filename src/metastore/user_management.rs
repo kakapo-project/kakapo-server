@@ -35,8 +35,9 @@ impl<'a> UserManagementOps for UserManagement<'a> {
             .get_result::<dbdata::RawUser>(self.conn)
             .map_err(|err| {
                 info!("Could not find user: {:?}", &user_identifier);
+                //TODO: a timining attack possible here?
                 match err {
-                    DbError::NotFound => UserManagementError::NotFound,
+                    DbError::NotFound => UserManagementError::Unauthorized,
                     _ => UserManagementError::InternalError(err.to_string()),
                 }
             })?;
@@ -62,6 +63,7 @@ impl<'a> UserManagementOps for UserManagement<'a> {
     fn add_user(&self, user: &NewUser) -> Result<User, UserManagementError> {
         info!("Creating new user {:?}", &user);
 
+        //TODO: test password complexity
         let hashed_pass = self
             .authentication
             .hash_password(&user.password)?;

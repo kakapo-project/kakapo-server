@@ -450,12 +450,12 @@ mod test {
 
         with_state(|state| {
             let name = format!("my_query_{}", random_identifier());
-            let new_query: data::Query = from_value(json!({
+            let new_query: data::DataQueryEntity = from_value(json!({
                 "name": name,
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
-            let create_action = CreateEntity::<data::Query, MockState>::new(new_query);
+            let create_action = CreateEntity::<data::DataQueryEntity, MockState>::new(new_query);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
@@ -475,17 +475,17 @@ mod test {
     fn test_update_entity() {
         with_state(|state| {
             let name = format!("my_query_{}", random_identifier());
-            let new_query: data::Query = from_value(json!({
+            let new_query: data::DataQueryEntity = from_value(json!({
                 "name": name,
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
-            let create_action = CreateEntity::<data::Query, MockState>::new(new_query);
+            let create_action = CreateEntity::<data::DataQueryEntity, MockState>::new(new_query);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let read_action = GetEntity::<data::Query, MockState>::new(name.to_owned());
+            let read_action = GetEntity::<data::DataQueryEntity, MockState>::new(name.to_owned());
             let result = read_action.call(&state);
 
             let data = result.unwrap().get_data();
@@ -500,17 +500,17 @@ mod test {
     fn test_delete_entity() {
         with_state(|state| {
             let name = format!("my_query_{}", random_identifier());
-            let new_query: data::Query = from_value(json!({
+            let new_query: data::DataQueryEntity = from_value(json!({
                 "name": name,
                 "description": "blah blah blah",
                 "statement": "SELECT * FROM a_table"
             })).unwrap();
-            let create_action = CreateEntity::<data::Query, MockState>::new(new_query);
+            let create_action = CreateEntity::<data::DataQueryEntity, MockState>::new(new_query);
 
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let delete_action = DeleteEntity::<data::Query, MockState>::new(name.to_owned());
+            let delete_action = DeleteEntity::<data::DataQueryEntity, MockState>::new(name.to_owned());
             let result = delete_action.call(&state);
             let data = result.unwrap().get_data();
 

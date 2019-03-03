@@ -7,7 +7,6 @@ use model::actions::error::Error;
 use model::query;
 
 use data;
-use data::utils::TableDataFormat;
 use data::permissions::*;
 
 use model::actions::decorator::*;
@@ -23,8 +22,8 @@ use state::ActionState;
 #[derive(Debug)]
 pub struct RunQuery<S = ActionState, QC = query::QueryAction>  {
     pub query_name: String,
-    pub params: data::QueryParams,
-    pub format: TableDataFormat,
+    pub params: serde_json::Value,
+    pub format: serde_json::Value,
     pub phantom_data: PhantomData<(S, QC)>,
 }
 
@@ -33,11 +32,11 @@ impl<S, QC> RunQuery<S, QC>
         QC: query::QueryActionFunctions<S>,
         for<'a> S: StateFunctions<'a>,
 {
-    pub fn new(query_name: String, params: data::QueryParams) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(query_name: String, params: serde_json::Value) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
             query_name: query_name.to_owned(),
             params,
-            format: TableDataFormat::Rows,
+            format: json!({}), //TODO:... example: TableDataFormat::Rows
             phantom_data: PhantomData,
         };
 
@@ -65,11 +64,8 @@ impl<S, QC> Action<S> for RunQuery<S, QC>
                 None => Err(Error::NotFound),
             })
             .and_then(|query| {
-                QC::run_query(state, &query, &self.params)
+                QC::run_query(state, &query, &self.params, &self.format)
                     .map_err(Error::Query)
-            })
-            .and_then(|table_data| {
-                Ok(table_data.format_with(&self.format))
             })
             .and_then(|res| ActionRes::new("RunQuery", RunQueryResult(res)))
     }

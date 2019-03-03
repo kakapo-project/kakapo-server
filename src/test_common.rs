@@ -43,6 +43,7 @@ use futures::Stream;
 use actix_web::ws::Message;
 use connection::GetSecrets;
 use state::error::BroadcastError;
+use connection::executor::DomainError;
 
 
 pub fn random_identifier() -> String {
@@ -288,6 +289,7 @@ pub fn with_state<F>(f: F)
         Scripting::new(script_path),
         Some(claims),
         secrets,
+        Err(DomainError::Unknown),
         "THE_ISSUER".to_string(),
         500,
         60 * 60 * 24 * 7,
@@ -324,6 +326,7 @@ pub fn with_state_no_transaction<F>(f: F)
         Scripting::new(script_path),
         Some(claims),
         secrets,
+        Err(DomainError::Unknown),
         "THE_ISSUER".to_string(),
         500,
         60 * 60 * 24 * 7,

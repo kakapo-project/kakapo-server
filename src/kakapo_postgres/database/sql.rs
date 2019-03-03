@@ -15,19 +15,20 @@ use diesel::prelude::*;
 
 use connection::executor::Conn;
 
-use data::Value;
-use data::DataType;
-use data;
-
-use database::error::DbError;
 use diesel::pg::Pg;
 use diesel::sql_types;
 use diesel::deserialize::FromSql;
 use diesel::serialize::Output;
 use diesel::serialize::ToSql;
 use diesel::serialize::IsNull;
-use database::DatabaseFunctions;
-use database::error_parser;
+
+use kakapo_postgres::database::DatabaseFunctions;
+use kakapo_postgres::database::error_parser;
+use kakapo_postgres::database::error::DbError;
+
+use kakapo_postgres::data::DataType;
+use kakapo_postgres::data::Value;
+use kakapo_postgres::data::RawTableData;
 
 struct InternalRawConnection {
     pub internal_connection: NonNull<pq_sys::PGconn>,
@@ -99,7 +100,7 @@ impl ResultWrapper {
         let data_type = match type_oid {
             0x17 => Ok(DataType::Integer),
             0x19 => Ok(DataType::String),
-            _ => Err(generate_error(&format!("could not understand oid : `0x{:X?}`", type_oid))),
+            _ => Err(generate_error(&format!("could not understand oid : `0x{:X?}`", type_oid))), //TODO:....
         }?;
 
         self.get_with_hint(data_type, row_idx, col_idx)
@@ -236,7 +237,7 @@ impl Drop for ResultWrapper {
 }
 
 
-fn final_execute(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<ResultWrapper, Error> {
+fn final_execute(conn: &Conn, query: &str, params: Vec<Value>) -> Result<ResultWrapper, Error> {
     let conn_wrapper = ConnWrapper::new(&conn);
 
 
@@ -332,7 +333,10 @@ fn final_execute(conn: &Conn, query: &str, params: Vec<data::Value>) -> Result<R
 }
 
 impl DatabaseFunctions for Conn {
-    fn exec(&self, query: &str, params: Vec<data::Value>) -> Result<data::RawTableData, DbError> {
+    fn exec(&self, query: &str, params: Vec<Value>) -> Result<RawTableData, DbError> {
+
+        debug!("Running query: {:?}", &query);
+
         let result = final_execute(self, query, params)
             .map_err(|err| {
                 println!("Encountered error: {:?}", &err);
@@ -355,7 +359,7 @@ impl DatabaseFunctions for Conn {
             return Err(err);
         }
 
-        let table_data = data::RawTableData::new_and_fill(columns, data);
+        let table_data = RawTableData::new_and_fill(columns, data);
         Ok(table_data)
     }
 }

@@ -1,4 +1,3 @@
-#![feature(specialization)]
 
 pub mod error;
 pub mod update_state;

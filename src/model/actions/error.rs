@@ -1,18 +1,18 @@
 use model::entity::error::EntityError;
-use model::table::error::TableError;
 use model::query::error::QueryError;
 use state::error::UserManagementError;
 use auth::send_mail::EmailError;
 
 use scripting::error::ScriptError;
 use state::error::BroadcastError;
+use data::error::DatastoreError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {
     #[fail(display = "{}", 0)]
     Entity(EntityError),
     #[fail(display = "{}", 0)]
-    Table(TableError),
+    Datastore(DatastoreError),
     #[fail(display = "{}", 0)]
     Script(ScriptError),
     #[fail(display = "{}", 0)]

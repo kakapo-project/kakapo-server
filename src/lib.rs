@@ -36,7 +36,6 @@ extern crate time_test;
 extern crate tokio;
 extern crate tokio_core;
 extern crate uuid;
-extern crate core;
 
 // Mods
 mod auth;
@@ -44,12 +43,15 @@ mod view;
 mod model;
 mod scripting;
 mod data;
-mod database;
 mod connection;
 mod metastore;
 mod broker;
 mod server;
 mod state;
+
+mod kakapo_postgres;
+
+pub mod plugins;
 
 //#[cfg(test)]
 pub mod test_common;
@@ -63,12 +65,13 @@ use actix_web::middleware::cors::CorsBuilder;
 pub use connection::AppStateBuilder;
 pub use connection::AppState;
 pub use connection::AppStateLike;
-use actix_web::test::TestApp;
+pub use metastore::setup_admin;
 
+use actix_web::test::TestApp;
 use env_logger::Builder;
 use env_logger::Target;
 use log::LevelFilter;
-
+use diesel::prelude::*;
 
 pub fn run() {
 
@@ -92,8 +95,14 @@ mod test {
     use super::*;
 
     #[test]
-    #[ignore]
     fn test_run_server() {
+
+        let result = setup_admin("admin", "admin@example.com", "Admin", "password");
+        if let Err(error) = result {
+            panic!();
+            return;
+        }
+
         run();
     }
 }

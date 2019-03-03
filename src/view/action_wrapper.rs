@@ -98,9 +98,22 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
 
         let auth_claims = msg.decode_token(self.get_token_secret());
-        let action_req = msg.get_action()?;
 
+        // Unauthorized has priority over serialization failed
+        let action_req = match msg.get_action() {
+            Err(action_req_serialization_error) => {
+                if auth_claims.is_none() {
+                    Err(Error::Unauthorized)
+                } else {
+                    Err(action_req_serialization_error)
+                }
+            },
+            Ok(x) => Ok(x),
+        };
+
+        let action_req = action_req?;
         let conn = self.get_connection();
+        let domain_conn = self.get_domain_conn("Sirocco");
         let scripting = Scripting::new(self.get_scripts_path());
         let secrets = self.get_secrets();
 
@@ -109,6 +122,7 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
             scripting,
             auth_claims,
             secrets,
+            domain_conn,
             self.jwt_issuer.to_owned(),
             self.jwt_token_duration,
             self.jwt_refresh_token_duration,

@@ -39,31 +39,6 @@ pub trait GetEntityChannel {
 }
 
 
-impl GetEntityChannel for data::Table {
-    fn entity_channel(name: &str) -> Defaults {
-        Defaults::Table(name.to_string())
-    }
-}
-
-impl GetEntityChannel for data::Query {
-    fn entity_channel(name: &str) -> Defaults {
-        Defaults::Query(name.to_string())
-    }
-}
-
-impl GetEntityChannel for data::Script {
-    fn entity_channel(name: &str) -> Defaults {
-        Defaults::Script(name.to_string())
-    }
-}
-
-impl GetEntityChannel for data::View {
-    fn entity_channel(name: &str) -> Defaults {
-        Defaults::View(name.to_string())
-    }
-}
-
-
 impl Channels {
 
     pub fn entity<T>(name: &str) -> Self

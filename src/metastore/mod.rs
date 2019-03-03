@@ -9,6 +9,10 @@ mod schema;
 
 use std::fmt::Debug;
 
+use diesel::prelude::*;
+use chrono::Utc;
+use argonautica::Hasher;
+
 use data;
 
 use connection::executor::Conn;
@@ -28,6 +32,7 @@ use model::entity::EntityModifierController;
 use model::entity::EntityRetrieverController;
 
 
+
 //TODO: put all of this in internal
 pub trait EntityCrudOps
     where Self: Sized + Debug,
@@ -43,6 +48,66 @@ pub trait EntityCrudOps
     fn update(state: &EntityModifierController, name_object: (&str, Self)) -> Result<Updated<Self>, EntityError>;
 
     fn delete(state: &EntityModifierController, name: &str) -> Result<Deleted<Self>, EntityError>;
+}
+
+// Meta store helpers
+pub fn setup_admin(username: &str, email: &str, display_name: &str, password: &str) -> Result<(), String> {
+    let database_url = format!(
+        "postgres://{user}:{pass}@{host}:{port}/{db}",
+        user = "test",
+        pass = "password",
+        host = "localhost",
+        port = 5432,
+        db = "test",
+    );
+
+    let id = ADMIN_USER_ID;
+
+    let conn = PgConnection::establish(&database_url)
+        .map_err(|err| {
+            error!("Could not create user, couldn't establish connection: {:?}", &err);
+            err.to_string()
+        })?;
+
+    let password_secret = "Hello World Hello Wold";
+
+    //TODO: test password complexity
+    let mut hasher = Hasher::default();
+    let password = hasher
+        .with_password(password)
+        .with_secret_key(password_secret)
+        .hash()
+        .map_err(|err| {
+            error!("Could not create user, couldn't hash: {:?}", &err);
+            err.to_string()
+        })?;
+
+    let result = diesel::insert_into(schema::user::table)
+        .values((
+            schema::user::columns::user_id.eq(1),
+            schema::user::columns::username.eq(username),
+            schema::user::columns::email.eq(email),
+            schema::user::columns::display_name.eq(display_name),
+            schema::user::columns::password.eq(&password),
+            schema::user::columns::user_info.eq(json!({})),
+            schema::user::columns::joined_at.eq(Utc::now().naive_utc()),
+        ))
+        .on_conflict(schema::user::columns::user_id)
+        .do_update()
+        .set((
+            schema::user::columns::username.eq(username),
+            schema::user::columns::email.eq(email),
+            schema::user::columns::display_name.eq(display_name),
+            schema::user::columns::password.eq(&password),
+            schema::user::columns::user_info.eq(json!({})),
+            schema::user::columns::joined_at.eq(Utc::now().naive_utc()),
+        ))
+        .execute(&conn)
+        .map_err(|err| err.to_string())?;
+
+    info!("Admin user has been set up!");
+
+    Ok(())
 }
 
 const ADMIN_USER_ID: i64 = 1;
@@ -371,17 +436,17 @@ macro_rules! implement_retriever_and_modifier {
 }
 
 
-make_crud_ops!(table, data::Table);
-make_crud_ops!(query, data::Query);
+make_crud_ops!(table, data::DataStoreEntity);
+make_crud_ops!(query, data::DataQueryEntity);
 make_crud_ops!(script, data::Script);
 make_crud_ops!(view, data::View);
 
 pub mod table {
-    implement_retriever_and_modifier!(data::Table, table_schema);
+    implement_retriever_and_modifier!(data::DataStoreEntity, table_schema);
 }
 
 pub mod query {
-    implement_retriever_and_modifier!(data::Query, query);
+    implement_retriever_and_modifier!(data::DataQueryEntity, query);
 }
 
 pub mod script {

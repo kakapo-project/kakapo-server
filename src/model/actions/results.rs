@@ -57,19 +57,19 @@ pub enum DeleteEntityResult<T> {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct GetTableDataResult(pub data::TableData);
+pub struct GetTableDataResult(pub serde_json::Value);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct InsertTableDataResult(pub data::TableData);
+pub struct InsertTableDataResult(pub serde_json::Value);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct ModifyTableDataResult(pub data::TableData);
+pub struct ModifyTableDataResult(pub serde_json::Value);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct RemoveTableDataResult(pub data::TableData);
+pub struct RemoveTableDataResult(pub serde_json::Value);
 
 #[derive(Debug, Clone, Serialize)]
-pub struct RunQueryResult(pub data::TableData);
+pub struct RunQueryResult(pub serde_json::Value);
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RunScriptResult(pub serde_json::Value);

@@ -12,22 +12,35 @@ use AppStateBuilder;
 
 use view::extensions::ProcedureExt;
 
+use kakapo_postgres::KakapoPostgres;
+
 pub fn serve() {
     let server_addr = "127.0.0.1:8080";
     let is_secure = false;
 
+    let plugin = KakapoPostgres {
+        host: "localhost".to_string(),
+        port: 5432,
+        user: "test".to_string(),
+        pass: "password".to_string(),
+        db: "test".to_string(),
+    };
+
+    let secret = "Hello World";
+    let state = AppStateBuilder::new()
+        .host("localhost")
+        .port(5432)
+        .user("test")
+        .pass("password")
+        .num_threads(1)
+        .password_secret("Hello World Hello Wold")
+        .token_secret("Hello World Hello Wold")
+        .add_plugin("Sirocco", plugin)
+        .done();
+
     let mut server_cfg = actix_web::server::new(move || {
 
-        let secret = "Hello World";
-        let mut state = AppStateBuilder::new()
-            .host("localhost")
-            .port(5432)
-            .user("test")
-            .pass("password")
-            .num_threads(1)
-            .done();
-
-        App::with_state(state)
+        App::with_state(state.clone())
             .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
             .middleware(Logger::new(r#"Requested [%r] FROM %a "%{User-Agent}i""#))
             .configure(move |app| Cors::for_app(app)

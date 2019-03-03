@@ -1,187 +1,72 @@
 
-pub mod error;
-
 use data;
 use data::Named;
+use data::error::DatastoreError;
 
-use model::table::error::TableError;
-use database::error::DbError;
-use connection::executor::Conn;
-use database::DatabaseFunctions;
+use connection::executor::DomainError;
 
-pub struct TableAction<'a> {
-    pub conn: &'a Conn,
+use plugins::Datastore;
+
+
+pub struct DatastoreAction<'a> {
+    pub conn: &'a Result<Box<Datastore>, DomainError>,
 }
 
-pub trait TableActionFunctions {
-    fn query(&self, table: &data::Table) -> Result<data::RawTableData, TableError>;
+pub trait DatastoreActionOps {
+    fn query(&self, table: &data::DataStoreEntity) -> Result<serde_json::Value, DatastoreError>;
 
-    fn insert_row(&self, table: &data::Table, data: &data::ObjectValues, fail_on_duplicate: bool) -> Result<data::RawTableData, TableError>;
+    fn insert_row(&self, table: &data::DataStoreEntity, data: &serde_json::Value, fail_on_duplicate: bool) -> Result<serde_json::Value, DatastoreError>;
 
-    fn upsert_row(&self, table: &data::Table, data: &data::ObjectValues) -> Result<data::RawTableData, TableError>;
+    fn upsert_row(&self, table: &data::DataStoreEntity, data: &serde_json::Value) -> Result<serde_json::Value, DatastoreError>;
 
-    fn update_row(&self, table: &data::Table, keys: &data::ObjectKeys, data: &data::ObjectValues, fail_on_not_found: bool) -> Result<data::RawTableData, TableError>;
+    fn update_row(&self, table: &data::DataStoreEntity, keyed_data: &serde_json::Value, fail_on_not_found: bool) -> Result<serde_json::Value, DatastoreError>;
 
-    fn delete_row(&self, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError>;
+    fn delete_row(&self, table: &data::DataStoreEntity, keys: &serde_json::Value, fail_on_not_found: bool) -> Result<serde_json::Value, DatastoreError>;
 }
 
-impl<'a> TableActionFunctions for TableAction<'a> {
-    fn query(&self, table: &data::Table) -> Result<data::RawTableData, TableError> {
+impl From<&DomainError> for DatastoreError {
+    fn from(domain: &DomainError) -> Self {
+        match domain {
+            DomainError::DomainNotFound(x) => DatastoreError::DomainNotFound(x.to_owned()),
+            DomainError::Unknown => DatastoreError::Unknown,
+        }
+    }
+}
 
-        let query = format!("SELECT * FROM {}", &table.my_name());
-        self.conn
-            .exec(&query, vec![])
-            .or_else(|err| Err(TableError::db_error(err)))
+impl<'a> DatastoreActionOps for DatastoreAction<'a> {
+    fn query(&self, table: &data::DataStoreEntity) -> Result<serde_json::Value, DatastoreError> {
+        match self.conn {
+            Ok(conn) => conn.retrieve(table), //TODO: should be able to query
+            Err(err) => Err(err.into())
+        }
     }
 
-    fn insert_row(&self, table: &data::Table, data: &data::ObjectValues, fail_on_duplicate: bool) -> Result<data::RawTableData, TableError> {
+    fn insert_row(&self, table: &data::DataStoreEntity, data: &serde_json::Value, fail_on_duplicate: bool) -> Result<serde_json::Value, DatastoreError> {
+        match self.conn {
+            Ok(conn) => conn.insert(table, data), //TODO: should be able to query
+            Err(err) => Err(err.into())
+        }
+    }
 
-        let table_column_names = table.get_column_names();
-        let raw_data = data.as_list();
-        let mut results = data::RawTableData::new(vec![], table_column_names.to_owned());
+    fn upsert_row(&self, table: &data::DataStoreEntity, data: &serde_json::Value) -> Result<serde_json::Value, DatastoreError> {
+        match self.conn {
+            Ok(conn) => conn.upsert(table, data), //TODO: should be able to query
+            Err(err) => Err(err.into())
+        }
+    }
 
-        for row in raw_data {
-            let column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
-            let column_counts: Vec<String> = column_names.iter().enumerate()
-                .map(|(i, _)| format!("${}", i+1))
-                .collect();
-            let values = row.values().map(|x| x.to_owned()).collect();
-            let query = format!(
-                r#"INSERT INTO "{name}" ("{columns}") VALUES ({params}) RETURNING *;"#,
-                name=table.my_name(),
-                columns=column_names.join(r#"", ""#),
-                params=column_counts.join(r#", "#),
-            );
+    fn update_row(&self, table: &data::DataStoreEntity, keyed_data: &serde_json::Value, fail_on_not_found: bool) -> Result<serde_json::Value, DatastoreError> {
+        match self.conn {
+            Ok(conn) => conn.update(table, keyed_data), //TODO: should be able to query
+            Err(err) => Err(err.into())
+        }
+    }
 
-            let new_row = self.conn
-                .exec(&query, values)
-                .or_else(|err| {
-                    match err {
-                        DbError::AlreadyExists => if !fail_on_duplicate {
-                            Ok(data::RawTableData::new(vec![], table_column_names.to_owned()))
-                        } else {
-                            Err(TableError::db_error(err))
-                        },
-                        _ => Err(TableError::db_error(err)),
-                    }
-                })?;
-
-            results.append(new_row)
-                .or_else(|err| {
-                    error!("columns names are mismatched");
-                    Err(TableError::Unknown)
-                })?;
+    fn delete_row(&self, table: &data::DataStoreEntity, keys: &serde_json::Value, fail_on_not_found: bool) -> Result<serde_json::Value, DatastoreError> {
+        match self.conn {
+            Ok(conn) => conn.delete(table, keys), //TODO: should be able to query
+            Err(err) => Err(err.into())
         }
 
-        Ok(results)
-    }
-
-    fn upsert_row(&self, table: &data::Table, data: &data::ObjectValues) -> Result<data::RawTableData, TableError> {
-        //TODO: doing this because I want to know whether it was an insert or update so that I can put in the correct data in the transactions table
-        // otherise, maybe ON CONFLICT with triggers would have been the proper choice
-        self.conn
-            .exec( "SELECT id FROM table WHERE id = my_id", vec![]);
-        self.conn
-            .exec("INSERT INTO table (value1, value2, value3) VALUES (1, 2, 3)", vec![]);
-        self.conn
-            .exec("UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id", vec![]);
-        unimplemented!()
-    }
-
-    fn update_row(&self, table: &data::Table, keys: &data::ObjectKeys, data: &data::ObjectValues, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
-
-        let table_column_names = table.get_column_names();
-        let raw_keys = keys.as_list();
-        let raw_data = data.as_list();
-        let mut results = data::RawTableData::new(vec![], table_column_names.to_owned());
-
-        for (key, row) in raw_keys.iter().zip(raw_data) {
-            let column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
-            let key_names: Vec<String> = key.keys().map(|x| x.to_owned()).collect();
-
-            let mut values: Vec<data::Value> = row.values().map(|x| x.to_owned()).collect();
-            let key_values: Vec<data::Value> = key.values().map(|x| x.to_owned().into_value()).collect();
-            values.extend(key_values);
-
-            let val_index = 1;
-            let key_index = column_names.len() + 1;
-
-            let query = format!(
-                "UPDATE {name} SET {sets} WHERE {id} RETURNING *", //"UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id"
-                name=table.my_name(),
-                sets=column_names.iter().enumerate()
-                    .map(|(i, x)| format!("{} = ${}", x, i+val_index))
-                    .collect::<Vec<String>>()
-                    .join(","),
-                id=key_names.iter().enumerate()
-                    .map(|(i, x)| format!("{} = ${}", x, i+key_index))
-                    .collect::<Vec<String>>()
-                    .join(" AND "),
-            );
-
-            let new_row = self.conn
-                .exec(&query, values)
-                .or_else(|err| {
-                    match err {
-                        DbError::NotFound => if !fail_on_not_found {
-                            Ok(data::RawTableData::new(vec![], table_column_names.to_owned()))
-                        } else {
-                            Err(TableError::db_error(err))
-                        },
-                        _ => Err(TableError::db_error(err)),
-                    }
-                })?;
-
-            results.append(new_row)
-                .or_else(|err| {
-                    error!("columns names are mismatched");
-                    Err(TableError::Unknown)
-                })?;
-        }
-
-        Ok(results)
-
-    }
-
-    fn delete_row(&self, table: &data::Table, keys: &data::ObjectKeys, fail_on_not_found: bool) -> Result<data::RawTableData, TableError> {
-
-        let table_column_names = table.get_column_names();
-        let raw_keys = keys.as_list();
-        let mut results = data::RawTableData::new(vec![], table_column_names.to_owned());
-
-        for key in raw_keys {
-            let key_names: Vec<String> = key.keys().map(|x| x.to_owned()).collect();
-            let values: Vec<data::Value> = key.values().map(|x| x.to_owned().into_value()).collect();
-
-            let query = format!(
-                "DELETE {name} WHERE {id} RETURNING *", //"DELETE table WHERE id = my_id"
-                name=table.my_name(),
-                id=key_names.iter().enumerate()
-                    .map(|(i, x)| format!("{} = ${}", x, i+1))
-                    .collect::<Vec<String>>()
-                    .join(" AND "),
-            );
-
-            let new_row = self.conn
-                .exec(&query, values)
-                .or_else(|err| {
-                    match err {
-                        DbError::NotFound => if !fail_on_not_found {
-                            Ok(data::RawTableData::new(vec![], table_column_names.to_owned()))
-                        } else {
-                            Err(TableError::db_error(err))
-                        },
-                        _ => Err(TableError::db_error(err)),
-                    }
-                })?;
-
-            results.append(new_row)
-                .or_else(|err| {
-                    error!("columns names are mismatched");
-                    Err(TableError::Unknown)
-                })?;
-        }
-
-        Ok(results)
     }
 }

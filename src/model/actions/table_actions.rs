@@ -9,7 +9,6 @@ use model::actions::error::Error;
 use data::utils::OnDuplicate;
 
 use data::utils::OnNotFound;
-use data::utils::TableDataFormat;
 
 use data::channels::Channels;
 use data::permissions::Permission;
@@ -20,7 +19,7 @@ use model::actions::ActionRes;
 use model::actions::ActionResult;
 
 use model::entity::RetrieverFunctions;
-use model::table::TableActionFunctions;
+use model::table::DatastoreActionOps;
 
 use state::ActionState;
 use state::StateFunctions;
@@ -29,7 +28,7 @@ use state::StateFunctions;
 #[derive(Debug)]
 pub struct QueryTableData<S = ActionState> {
     pub table_name: String,
-    pub format: TableDataFormat,
+    pub format: serde_json::Value,
     pub phantom_data: PhantomData<(S)>,
 }
 
@@ -40,7 +39,7 @@ impl<S> QueryTableData<S>
     pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
             table_name: table_name.to_owned(),
-            format: TableDataFormat::Rows,
+            format: json!({}), //TODO:...
             phantom_data: PhantomData,
         };
 
@@ -62,7 +61,7 @@ impl<S> Action<S> for QueryTableData<S>
             .get_entity_retreiver_functions()
             .get_one( &self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
-            .and_then(|res: Option<data::Table>| {
+            .and_then(|res: Option<data::DataStoreEntity>| {
                 match res {
                     Some(table) => Ok(table),
                     None => Err(Error::NotFound),
@@ -72,10 +71,7 @@ impl<S> Action<S> for QueryTableData<S>
                 state
                     .get_table_controller()
                     .query(&table)
-                    .or_else(|err| Err(Error::Table(err)))
-            })
-            .and_then(|table_data| {
-                Ok(table_data.format_with(&self.format))
+                    .or_else(|err| Err(Error::Datastore(err)))
             })
             .and_then(|res| ActionRes::new("QueryTableData", GetTableDataResult(res)))
     }
@@ -85,8 +81,8 @@ impl<S> Action<S> for QueryTableData<S>
 #[derive(Debug)]
 pub struct InsertTableData<S = ActionState> {
     pub table_name: String,
-    pub data: data::TableData, //payload
-    pub format: TableDataFormat,
+    pub data: serde_json::Value, //payload
+    pub format: serde_json::Value,
     pub on_duplicate: OnDuplicate,
     pub phantom_data: PhantomData<(S)>,
 }
@@ -95,12 +91,12 @@ impl<S> InsertTableData<S>
     where
         for<'a> S: StateFunctions<'a>,
 {
-    pub fn new(table_name: String, data: data::TableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+    pub fn new(table_name: String, data: serde_json::Value) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channel = Channels::table(&table_name);
         let action = Self {
             table_name: table_name.to_owned(),
             data,
-            format: TableDataFormat::Rows,
+            format: json!({}), //TODO:...
             on_duplicate: OnDuplicate::Ignore,
             phantom_data: PhantomData,
         };
@@ -124,23 +120,19 @@ impl<S> Action<S> for InsertTableData<S>
             .get_entity_retreiver_functions()
             .get_one(&self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
-            .and_then(|res: Option<data::Table>| {
+            .and_then(|res: Option<data::DataStoreEntity>| {
                 match res {
                     Some(table) => Ok(table),
                     None => Err(Error::NotFound),
                 }
             })
             .and_then(|table| {
-                let data = self.data.normalize();
                 let table_controller = state.get_table_controller();
                 match &self.on_duplicate {
-                    OnDuplicate::Update => table_controller.upsert_row(&table, &data),
-                    OnDuplicate::Ignore => table_controller.insert_row(&table, &data, false),
-                    OnDuplicate::Fail => table_controller.insert_row(&table, &data, true)
-                }.or_else(|err| Err(Error::Table(err)))
-            })
-            .and_then(|table_data| {
-                Ok(table_data.format_with(&self.format))
+                    OnDuplicate::Update => table_controller.upsert_row(&table, &self.data),
+                    OnDuplicate::Ignore => table_controller.insert_row(&table, &self.data, false),
+                    OnDuplicate::Fail => table_controller.insert_row(&table, &self.data, true)
+                }.or_else(|err| Err(Error::Datastore(err)))
             })
             .and_then(|res| ActionRes::new("InsertTableData", InsertTableDataResult(res)))
     }
@@ -149,8 +141,8 @@ impl<S> Action<S> for InsertTableData<S>
 #[derive(Debug)]
 pub struct ModifyTableData<S = ActionState> {
     pub table_name: String,
-    pub keyed_data: data::KeyedTableData,
-    pub format: TableDataFormat,
+    pub keyed_data: serde_json::Value,
+    pub format: serde_json::Value,
     pub on_not_found: OnNotFound,
     pub phantom_data: PhantomData<(S)>,
 }
@@ -159,12 +151,12 @@ impl<S> ModifyTableData<S>
     where
         for<'a> S: StateFunctions<'a>,
 {
-    pub fn new(table_name: String, keyed_data: data::KeyedTableData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+    pub fn new(table_name: String, keyed_data: serde_json::Value) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channel = Channels::table(&table_name);
         let action = Self {
             table_name: table_name.to_owned(),
             keyed_data,
-            format: TableDataFormat::Rows,
+            format: json!({}), //TODO:...
             on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
         };
@@ -188,22 +180,18 @@ impl<S> Action<S> for ModifyTableData<S>
             .get_entity_retreiver_functions()
             .get_one(&self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
-            .and_then(|res: Option<data::Table>| {
+            .and_then(|res: Option<data::DataStoreEntity>| {
                 match res {
                     Some(table) => Ok(table),
                     None => Err(Error::NotFound),
                 }
             })
             .and_then(|table| {
-                let (keys, data) = self.keyed_data.normalize();
                 let table_controller = state.get_table_controller();
                 match &self.on_not_found {
-                    OnNotFound::Ignore => table_controller.update_row(&table, &keys, &data, false),
-                    OnNotFound::Fail => table_controller.update_row(&table, &keys, &data, true)
-                }.or_else(|err| Err(Error::Table(err)))
-            })
-            .and_then(|table_data| {
-                Ok(table_data.format_with(&self.format))
+                    OnNotFound::Ignore => table_controller.update_row(&table, &self.keyed_data, false),
+                    OnNotFound::Fail => table_controller.update_row(&table, &self.keyed_data, true)
+                }.or_else(|err| Err(Error::Datastore(err)))
             })
             .and_then(|res| ActionRes::new("ModifyTableData", ModifyTableDataResult(res)))
     }
@@ -212,8 +200,8 @@ impl<S> Action<S> for ModifyTableData<S>
 #[derive(Debug)]
 pub struct RemoveTableData<S = ActionState>  {
     pub table_name: String,
-    pub keys: data::KeyData,
-    pub format: TableDataFormat,
+    pub keys: serde_json::Value,
+    pub format: serde_json::Value,
     pub on_not_found: OnNotFound,
     pub phantom_data: PhantomData<(S)>,
 }
@@ -222,12 +210,12 @@ impl<S> RemoveTableData<S>
     where
         for<'a> S: StateFunctions<'a>,
 {
-    pub fn new(table_name: String, keys: data::KeyData) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
+    pub fn new(table_name: String, keys: serde_json::Value) -> WithPermissionRequired<WithDispatch<WithTransaction<Self, S>, S>, S> {
         let channel = Channels::table(&table_name);
         let action = Self {
             table_name: table_name.to_owned(),
             keys,
-            format: TableDataFormat::Rows,
+            format: json!({}), //TODO:...
             on_not_found: OnNotFound::Ignore,
             phantom_data: PhantomData,
         };
@@ -251,22 +239,18 @@ impl<S> Action<S> for RemoveTableData<S>
             .get_entity_retreiver_functions()
             .get_one(&self.table_name)
             .or_else(|err| Err(Error::Entity(err)))
-            .and_then(|res: Option<data::Table>| {
+            .and_then(|res: Option<data::DataStoreEntity>| {
                 match res {
                     Some(table) => Ok(table),
                     None => Err(Error::NotFound),
                 }
             })
             .and_then(|table| {
-                let keys = self.keys.normalize();
                 let table_controller = state.get_table_controller();
                 match &self.on_not_found {
-                    OnNotFound::Ignore => table_controller.delete_row(&table, &keys, false),
-                    OnNotFound::Fail => table_controller.delete_row(&table, &keys, true)
-                }.or_else(|err| Err(Error::Table(err)))
-            })
-            .and_then(|table_data| {
-                Ok(table_data.format_with(&self.format))
+                    OnNotFound::Ignore => table_controller.delete_row(&table, &self.keys, false),
+                    OnNotFound::Fail => table_controller.delete_row(&table, &self.keys, true)
+                }.or_else(|err| Err(Error::Datastore(err)))
             })
             .and_then(|res| ActionRes::new("RemoveTableData", RemoveTableDataResult(res)))
     }
@@ -285,7 +269,7 @@ mod test {
     fn test_add_data() {
         with_state(|state| {
             let table_name = format!("my_table{}", random_identifier());
-            let table: data::Table = from_value(json!({
+            let table: data::DataStoreEntity = from_value(json!({
                 "name": table_name,
                 "description": "table description",
                 "schema": {
@@ -304,11 +288,11 @@ mod test {
                 }
             })).unwrap();
 
-            let create_action = entity_actions::CreateEntity::<data::Table, MockState>::new(table);
+            let create_action = entity_actions::CreateEntity::<data::DataStoreEntity, MockState>::new(table);
             let result = create_action.call(&state);
             let data = result.unwrap().get_data();
 
-            let data: data::TableData = from_value(json!([
+            let data = json!([
                 {
                     "col_a": 42,
                     "col_b": 43,
@@ -317,7 +301,7 @@ mod test {
                     "col_a": 5000,
                     "col_b": 5500,
                 }
-            ])).unwrap();
+            ]);
             let create_action = InsertTableData::<MockState>::new(table_name, data);
             let result = create_action.call(&state);
 

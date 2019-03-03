@@ -22,6 +22,8 @@
     - java
     - javascript
     - R
+- Jupyter notebook like analysis GUI
+- Version control, i.e. git, github, gitlab
 - schedule tasks (cron) - **IMPORTANT**
 - Task dependencies
 - Take a look at celery to get some influence on what we may need

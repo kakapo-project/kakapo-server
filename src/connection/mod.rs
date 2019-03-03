@@ -5,11 +5,15 @@ use num_cpus;
 
 use std::sync::Arc;
 use std::fmt::Debug;
+use std::collections::HashMap;
 
 use actix::Addr;
 use actix::sync::SyncArbiter;
 
 use data::channels::Channels;
+
+use plugins::DomainBuilder;
+use plugins::Domain;
 
 pub trait GetSecrets {
     fn get_token_secret(&self) -> String;
@@ -28,7 +32,6 @@ pub struct AppState {
 }
 
 /// Builder for the AppState
-#[derive(Clone)]
 pub struct AppStateBuilder {
     host_name: Option<String>,
     port_name: Option<u16>,
@@ -42,6 +45,8 @@ pub struct AppStateBuilder {
     jwt_token_duration: i64,
     jwt_refresh_token_duration: i64,
     threads: usize,
+
+    domain_builders: HashMap<String, Box<DomainBuilder>>,
 }
 
 /// Example Usage
@@ -61,6 +66,8 @@ impl AppStateBuilder {
             jwt_token_duration: 600,
             jwt_refresh_token_duration: 60 * 60 * 24,
             threads: num_cpus::get(),
+
+            domain_builders: HashMap::new(),
         }
     }
 
@@ -124,13 +131,25 @@ impl AppStateBuilder {
         self
     }
 
-    pub fn done(self) -> AppState {
-        let token_secret = self.token_secret_key.clone().unwrap_or_default();
-        let password_secret = self.password_secret_key.clone().unwrap_or_default();
+    pub fn add_plugin<HD>(mut self, name: &str, domain_builder: HD) -> Self
+        where
+            HD: DomainBuilder + 'static,
+    {
+        self.domain_builders.insert(name.to_string(), Box::new(domain_builder));
+        self
+    }
 
+    pub fn done(self) -> AppState {
+        let token_secret = self.token_secret_key.clone()
+            .expect("Must specify a token secret");
+        let password_secret = self.password_secret_key.clone()
+            .expect("Must specify a password secret");
+        let threads = self.threads;
+
+        info!("Staring database connection");
         let connections = SyncArbiter::start(
-            self.threads,
-            move || executor::Executor::create(self.clone()));
+            threads,
+            move || executor::Executor::create(&self));
 
 
 

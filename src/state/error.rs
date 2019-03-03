@@ -11,7 +11,7 @@ pub enum UserManagementError {
     Unauthorized,
     #[fail(display = "{:?}", 0)]
     AuthenticationError(String),
-    #[fail(display = "{:?}", 0)]
+    #[fail(display = "Hash Error")]
     HashError(String),
     #[fail(display = "Internal error")]
     InternalError(String), //returns back the DatabaseError variant of sql error

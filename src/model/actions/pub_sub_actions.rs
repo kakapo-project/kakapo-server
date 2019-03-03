@@ -6,7 +6,6 @@ use data;
 
 use model::actions::results::*;
 use model::actions::error::Error;
-use data::utils::TableDataFormat;
 use model::query;
 
 use data::permissions::*;
@@ -201,8 +200,8 @@ impl<S> Action<S> for GetMessages<S>
 impl Channels {
     fn required_permission(&self) -> Permission {
         match self {
-            Channels::Defaults(Defaults::Table(name)) => Permission::read_entity::<data::Table>(name.to_owned()),
-            Channels::Defaults(Defaults::Query(name)) => Permission::read_entity::<data::Query>(name.to_owned()),
+            Channels::Defaults(Defaults::Table(name)) => Permission::read_entity::<data::DataStoreEntity>(name.to_owned()), //TODO: not right, this should be the responsiblity of raw types
+            Channels::Defaults(Defaults::Query(name)) => Permission::read_entity::<data::DataQueryEntity>(name.to_owned()),
             Channels::Defaults(Defaults::Script(name)) => Permission::read_entity::<data::Script>(name.to_owned()),
             Channels::Defaults(Defaults::View(name)) => Permission::read_entity::<data::View>(name.to_owned()),
             Channels::Defaults(Defaults::TableData(name)) => Permission::get_table_data(name.to_owned()),

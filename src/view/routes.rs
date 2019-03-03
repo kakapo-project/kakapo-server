@@ -84,13 +84,13 @@ pub mod manage {
     pub fn get_all_tables(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_all_entities: GetAllEntities = from_value(query)?;
-        Ok(actions::GetAllEntities::<data::Table>::new(get_all_entities.show_deleted))
+        Ok(actions::GetAllEntities::<data::DataStoreEntity>::new(get_all_entities.show_deleted))
     }
 
     pub fn get_all_queries(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_all_entities: GetAllEntities = from_value(query)?;
-        Ok(actions::GetAllEntities::<data::Query>::new(get_all_entities.show_deleted))
+        Ok(actions::GetAllEntities::<data::DataQueryEntity>::new(get_all_entities.show_deleted))
     }
 
     pub fn get_all_scripts(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -102,13 +102,13 @@ pub mod manage {
     pub fn get_table(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_entity: GetEntity = from_value(query)?;
-        Ok(actions::GetEntity::<data::Table>::new(get_entity.name))
+        Ok(actions::GetEntity::<data::DataStoreEntity>::new(get_entity.name))
     }
 
     pub fn get_query(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_entity: GetEntity = from_value(query)?;
-        Ok(actions::GetEntity::<data::Query>::new(get_entity.name))
+        Ok(actions::GetEntity::<data::DataQueryEntity>::new(get_entity.name))
     }
 
     pub fn get_script(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -118,15 +118,15 @@ pub mod manage {
     }
 
     pub fn create_table(data: Value, query: Value) -> Result<impl Action, Error> {
-        let entity: data::Table = from_value(data)?;
+        let entity: data::DataStoreEntity = from_value(data)?;
         let _: NoQuery = from_value(query)?;
-        Ok(actions::CreateEntity::<data::Table>::new(entity))
+        Ok(actions::CreateEntity::<data::DataStoreEntity>::new(entity))
     }
 
     pub fn create_query(data: Value, query: Value) -> Result<impl Action, Error> {
-        let entity: data::Query = from_value(data)?;
+        let entity: data::DataQueryEntity = from_value(data)?;
         let _: NoQuery = from_value(query)?;
-        Ok(actions::CreateEntity::<data::Query>::new(entity))
+        Ok(actions::CreateEntity::<data::DataQueryEntity>::new(entity))
     }
 
     pub fn create_script(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -136,15 +136,15 @@ pub mod manage {
     }
 
     pub fn update_table(data: Value, query: Value) -> Result<impl Action, Error> {
-        let entity: data::Table = from_value(data)?;
+        let entity: data::DataStoreEntity = from_value(data)?;
         let get_entity: GetEntity = from_value(query)?;
-        Ok(actions::UpdateEntity::<data::Table>::new(get_entity.name, entity))
+        Ok(actions::UpdateEntity::<data::DataStoreEntity>::new(get_entity.name, entity))
     }
 
     pub fn update_query(data: Value, query: Value) -> Result<impl Action, Error> {
-        let entity: data::Query = from_value(data)?;
+        let entity: data::DataQueryEntity = from_value(data)?;
         let get_entity: GetEntity = from_value(query)?;
-        Ok(actions::UpdateEntity::<data::Query>::new(get_entity.name, entity))
+        Ok(actions::UpdateEntity::<data::DataQueryEntity>::new(get_entity.name, entity))
     }
 
     pub fn update_script(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -156,13 +156,13 @@ pub mod manage {
     pub fn delete_table(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_entity: GetEntity = from_value(query)?;
-        Ok(actions::DeleteEntity::<data::Table>::new(get_entity.name))
+        Ok(actions::DeleteEntity::<data::DataStoreEntity>::new(get_entity.name))
     }
 
     pub fn delete_query(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_entity: GetEntity = from_value(query)?;
-        Ok(actions::DeleteEntity::<data::Query>::new(get_entity.name))
+        Ok(actions::DeleteEntity::<data::DataQueryEntity>::new(get_entity.name))
     }
 
     pub fn delete_script(data: Value, query: Value) -> Result<impl Action, Error> {
@@ -178,25 +178,25 @@ pub mod manage {
     }
 
     pub fn insert_table_data(data: Value, query: Value) -> Result<impl Action, Error> {
-        let table_data: data::TableData = from_value(data)?;
+        let table_data: Value = data;
         let get_table: GetEntity = from_value(query)?;
         Ok(actions::InsertTableData::<_>::new(get_table.name, table_data))
     }
 
     pub fn modify_table_data(data: Value, query: Value) -> Result<impl Action, Error> {
-        let keyed_data: data::KeyedTableData = from_value(data)?;
+        let keyed_data: Value = data;
         let get_table: GetEntity = from_value(query)?;
         Ok(actions::ModifyTableData::<_>::new(get_table.name, keyed_data))
     }
 
     pub fn remove_table_data(data: Value, query: Value) -> Result<impl Action, Error> {
-        let keys: data::KeyData = from_value(data)?;
+        let keys: Value = data;
         let get_table: GetEntity = from_value(query)?;
         Ok(actions::RemoveTableData::<_>::new(get_table.name, keys))
     }
 
     pub fn run_query(data: Value, query: Value) -> Result<impl Action, Error> {
-        let params: data::QueryParams = from_value(data)?;
+        let params: Value = data;
         let get_query: GetEntity = from_value(query)?;
         Ok(actions::RunQuery::<_>::new(get_query.name, params))
     }

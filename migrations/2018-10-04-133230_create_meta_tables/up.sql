@@ -4,7 +4,7 @@ CREATE TABLE "user" (
     "user_id"                 BIGSERIAL PRIMARY KEY,
     "username"                VARCHAR NOT NULL UNIQUE,
     "email"                   VARCHAR NOT NULL UNIQUE,
-    "password"                VARCHAR NOT NULL,
+    "password"                VARCHAR NOT NULL, --TODO: store last_updated field
     "display_name"            VARCHAR NOT NULL,
     "user_info"               JSON NOT NULL DEFAULT '{}',
     "joined_at"               TIMESTAMP NOT NULL DEFAULT NOW(),

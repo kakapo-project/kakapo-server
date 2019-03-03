@@ -18,14 +18,15 @@ use model::actions::error::Error;
 
 use connection::executor::Conn;
 use connection::executor::Secrets;
+use connection::executor::DomainError;
 use connection::GetSecrets;
 
 use model::entity::EntityRetrieverController;
 use model::entity::EntityModifierController;
 use model::entity::RetrieverFunctions;
 use model::entity::ModifierFunctions;
-use model::table::TableAction;
-use model::table::TableActionFunctions;
+use model::table::DatastoreAction;
+use model::table::DatastoreActionOps;
 use auth::send_mail::EmailSender;
 use auth::send_mail::EmailOps;
 
@@ -42,12 +43,15 @@ use data::channels::Channels;
 use data::channels::Subscription;
 use data::auth::User;
 use data::Message;
+use plugins::Datastore;
+
 
 pub struct ActionState {
     pub database: Conn, //TODO: this should be templated
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
+    pub domain_conn: Result<Box<Datastore>, DomainError>,
     pub jwt_issuer: String,
     pub jwt_duration: i64,
     pub jwt_refresh_duration: i64,
@@ -62,7 +66,7 @@ impl fmt::Debug for ActionState {
 pub trait StateFunctions<'a>
     where
         Self: Debug + Send,
-        Self::TableController: TableActionFunctions,
+        Self::TableController: DatastoreActionOps,
         Self::Scripting: ScriptFunctions,
         Self::PubSub: PubSubOps,
         Self::EmailSender: EmailOps,
@@ -156,16 +160,17 @@ impl<'a> StateFunctions<'a> for ActionState {
 
         EntityModifierController {
             conn: &self.database,
+            domain_conn: &self.domain_conn,
             claims: &self.claims,
             scripting: &self.scripting,
             user_management,
         }
     }
 
-    type TableController = TableAction<'a>;
+    type TableController = DatastoreAction<'a>;
     fn get_table_controller(&'a self) -> Self::TableController {
-        TableAction {
-            conn: &self.database,
+        DatastoreAction {
+            conn: &self.domain_conn,
         }
     }
 
@@ -205,6 +210,7 @@ impl ActionState {
         scripting: Scripting,
         claims: Option<AuthClaims>,
         secrets: Secrets,
+        domain_conn: Result<Box<Datastore>, DomainError>,
         jwt_issuer: String,
         jwt_duration: i64,
         jwt_refresh_duration: i64,
@@ -214,6 +220,7 @@ impl ActionState {
             scripting,
             claims,
             secrets,
+            domain_conn,
             jwt_issuer, //TODO: put these in config
             jwt_duration,
             jwt_refresh_duration,

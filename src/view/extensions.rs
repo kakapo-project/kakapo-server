@@ -1,31 +1,36 @@
 
+use std::sync::Arc;
+use std::fmt::Debug;
+
+use serde::Serialize;
+
 use actix::prelude::*;
 
-use actix_web::{
-    http,
-    FromRequest, Json, Query,
-    HttpRequest,
-};
+use actix_web::http;
+use actix_web::FromRequest;
+use actix_web::Json;
+use actix_web::Query;
+use actix_web::HttpRequest;
 
 use actix_web::middleware::cors::CorsBuilder;
 use actix_web::dev::JsonConfig;
+use actix_web::test::TestApp;
 
-use super::action_wrapper::ActionWrapper;
+use view::action_wrapper::ActionWrapper;
 
-use super::procedure::ProcedureBuilder;
-use super::procedure::ProcedureHandler;
-use super::procedure::procedure_handler_function;
-use super::procedure::procedure_bad_request_handler_function;
+use view::procedure::ProcedureBuilder;
+use view::procedure::ProcedureHandler;
+use view::procedure::procedure_handler_function;
+use view::procedure::procedure_bad_request_handler_function;
 
 use model::actions::Action;
-use std::fmt::Debug;
-use serde::Serialize;
-use connection::executor::Executor;
-use actix_web::test::TestApp;
-use connection::AppStateLike;
+
 use view::routes::users;
 use view::routes::manage;
 use view::websocket;
+
+use connection::executor::Executor;
+use connection::AppStateLike;
 
 // use actix_web::dev::QueryConfig; //NOTE: for some reason this can't be imported, probably actix_web issue
 

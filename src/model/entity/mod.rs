@@ -25,6 +25,8 @@ use scripting::Scripting;
 use model::entity::update_state::UpdatePermissionFunctions;
 
 use state::UserManagement;
+use plugins::Datastore;
+use connection::executor::DomainError;
 
 pub trait RawEntityTypes
     where
@@ -56,6 +58,7 @@ pub struct EntityRetrieverController<'a> {
 
 pub struct EntityModifierController<'a> {
     pub conn: &'a Conn, //TODO: database specific, dependency inject here
+    pub domain_conn: &'a Result<Box<Datastore>, DomainError>,
     pub claims: &'a Option<AuthClaims>,
     pub scripting: &'a Scripting,
     pub user_management: UserManagement<'a>, //Entities need to get access to user management for updating data

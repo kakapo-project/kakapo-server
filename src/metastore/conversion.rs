@@ -25,21 +25,19 @@ use data::channels::GetEntityChannel;
 use data::channels::Defaults;
 
 
-impl ConvertRaw<data::Table> for dbdata::RawTable {
-    fn convert(&self) -> data::Table {
-        let schema: data::SchemaState = serde_json::from_value(self.table_data.to_owned())
-            .unwrap_or_default(); //TODO: return serialization error!
-        data::Table {
+impl ConvertRaw<data::DataStoreEntity> for dbdata::RawTable {
+    fn convert(&self) -> data::DataStoreEntity {
+        data::DataStoreEntity {
             name: self.my_name().to_owned(),
             description: self.description.to_owned(),
-            schema,
+            schema: self.table_data.to_owned()
         }
     }
 }
 
-impl ConvertRaw<data::Query> for dbdata::RawQuery {
-    fn convert(&self) -> data::Query {
-        data::Query {
+impl ConvertRaw<data::DataQueryEntity> for dbdata::RawQuery {
+    fn convert(&self) -> data::DataQueryEntity {
+        data::DataQueryEntity {
             name: self.name.to_owned(),
             description: self.description.to_owned(),
             statement: self.statement.to_owned(),
@@ -68,13 +66,13 @@ impl ConvertRaw<data::View> for dbdata::RawView {
 }
 
 
-impl GenerateRaw<data::Table> for dbdata::NewRawTable {
-    fn new(data: &data::Table, entity_id: i64, modified_by: i64) -> Self {
+impl GenerateRaw<data::DataStoreEntity> for dbdata::NewRawTable {
+    fn new(data: &data::DataStoreEntity, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawTable {
             entity_id,
             name: data.my_name().to_owned(),
             description: data.description.to_owned(),
-            table_data: serde_json::to_value(data.schema.to_owned()).unwrap_or_default(),
+            table_data: data.schema.to_owned(),
             is_deleted: false,
             modified_by
         }
@@ -85,15 +83,15 @@ impl GenerateRaw<data::Table> for dbdata::NewRawTable {
             entity_id,
             name: "".to_string(),
             description: "".to_string(),
-            table_data: serde_json::to_value(json!({})).unwrap_or_default(),
+            table_data: json!({}),
             is_deleted: true,
             modified_by
         }
     }
 }
 
-impl GenerateRaw<data::Query> for dbdata::NewRawQuery {
-    fn new(data: &data::Query, entity_id: i64, modified_by: i64) -> Self {
+impl GenerateRaw<data::DataQueryEntity> for dbdata::NewRawQuery {
+    fn new(data: &data::DataQueryEntity, entity_id: i64, modified_by: i64) -> Self {
         dbdata::NewRawQuery {
             entity_id,
             name: data.my_name().to_owned(),
@@ -172,14 +170,14 @@ impl GenerateRaw<data::View> for dbdata::NewRawView {
     }
 }
 
-impl RawEntityTypes for data::Table {
+impl RawEntityTypes for data::DataStoreEntity {
     const TYPE_NAME: &'static str = "table";
     type Data = RawTable;
     type NewData = NewRawTable;
 
 }
 
-impl RawEntityTypes for data::Query {
+impl RawEntityTypes for data::DataQueryEntity {
     const TYPE_NAME: &'static str = "query";
     type Data = RawQuery;
     type NewData = NewRawQuery;
@@ -198,4 +196,29 @@ impl RawEntityTypes for data::View {
     type Data = RawView;
     type NewData = NewRawView;
 
+}
+
+//TODO: this is entity to channel, make something channel to entity
+impl GetEntityChannel for data::Script {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::Script(name.to_string())
+    }
+}
+
+impl GetEntityChannel for data::View {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::View(name.to_string())
+    }
+}
+
+impl GetEntityChannel for data::DataStoreEntity {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::Table(name.to_string())
+    }
+}
+
+impl GetEntityChannel for data::DataQueryEntity {
+    fn entity_channel(name: &str) -> Defaults {
+        Defaults::Query(name.to_string())
+    }
 }

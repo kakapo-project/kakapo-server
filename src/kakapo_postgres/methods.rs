@@ -1,13 +1,27 @@
-
 use linked_hash_map::LinkedHashMap;
-use data::utils::TableDataFormat;
-use data::*;
+
+use kakapo_postgres::data::IndexableValue;
+use kakapo_postgres::data::Value;
+use kakapo_postgres::data::RawTableDataColumns;
+use kakapo_postgres::data::RawTableDataData;
+use kakapo_postgres::data::RawTableData;
+use kakapo_postgres::data::TableData;
+use kakapo_postgres::data::ObjectValues;
+use kakapo_postgres::data::KeyedTableData;
+use kakapo_postgres::data::KeyData;
+use kakapo_postgres::data::ObjectKeys;
+use kakapo_postgres::data::TabularKeys;
+use kakapo_postgres::data::TabularValues;
+use kakapo_postgres::data::Table;
+use kakapo_postgres::data::QueryParams;
+use kakapo_postgres::utils::TableDataFormat;
 
 #[derive(Debug, Fail)]
 pub enum DataError {
     #[fail(display = "mismatched columns")]
     MismatchedColumns,
 }
+
 
 impl IndexableValue {
     pub fn into_value(self) -> Value {
@@ -141,7 +155,7 @@ impl KeyData {
                 ObjectKeys::new(object_data)
             },
             KeyData::Keyed(keyed_table_data) => {
-                let (object_keys, object_values) = keyed_table_data.normalize();
+                let (object_keys, _object_values) = keyed_table_data.normalize();
 
                 object_keys
             },
@@ -169,7 +183,7 @@ impl TableData {
                 ObjectValues::new(object_data)
             },
             TableData::Keyed(keyed_table_data) => {
-                let (object_keys, object_values) = keyed_table_data.normalize();
+                let (_object_keys, object_values) = keyed_table_data.normalize();
 
                 object_values
             },
@@ -206,8 +220,8 @@ impl ObjectValues {
         ObjectValues(data)
     }
 
-    pub fn as_list(&self) -> &Vec<LinkedHashMap<String, Value>> {
-        &self.0
+    pub fn as_list(self) -> Vec<LinkedHashMap<String, Value>> {
+        self.0
     }
 }
 
@@ -216,15 +230,15 @@ impl ObjectKeys {
         ObjectKeys(data)
     }
 
-    pub fn as_list(&self) -> &Vec<LinkedHashMap<String, IndexableValue>> {
-        &self.0
+    pub fn as_list(self) -> Vec<LinkedHashMap<String, IndexableValue>> {
+        self.0
     }
 }
 
 
 impl Table {
     pub fn get_column_names(&self) -> Vec<String> {
-       self.schema.get_column_names()
+        self.schema.get_column_names()
     }
 }
 
