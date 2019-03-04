@@ -15,7 +15,7 @@ CREATE TABLE "user" (
 CREATE TABLE "invitation" (
     "invitation_id"           BIGSERIAL PRIMARY KEY,
     "email"                   VARCHAR NOT NULL UNIQUE,
-    "token"                   VARCHAR NOT NULL,
+    "token"                   VARCHAR NOT NULL, -- TODO: should be unique
     "token_info"              JSON NOT NULL DEFAULT '{}',
     "sent_at"                 TIMESTAMP NOT NULL DEFAULT NOW(),
     "expires_at"              TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '1 DAY'),
@@ -24,7 +24,7 @@ CREATE TABLE "invitation" (
 
 CREATE TABLE "session" (
     "session_id"              BIGSERIAL PRIMARY KEY,
-    "token"                   VARCHAR NOT NULL,
+    "token"                   VARCHAR NOT NULL, -- TODO: should be unique
     "user_id"                 BIGINT REFERENCES "user" NOT NULL,
     "created_at"              TIMESTAMP NOT NULL DEFAULT NOW(),
     "expires_at"              TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '1 DAY')

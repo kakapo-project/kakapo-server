@@ -11,4 +11,8 @@ pub trait AuthenticationOps {
     fn hash_password(&self, raw_password: &str) -> Result<String, UserManagementError>;
 
     fn create_session(&self, user: UserInfo) -> Result<SessionToken, UserManagementError>;
+
+    fn refresh_session(&self, token_string: String) -> Result<SessionToken, UserManagementError>;
+
+    fn delete_session(&self, user_id: i64) -> Result<(), UserManagementError>;
 }

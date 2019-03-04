@@ -16,6 +16,7 @@ use state::StateFunctions;
 use state::user_management::UserManagementOps;
 use state::authentication::AuthenticationOps;
 use state::PubSubOps;
+use state::authorization::AuthorizationOps;
 
 use auth::send_mail::EmailOps;
 use connection::GetSecrets;
@@ -88,7 +89,12 @@ impl<S> Action<S> for Refresh<S>
 {
     type Ret = SessionToken;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        unimplemented!();
+        let session_token = state
+            .get_authentication()
+            .refresh_session(self.refresh_token.to_owned())
+            .map_err(Error::UserManagement)?;
+
+        ActionRes::new("Refresh", session_token)
     }
 }
 
@@ -100,14 +106,15 @@ pub struct Logout<S = ActionState> {
 impl<S> Logout<S>
     where for<'a> S: GetSecrets + StateFunctions<'a>,
 {
-    pub fn new() -> WithTransaction<Self, S> {
+    pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
         let action = Self {
             phantom_data: PhantomData,
         };
 
         let action_with_transaction = WithTransaction::new(action);
+        let action_with_permission = WithLoginRequired::new(action_with_transaction);
 
-        action_with_transaction
+        action_with_permission
     }
 }
 
@@ -116,7 +123,19 @@ impl<S> Action<S> for Logout<S>
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        unimplemented!()
+        let user_id = state
+            .get_authorization()
+            .user_id()
+            .ok_or_else(|| {
+                error!("This is unexpected. the user should already be logged in at this point");
+                Error::Unknown
+            })?;
+        let session_token = state
+            .get_authentication()
+            .delete_session(user_id)
+            .map_err(Error::UserManagement)?;
+
+        ActionRes::new("Logout", ())
     }
 }
 

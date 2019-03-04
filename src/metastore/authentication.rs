@@ -27,6 +27,8 @@ use metastore::schema;
 use auth::tokens::Token;
 use metastore::dbdata;
 use metastore;
+use diesel::prelude::*;
+use diesel::result::Error;
 
 
 impl<'a> AuthenticationOps for Authentication<'a> {
@@ -95,6 +97,72 @@ impl<'a> AuthenticationOps for Authentication<'a> {
             })?;
 
 
+        self.build_jwt_token(now, user, session_token.token)
+    }
+
+    fn refresh_session(&self, token_string: String) -> Result<SessionToken, UserManagementError> {
+
+        let now = Utc::now();
+        let naive_datetime_now = NaiveDateTime::from_timestamp(now.timestamp(), 0);
+
+        let token = schema::session::table
+            .filter(schema::session::columns::token.eq(&token_string))
+            .filter(schema::session::columns::expires_at.gt(naive_datetime_now))
+            .get_result::<dbdata::RawSessionToken>(self.conn)
+            .map_err(|err| match err {
+                Error::NotFound => {
+                    warn!("Token not found for {:?}", &token_string);
+                    UserManagementError::NotFound
+                },
+                _ => {
+                    error!("Could not get token value: {:?}", &err);
+                    UserManagementError::InternalError(err.to_string())
+                },
+            })?;
+
+        let user = schema::user::table
+            .filter(schema::user::columns::user_id.eq(token.user_id))
+            .get_result::<dbdata::RawUser>(self.conn)
+            .map_err(|err| {
+                error!("Could not get user: {:?}", &err);
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+
+        let duration = self.jwt_duration;
+
+        let user = UserInfo {
+            user_id: user.user_id,
+            username: user.username,
+            email: user.email,
+            display_name: user.display_name,
+        };
+
+        self.build_jwt_token(now, user, token_string)
+    }
+
+    fn delete_session(&self, user_id: i64) -> Result<(), UserManagementError> {
+        let _tokens = diesel::delete(schema::session::table)
+            .filter(schema::session::columns::user_id.eq(&user_id))
+            .get_results::<dbdata::RawSessionToken>(self.conn)
+            .map_err(|err| {
+                error!("Could not get token value: {:?}", &err);
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+        info!("All tokens for user id {} removed", user_id);
+
+        Ok(())
+    }
+
+}
+
+
+impl<'a> Authentication<'a>  {
+    fn build_jwt_token(&self, now: chrono::DateTime<Utc>, user: UserInfo, refresh_token_string: String) -> Result<SessionToken, UserManagementError> {
+        let duration = self.jwt_duration;
+        let refresh_duration = self.jwt_refresh_duration;
+
         let is_admin = user.user_id == metastore::ADMIN_USER_ID;
         let claims = AuthClaims {
             iss: self.jwt_issuer.to_owned(),
@@ -112,7 +180,7 @@ impl<'a> AuthenticationOps for Authentication<'a> {
         Ok(SessionToken::Bearer {
             access_token: jwt,
             expires_in: duration as u32,
-            refresh_token: session_token.token,
+            refresh_token: refresh_token_string,
         })
     }
 }
