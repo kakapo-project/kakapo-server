@@ -98,7 +98,7 @@ impl<'a> UserManagementOps for UserManagement<'a> {
     }
 
     fn remove_user(&self, user_identifier: &str) -> Result<User, UserManagementError> {
-        info!("deleting user: {:?}", &user_identifier);
+        info!("deleting user: {:?}", &user_identifier); //TODO: doesn't work since user does not cascade, put in a flag instead
         /* FIXME: .or_filter not working for diesel */
         /*
         let result = diesel::delete(schema::user::table)
@@ -265,11 +265,63 @@ impl<'a> UserManagementOps for UserManagement<'a> {
     }
 
     fn rename_permission(&self, old_permission: &Permission, new_permission: &Permission) -> Result<Permission, UserManagementError> {
-        unimplemented!()
+        let old_permission_json = serde_json::to_value(old_permission)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &old_permission, &err);
+                UserManagementError::Unknown
+            })?;
+
+        let new_permission_json = serde_json::to_value(new_permission)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &new_permission, &err);
+                UserManagementError::Unknown
+            })?;
+
+
+        let raw_permission = diesel::update(
+                schema::permission::table.filter(schema::permission::columns::data.eq(&old_permission_json))
+            )
+            .set(schema::permission::columns::data.eq(&new_permission_json))
+            .get_result::<dbdata::RawPermission>(self.conn)
+            .map_err(|err| {
+                println!("Could not delete permission err: {:?}", &err);
+
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+        let permission: Permission = serde_json::from_value(raw_permission.data)
+            .map_err(|err| {
+                error!("Could not deserialize error: {:?}", &err);
+                UserManagementError::Unknown
+            })?;
+
+        Ok(permission)
     }
 
     fn remove_permission(&self, permission: &Permission) -> Result<Permission, UserManagementError> {
-        unimplemented!()
+        let permission_json = serde_json::to_value(permission)
+            .map_err(|err| {
+                error!("Could not serialize value {:?} error: {:?}", &permission, &err);
+                UserManagementError::Unknown
+            })?;
+
+
+        let raw_permission = diesel::delete(schema::permission::table)
+            .filter(schema::permission::columns::data.eq(&permission_json))
+            .get_result::<dbdata::RawPermission>(self.conn)
+            .map_err(|err| {
+                println!("Could not delete permission err: {:?}", &err);
+
+                UserManagementError::InternalError(err.to_string())
+            })?;
+
+        let permission: Permission = serde_json::from_value(raw_permission.data)
+            .map_err(|err| {
+                error!("Could not deserialize error: {:?}", &err);
+                UserManagementError::Unknown
+            })?;
+
+        Ok(permission)
     }
 
     fn attach_permission_for_role(&self, permission: &Permission, rolename: &str) -> Result<Role, UserManagementError> {

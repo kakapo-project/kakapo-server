@@ -63,6 +63,7 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         let raw_user = get_user(self.conn, user_id)?;
         let raw_channel = get_channel(self.conn, &channel)?;
         let raw_user_channel = remove_user_channel(self.conn, raw_user.user_id, raw_channel.channel_id)?;
+        //TODO: if it's the last user subscribing to the channel, delete channel
 
         let user = User {
             username: raw_user.username,

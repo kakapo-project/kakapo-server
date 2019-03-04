@@ -45,15 +45,15 @@ CREATE TABLE "channel" (
 
 CREATE TABLE "user_channel" ( -- This is the subscriptions
     "user_channel_id"         BIGSERIAL PRIMARY KEY,
-    "user_id"                 BIGINT REFERENCES "user" NOT NULL, --TODO: maybe this should be session
-    "channel_id"              BIGINT REFERENCES "channel" NOT NULL,
+    "user_id"                 BIGINT REFERENCES "user" ON DELETE CASCADE NOT NULL , --TODO: maybe this should be session
+    "channel_id"              BIGINT REFERENCES "channel" ON DELETE CASCADE NOT NULL ,
     "subscribed_at"           TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE ("user_id", "channel_id")
 );
 
 CREATE TABLE "message" (
     "message_id"              BIGSERIAL PRIMARY KEY,
-    "channel_id"              BIGINT REFERENCES "channel" NOT NULL,
+    "channel_id"              BIGINT REFERENCES "channel" ON DELETE CASCADE NOT NULL ,
     "data"                    JSONB NOT NULL,
     "sent_at"                 TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -130,8 +130,8 @@ CREATE TABLE "tag" (
 
 CREATE TABLE "entity_tag" (
     "entity_tag_id"           BIGSERIAL PRIMARY KEY,
-    "entity_id"               BIGINT REFERENCES "entity" NOT NULL,
-    "tag_id"                  BIGINT REFERENCES "tag" NOT NULL,
+    "entity_id"               BIGINT REFERENCES "entity" ON DELETE CASCADE NOT NULL ,
+    "tag_id"                  BIGINT REFERENCES "tag" ON DELETE CASCADE NOT NULL ,
     UNIQUE ("entity_id", "tag_id")
 );
 
@@ -144,8 +144,8 @@ CREATE TABLE "role" (
 
 CREATE TABLE "user_role" (
     "user_role_id"            BIGSERIAL PRIMARY KEY,
-    "user_id"                 BIGINT REFERENCES "user" NOT NULL,
-    "role_id"                 BIGINT REFERENCES "role" NOT NULL,
+    "user_id"                 BIGINT REFERENCES "user" ON DELETE CASCADE NOT NULL ,
+    "role_id"                 BIGINT REFERENCES "role" ON DELETE CASCADE NOT NULL ,
     UNIQUE ("user_id", "role_id")
 );
 
@@ -156,8 +156,8 @@ CREATE TABLE "permission" (
 
 CREATE TABLE "role_permission" (
     "role_permission_id"      BIGSERIAL PRIMARY KEY,
-    "role_id"                 BIGINT REFERENCES "role" NOT NULL,
-    "permission_id"           BIGINT REFERENCES "permission" NOT NULL,
+    "role_id"                 BIGINT REFERENCES "role"ON DELETE CASCADE NOT NULL ,
+    "permission_id"           BIGINT REFERENCES "permission" ON DELETE CASCADE NOT NULL ,
     UNIQUE ("role_id", "permission_id")
 );
 
