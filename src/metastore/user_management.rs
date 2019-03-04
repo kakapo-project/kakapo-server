@@ -189,8 +189,27 @@ impl<'a> UserManagementOps for UserManagement<'a> {
         })
     }
 
-    fn rename_role(&self, oldname: &'_ str, newname: &'_ str) -> Result<Role, UserManagementError> {
-        unimplemented!()
+    fn rename_role(&self, oldname: &str, newname: &str) -> Result<Role, UserManagementError> {
+        info!("Updating role {:?}", &oldname);
+        let role = diesel::update(
+            schema::role::table
+                .filter(schema::role::columns::name.eq(&oldname)))
+            .set(schema::role::columns::name.eq(&newname))
+            .get_result::<dbdata::RawRole>(self.conn)
+            .map_err(|err| {
+                error!("Could not update new role {} from old role {} err: {:?}", &newname, &oldname, &err);
+
+                match err {
+                    DbError::NotFound => UserManagementError::NotFound,
+                    _ => UserManagementError::InternalError(err.to_string()),
+                }
+            })?;
+
+        info!("updating role {} to {}", &oldname, newname);
+        Ok(Role {
+            name: role.name,
+            description: Some(role.description),
+        })
     }
 
     fn remove_role(&self, rolename: &str) -> Result<Role, UserManagementError> {
