@@ -14,22 +14,22 @@ use model::actions::Action;
 use model::actions::ActionRes;
 use model::actions::ActionResult;
 use model::entity::RetrieverFunctions;
+use model::query::QueryActionOps;
 
 use state::StateFunctions;
 use state::ActionState;
 
 // Query Action
 #[derive(Debug)]
-pub struct RunQuery<S = ActionState, QC = query::QueryAction>  {
+pub struct RunQuery<S = ActionState>  {
     pub query_name: String,
     pub params: serde_json::Value,
     pub format: serde_json::Value,
-    pub phantom_data: PhantomData<(S, QC)>,
+    pub phantom_data: PhantomData<(S)>,
 }
 
-impl<S, QC> RunQuery<S, QC>
+impl<S> RunQuery<S>
     where
-        QC: query::QueryActionFunctions<S>,
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(query_name: String, params: serde_json::Value) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
@@ -48,9 +48,8 @@ impl<S, QC> RunQuery<S, QC>
     }
 }
 
-impl<S, QC> Action<S> for RunQuery<S, QC>
+impl<S> Action<S> for RunQuery<S>
     where
-        QC: query::QueryActionFunctions<S>,
         for<'a> S: StateFunctions<'a>,
 {
     type Ret = RunQueryResult;
@@ -58,14 +57,16 @@ impl<S, QC> Action<S> for RunQuery<S, QC>
         state
             .get_entity_retreiver_functions()
             .get_one(&self.query_name)
-            .map_err(Error::Entity)
+            .map_err(|err| Error::Entity(err))
             .and_then(|res| match res {
                 Some(query) => Ok(query),
                 None => Err(Error::NotFound),
             })
             .and_then(|query| {
-                QC::run_query(state, &query, &self.params, &self.format)
-                    .map_err(Error::Query)
+                state
+                    .get_query_controller()
+                    .run_query(&query, &self.params, &self.format)
+                    .map_err(|err| Error::Datastore(err))
             })
             .and_then(|res| ActionRes::new("RunQuery", RunQueryResult(res)))
     }

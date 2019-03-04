@@ -25,7 +25,7 @@ use scripting::Scripting;
 use model::entity::update_state::UpdatePermissionFunctions;
 
 use state::UserManagement;
-use plugins::Datastore;
+use plugins::v1::Datastore;
 use connection::executor::DomainError;
 
 pub trait RawEntityTypes

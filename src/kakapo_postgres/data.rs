@@ -1,8 +1,8 @@
 
 use linked_hash_map::LinkedHashMap;
-use data::Named;
-use plugins::DataStoreEntity;
-use plugins::DatastoreError;
+use plugins::v1::DataStoreEntity;
+use plugins::v1::DatastoreError;
+use plugins::v1::DataQueryEntity;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -394,12 +394,6 @@ impl Table {
     }
 }
 
-impl Named for Table {
-    fn my_name(&self) -> &str {
-        &self.name
-    }
-}
-
 impl From<&DataStoreEntity> for Result<Table, DatastoreError> {
     fn from(item: &DataStoreEntity) -> Result<Table, DatastoreError> {
         Ok(Table {
@@ -428,9 +422,13 @@ pub struct Query {
     pub statement: String,
 }
 
-impl Named for Query {
-    fn my_name(&self) -> &str {
-        &self.name
+impl From<&DataQueryEntity> for Result<Query, DatastoreError> {
+    fn from(item: &DataQueryEntity) -> Result<Query, DatastoreError> {
+        Ok(Query {
+            name: item.name.to_owned(),
+            description: item.description.to_owned(),
+            statement: item.statement.to_owned(),
+        })
     }
 }
 

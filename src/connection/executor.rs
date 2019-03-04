@@ -12,13 +12,18 @@ use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
 use connection::AppStateBuilder;
 
-use plugins::Domain;
-use plugins::Datastore;
+use plugins::v1::Domain;
+use plugins::v1::Datastore;
+use plugins::v1::DataQuery;
 
 #[derive(Debug, Fail, Serialize)]
 pub enum DomainError {
     #[fail(display = "domain {} does not exist", 0)]
     DomainNotFound(String),
+    #[fail(display = "domain does not support datastore operations")]
+    DatastoreNotAvailable,
+    #[fail(display = "domain does not support query operations")]
+    QueryNotAvailable,
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }
@@ -55,13 +60,24 @@ impl Executor {
             .expect("Could not get connection")
     }
 
-    pub fn get_domain_conn(&self, domain_name: &str) -> Result<Box<Datastore>, DomainError> {
-        let domain = self.domains
+    pub fn get_datastore_conn(&self, domain_name: &str) -> Result<Box<Datastore>, DomainError> {
+        let datastore = self.domains
             .get(domain_name)
-            .ok_or_else(|| DomainError::DomainNotFound(domain_name.to_string()))?;
+            .ok_or_else(|| DomainError::DomainNotFound(domain_name.to_string()))?
+            .connect_datastore()
+            .ok_or_else(|| DomainError::DatastoreNotAvailable)?;
 
-        Ok(domain.connect())
+        Ok(datastore)
+    }
 
+    pub fn get_query_conn(&self, domain_name: &str) -> Result<Box<DataQuery>, DomainError> {
+        let dataquery = self.domains
+            .get(domain_name)
+            .ok_or_else(|| DomainError::DomainNotFound(domain_name.to_string()))?
+            .connect_query()
+            .ok_or_else(|| DomainError::DatastoreNotAvailable)?;
+
+        Ok(dataquery)
     }
 
     pub fn create(info: &AppStateBuilder) -> Self {

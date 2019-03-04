@@ -10,8 +10,7 @@ use kakapo_postgres::database::DatabaseFunctions;
 use diesel::r2d2::PooledConnection;
 use diesel::r2d2::ConnectionManager;
 use diesel::prelude::PgConnection;
-use data::Named;
-use plugins::DatastoreError;
+use plugins::v1::DatastoreError;
 
 pub struct CrudTable<'a> {
     conn: &'a PooledConnection<ConnectionManager<PgConnection>>,
@@ -53,15 +52,15 @@ impl<'a> CrudTableOps for CrudTable<'a> {
         let mut results = RawTableData::new(vec![], table_column_names.to_owned());
 
         for row in raw_data {
-            let column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
-            let column_counts: Vec<String> = column_names.iter().enumerate()
+            let sql_column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
+            let column_counts: Vec<String> = sql_column_names.iter().enumerate()
                 .map(|(i, _)| format!("${}", i+1))
                 .collect();
             let values = row.values().map(|x| x.to_owned()).collect();
             let query = format!(
                 r#"INSERT INTO "{name}" ("{columns}") VALUES ({params}) RETURNING *;"#,
                 name=&self.table.name,
-                columns=column_names.join(r#"", ""#),
+                columns=sql_column_names.join(r#"", ""#),
                 params=column_counts.join(r#", "#),
             );
 
@@ -69,7 +68,7 @@ impl<'a> CrudTableOps for CrudTable<'a> {
                 .exec(&query, values)
                 .or_else(|err| {
                     match err {
-                        DbError::AlreadyExists => if !fail_on_duplicate {
+                        DbError::ConstraintError(_) => if !fail_on_duplicate {
                             Ok(RawTableData::new(vec![], table_column_names.to_owned()))
                         } else {
                             Err(DatastoreError::DbError(err.to_string()))
@@ -89,15 +88,45 @@ impl<'a> CrudTableOps for CrudTable<'a> {
     }
 
     fn upsert(&self, data: ObjectValues) -> Result<RawTableData, DatastoreError> {
-        //TODO: doing this because I want to know whether it was an insert or update so that I can put in the correct data in the transactions table
+        //Note: doing this because I want to know whether it was an insert or update so that I can put in the correct data in the transactions table
         // otherise, maybe ON CONFLICT with triggers would have been the proper choice
-        self.conn
-            .exec( "SELECT id FROM table WHERE id = my_id", vec![]);
-        self.conn
-            .exec("INSERT INTO table (value1, value2, value3) VALUES (1, 2, 3)", vec![]);
-        self.conn
-            .exec("UPDATE table SET value1 = 1, value2 = 2 WHERE id = my_id", vec![]);
-        unimplemented!()
+        let table_column_names = self.table.get_column_names();
+        let raw_data = data.as_list();
+        let mut results = RawTableData::new(vec![], table_column_names.to_owned());
+
+        for row in raw_data {
+            let sql_column_names: Vec<String> = row.keys().map(|x| x.to_owned()).collect();
+            let column_counts: Vec<String> = sql_column_names.iter().enumerate()
+                .map(|(i, _)| format!("${}", i+1))
+                .collect();
+            let values = row.values().map(|x| x.to_owned()).collect();
+            let query = format!(
+                r#"INSERT INTO "{name}" ("{columns}") VALUES ({params}) RETURNING *;"#,
+                name=&self.table.name,
+                columns=sql_column_names.join(r#"", ""#),
+                params=column_counts.join(r#", "#),
+            );
+
+            let new_row = self.conn
+                .exec(&query, values)
+                .or_else(|err| {
+                    match err {
+                        DbError::ConstraintError(_) => {
+                            //TODO: update value
+                            Err(DatastoreError::DbError(err.to_string()))
+                        },
+                        _ => Err(DatastoreError::DbError(err.to_string())),
+                    }
+                })?;
+
+            results.append(new_row)
+                .or_else(|_| {
+                    error!("columns names are mismatched");
+                    Err(DatastoreError::Unknown)
+                })?;
+        }
+
+        Ok(results)
     }
 
     fn update(&self, keys: ObjectKeys, data: ObjectValues, fail_on_not_found: bool) -> Result<RawTableData, DatastoreError> {

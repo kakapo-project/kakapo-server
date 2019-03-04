@@ -113,16 +113,21 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
 
         let action_req = action_req?;
         let conn = self.get_connection();
-        let domain_conn = self.get_domain_conn("Sirocco");
+
+        let datastore_conn = self.get_datastore_conn("Sirocco");
+        let query_conn = self.get_query_conn("Sirocco");
+
         let scripting = Scripting::new(self.get_scripts_path());
         let secrets = self.get_secrets();
 
+        //TODO: this is getting out of hand, builder pattern is the way to do this
         let state = ActionState::new(
             conn,
             scripting,
             auth_claims,
             secrets,
-            domain_conn,
+            datastore_conn,
+            query_conn,
             self.jwt_issuer.to_owned(),
             self.jwt_token_duration,
             self.jwt_refresh_token_duration,

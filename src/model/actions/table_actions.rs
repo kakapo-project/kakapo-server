@@ -60,7 +60,7 @@ impl<S> Action<S> for QueryTableData<S>
         state
             .get_entity_retreiver_functions()
             .get_one( &self.table_name)
-            .or_else(|err| Err(Error::Entity(err)))
+            .map_err(|err| Error::Entity(err))
             .and_then(|res: Option<data::DataStoreEntity>| {
                 match res {
                     Some(table) => Ok(table),
@@ -71,7 +71,7 @@ impl<S> Action<S> for QueryTableData<S>
                 state
                     .get_table_controller()
                     .query(&table)
-                    .or_else(|err| Err(Error::Datastore(err)))
+                    .map_err(|err| Error::Datastore(err))
             })
             .and_then(|res| ActionRes::new("QueryTableData", GetTableDataResult(res)))
     }

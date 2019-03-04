@@ -43,7 +43,10 @@ use data::channels::Channels;
 use data::channels::Subscription;
 use data::auth::User;
 use data::Message;
-use plugins::Datastore;
+use plugins::v1::Datastore;
+use plugins::v1::DataQuery;
+use model::query::QueryActionOps;
+use model::query::QueryAction;
 
 
 pub struct ActionState {
@@ -51,7 +54,8 @@ pub struct ActionState {
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
-    pub domain_conn: Result<Box<Datastore>, DomainError>,
+    pub datastore_conn: Result<Box<Datastore>, DomainError>,
+    pub query_conn: Result<Box<DataQuery>, DomainError>,
     pub jwt_issuer: String,
     pub jwt_duration: i64,
     pub jwt_refresh_duration: i64,
@@ -67,6 +71,7 @@ pub trait StateFunctions<'a>
     where
         Self: Debug + Send,
         Self::TableController: DatastoreActionOps,
+        Self::QueryController: QueryActionOps,
         Self::Scripting: ScriptFunctions,
         Self::PubSub: PubSubOps,
         Self::EmailSender: EmailOps,
@@ -98,6 +103,9 @@ pub trait StateFunctions<'a>
     // table actions
     type TableController;
     fn get_table_controller(&'a self) -> Self::TableController;
+
+    type QueryController;
+    fn get_query_controller(&'a self) -> Self::QueryController;
 
     type Scripting;
     fn get_script_runner(&'a self) -> Self::Scripting;
@@ -160,7 +168,7 @@ impl<'a> StateFunctions<'a> for ActionState {
 
         EntityModifierController {
             conn: &self.database,
-            domain_conn: &self.domain_conn,
+            domain_conn: &self.datastore_conn, //TODO: should be a separate thing, permissions
             claims: &self.claims,
             scripting: &self.scripting,
             user_management,
@@ -168,9 +176,16 @@ impl<'a> StateFunctions<'a> for ActionState {
     }
 
     type TableController = DatastoreAction<'a>;
-    fn get_table_controller(&'a self) -> Self::TableController {
+    fn get_table_controller(&'a self) -> Self::TableController { //TODO: rename datastore
         DatastoreAction {
-            conn: &self.domain_conn,
+            conn: &self.datastore_conn,
+        }
+    }
+
+    type QueryController = QueryAction<'a>;
+    fn get_query_controller(&'a self) -> Self::QueryController {
+        QueryAction {
+            conn: &self.query_conn,
         }
     }
 
@@ -210,7 +225,8 @@ impl ActionState {
         scripting: Scripting,
         claims: Option<AuthClaims>,
         secrets: Secrets,
-        domain_conn: Result<Box<Datastore>, DomainError>,
+        datastore_conn: Result<Box<Datastore>, DomainError>,
+        query_conn: Result<Box<DataQuery>, DomainError>,
         jwt_issuer: String,
         jwt_duration: i64,
         jwt_refresh_duration: i64,
@@ -220,7 +236,8 @@ impl ActionState {
             scripting,
             claims,
             secrets,
-            domain_conn,
+            datastore_conn,
+            query_conn,
             jwt_issuer, //TODO: put these in config
             jwt_duration,
             jwt_refresh_duration,

@@ -11,6 +11,8 @@ pub enum DatastoreError {
     SerializationError,
     #[fail(display = "domain {} does not exist", 0)]
     DomainNotFound(String),
+    #[fail(display = "domain not supported")]
+    NotSupported,
     #[fail(display = "File System Error {:?}", 0)]
     FileSystemError(String),
     #[fail(display = "Invalid state, something is really weird with the database")]

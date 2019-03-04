@@ -12,8 +12,8 @@ use actix::sync::SyncArbiter;
 
 use data::channels::Channels;
 
-use plugins::DomainBuilder;
-use plugins::Domain;
+use plugins::v1::DomainBuilder;
+use plugins::v1::Domain;
 
 pub trait GetSecrets {
     fn get_token_secret(&self) -> String;

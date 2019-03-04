@@ -3,11 +3,13 @@ use diesel::r2d2::PooledConnection;
 use diesel::r2d2::Pool;
 use diesel::prelude::PgConnection;
 
-use plugins::Domain;
-use plugins::Datastore;
-use plugins::DomainBuilder;
-use plugins::DataStoreEntity;
-use plugins::DatastoreError;
+use plugins::v1::Domain;
+use plugins::v1::Datastore;
+use plugins::v1::DomainBuilder;
+use plugins::v1::DataStoreEntity;
+use plugins::v1::DatastoreError;
+use plugins::v1::DataQuery;
+use plugins::v1::DataQueryEntity;
 
 use kakapo_postgres::data::Table;
 use kakapo_postgres::data::TableData;
@@ -18,6 +20,10 @@ use kakapo_postgres::update_state::UpdateTable;
 use kakapo_postgres::update_state::UpdateTableOps;
 use kakapo_postgres::table::CrudTable;
 use kakapo_postgres::table::CrudTableOps;
+use kakapo_postgres::data::Query;
+use kakapo_postgres::query::QueryTable;
+use kakapo_postgres::query::QueryTableOps;
+use kakapo_postgres::data::QueryParams;
 
 #[derive(Clone)]
 pub struct KakapoPostgresDone {
@@ -51,15 +57,23 @@ impl DomainBuilder for KakapoPostgres {
 
 impl Domain for KakapoPostgresDone {
 
-    fn connect(&self) -> Box<Datastore> {
+    fn connect_datastore(&self) -> Option<Box<Datastore>> {
         info!("connecting to the poo");
         let conn = self.pool.get()
             .expect("Could not get connection");
 
         let postgres_connection = KakapoPostgresConnection { conn };
-        Box::new(postgres_connection)
+        Some(Box::new(postgres_connection))
     }
 
+    fn connect_query(&self) -> Option<Box<DataQuery>> {
+        info!("connecting to the poo");
+        let conn = self.pool.get()
+            .expect("Could not get connection");
+
+        let postgres_connection = KakapoPostgresConnection { conn };
+        Some(Box::new(postgres_connection))
+    }
 }
 
 // All of this is just boilerplate -__-
@@ -185,5 +199,23 @@ impl Datastore for KakapoPostgresConnection {
 
         let action = UpdateTable::new(&self.conn);
         action.delete_table(&old)
+    }
+}
+
+impl DataQuery for KakapoPostgresConnection {
+    fn query(&self, query: &DataQueryEntity, query_params: &serde_json::Value, format: &serde_json::Value) -> Result<serde_json::Value, DatastoreError> {
+        let query: Result<Query, DatastoreError> = query.into();
+        let query = query?;
+
+        let query_params: QueryParams = serde_json::from_value(query_params.to_owned())
+            .map_err(|_| DatastoreError::SerializationError)?;
+
+        let action = QueryTable::new(&self.conn);
+        let res = action.run_query(&query, query_params)?; //TODO: format
+
+        let res = serde_json::to_value(res)
+            .map_err(|_| DatastoreError::SerializationError)?;
+
+        Ok(res)
     }
 }

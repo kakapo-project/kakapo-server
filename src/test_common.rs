@@ -233,6 +233,11 @@ impl<'a> StateFunctions<'a> for MockState {
         self.0.get_table_controller()
     }
 
+    type QueryController = <ActionState as StateFunctions<'a>>::QueryController;
+    fn get_query_controller(&'a self) -> <Self as StateFunctions<'a>>::QueryController {
+        self.0.get_query_controller()
+    }
+
     type Scripting = <ActionState as StateFunctions<'a>>::Scripting;
     fn get_script_runner(&'a self) -> <Self as StateFunctions<'a>>::Scripting {
         self.0.get_script_runner()
@@ -290,6 +295,7 @@ pub fn with_state<F>(f: F)
         Some(claims),
         secrets,
         Err(DomainError::Unknown),
+        Err(DomainError::Unknown),
         "THE_ISSUER".to_string(),
         500,
         60 * 60 * 24 * 7,
@@ -326,6 +332,7 @@ pub fn with_state_no_transaction<F>(f: F)
         Scripting::new(script_path),
         Some(claims),
         secrets,
+        Err(DomainError::Unknown),
         Err(DomainError::Unknown),
         "THE_ISSUER".to_string(),
         500,

@@ -17,7 +17,8 @@ pub trait Domain
     where
         Self: Send + Sync,
 {
-    fn connect(&self) -> Box<Datastore>; //TODO: Option<Box<...
+    fn connect_datastore(&self) -> Option<Box<Datastore>>;
+    fn connect_query(&self) -> Option<Box<DataQuery>>;
 }
 
 type Rows = serde_json::Value;
@@ -57,23 +58,13 @@ pub trait Datastore:
     fn on_datastore_deleted(&self, old: &DataStoreEntity) -> Result<(), DatastoreError>;
 }
 
-pub trait HasQuery
+type QueryParams = serde_json::Value;
+type QueryFormat = serde_json::Value;
+
+pub trait DataQuery
     where
-        Self::Query: QueryOps,
+        Self: Send
 {
-    type Query;
-
-    //TODO: figure out permissions
-    fn connect(&self) -> Self::Query;
-
-}
-
-pub trait QueryOps
-    where
-        Self::Dataset: Serialize,
-{
-    type Dataset;
-
-    fn query(&self) -> Self::Dataset;
+    fn query(&self, query: &DataQueryEntity, query_params: &QueryParams, format: &QueryFormat) -> Result<Dataset, DatastoreError>; //TODO: rename to DatasetError
 }
 

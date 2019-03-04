@@ -1,53 +1,67 @@
 
+use kakapo_postgres::data::Table;
+use kakapo_postgres::data::RawTableData;
+use kakapo_postgres::data::ObjectValues;
+use kakapo_postgres::data::ObjectKeys;
+use kakapo_postgres::data::Value;
 use kakapo_postgres::database::error::DbError;
 use kakapo_postgres::database::DatabaseFunctions;
-use data;
 
-/*
+use diesel::r2d2::PooledConnection;
+use diesel::r2d2::ConnectionManager;
+use diesel::prelude::PgConnection;
+use data::Named;
+use plugins::v1::DatastoreError;
+use kakapo_postgres::data::Query;
+use kakapo_postgres::data::QueryParams;
 
-impl QueryError {
-    pub fn db_error(err: DbError) -> Self {
-        unimplemented!()
+pub struct QueryTable<'a> {
+    conn: &'a PooledConnection<ConnectionManager<PgConnection>>,
+}
+
+impl<'a> QueryTable<'a> {
+    pub fn new(conn: &'a PooledConnection<ConnectionManager<PgConnection>>) -> Self {
+        Self { conn }
     }
 }
 
-impl QueryActionFunctions<ActionState> for QueryAction {
-    fn run_query(state: &ActionState, query: &data::DataQueryEntity, params: &serde_json::Value, format: &serde_json::Value) -> Result<serde_json::Value, QueryError>  {
-        /* TODO:...
-        let params = serde_json::from_value(params)
-            .map_error(...)?;
-        let username = state.get_authorization().username();
+
+pub trait QueryTableOps {
+    fn run_query(&self, query: &Query, params: QueryParams) -> Result<RawTableData, DatastoreError>;
+}
+
+
+impl<'a> QueryTableOps for QueryTable<'a> {
+    fn run_query(&self, query: &Query, params: QueryParams) -> Result<RawTableData, DatastoreError> {
+
+
         let db_params = params.value_list();
 
+        /* TODO: ...
+        let username = state.get_authorization().username();
         if let Some(db_user) = username.to_owned() {
             state
                 .get_database()
                 .exec("SET SESSION AUTHORIZATION $1", vec![Value::String(db_user)])
-                .or_else(|err| Err(QueryError::db_error(err)))?;
+                .or_else(|err| Err(DatastoreError::DbError(err.to_string())))?;
+
         }
+        */
 
-        let result = state
-            .get_database()
+        let result = self
+            .conn
             .exec(&query.statement, db_params)
-            .or_else(|err| Err(QueryError::db_error(err)))?;
+            .or_else(|err| Err(DatastoreError::DbError(err.to_string())))?;
 
+        /*
         if let Some(db_user) = username {
             state
                 .get_database()
                 .exec("RESET SESSION AUTHORIZATION", vec![])
-                .or_else(|err| Err(QueryError::db_error(err)))?;
+                .or_else(|err| Err(DatastoreError::DbError(err.to_string())))?;
         }
+        */
 
         Ok(result)
-
-        //...
-         .and_then(|table_data| {
-            Ok(table_data.format_with(&self.format))
-        })
-
-        serd_json::to_value(...)
-        */
-        unimplemented!()
     }
 }
-*/

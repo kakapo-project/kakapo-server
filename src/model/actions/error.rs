@@ -1,5 +1,4 @@
 use model::entity::error::EntityError;
-use model::query::error::QueryError;
 use state::error::UserManagementError;
 use auth::send_mail::EmailError;
 
@@ -15,8 +14,6 @@ pub enum Error {
     Datastore(DatastoreError),
     #[fail(display = "{}", 0)]
     Script(ScriptError),
-    #[fail(display = "{}", 0)]
-    Query(QueryError),
     #[fail(display = "{}", 0)]
     EmailError(EmailError),
     #[fail(display = "{}", 0)]

@@ -14,7 +14,7 @@ use state::user_management::UserManagementOps;
 use kakapo_postgres::data::DataType;
 use kakapo_postgres::data::Table;
 
-use plugins::DatastoreError;
+use plugins::v1::DatastoreError;
 
 fn get_sql_data_type(data_type: &DataType) -> String {
     match data_type {
