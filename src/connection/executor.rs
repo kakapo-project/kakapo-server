@@ -84,24 +84,24 @@ impl Executor {
 
         let database_url = format!(
             "postgres://{}:{}@{}:{}/{}",
-            info.user_name.clone().unwrap_or_default(),
-            info.pass_name.clone().unwrap_or_default(),
-            info.host_name.clone().unwrap_or_default(),
-            info.port_name.clone().unwrap_or_default(),
-            info.db_name.clone().unwrap_or_default(),
+            info.user.clone().unwrap_or_default(),
+            info.pass.clone().unwrap_or_default(),
+            info.host.clone().unwrap_or_default(),
+            info.port.clone().unwrap_or_default(),
+            info.db.clone().unwrap_or_default(),
         );
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder().build(manager)
             .expect("Could not start connection");
 
-        let script_path = match info.script_path_dir.clone() {
+        let script_path = match info.script_path.clone() {
             Some(dir) => PathBuf::from(dir),
             None => kakapo_script_home(),
         };
 
         let secrets = Secrets {
-            token_secret: info.token_secret_key.clone().unwrap_or_default(),
-            password_secret: info.password_secret_key.clone().unwrap_or_default(),
+            token_secret: info.token_secret.clone().unwrap_or_default(),
+            password_secret: info.password_secret.clone().unwrap_or_default(),
         };
 
         let mut domains = HashMap::new();

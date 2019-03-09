@@ -66,6 +66,9 @@ impl<A, T, S> Action<S> for WithFilterListByPermission<A, T, S>
         let user_permissions = state
             .get_authorization()
             .permissions();
+
+        //TODO: check user logged in
+
         let raw_results = self.action.call(state)?;
         let raw_results_name = raw_results.get_name();
 

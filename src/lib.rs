@@ -72,30 +72,24 @@ use env_logger::Builder;
 use env_logger::Target;
 use log::LevelFilter;
 use diesel::prelude::*;
-
-pub fn run() {
-
-    Builder::new()
-        .target(Target::Stdout)
-        .filter_level(LevelFilter::Warn)
-        .filter_module("kakapo", LevelFilter::Debug)
-        .filter_module("actix_web", LevelFilter::Info)
-        .init();
-
-    let sys = actix::System::new("Kakapo");
-
-    server::serve();
-
-    // loop
-    sys.run();
-}
+use std::net::ToSocketAddrs;
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::net;
+    use std::io;
+    use kakapo_postgres::KakapoPostgres;
 
     #[test]
     fn test_run_server() {
+
+        Builder::new()
+            .target(Target::Stdout)
+            .filter_level(LevelFilter::Warn)
+            .filter_module("kakapo", LevelFilter::Debug)
+            .filter_module("actix_web", LevelFilter::Info)
+            .init();
 
         let result = setup_admin("admin", "admin@example.com", "Admin", "password");
         if let Err(error) = result {
@@ -103,6 +97,27 @@ mod test {
             return;
         }
 
-        run();
+        let plugin = KakapoPostgres::new()
+            .host("localhost")
+            .port(5432)
+            .user("test")
+            .pass("password")
+            .db("test");
+
+        let secret = "Hello World";
+        let state = AppStateBuilder::new()
+            .host("localhost")
+            .port(5432)
+            .user("test")
+            .pass("password")
+            .num_threads(1)
+            .password_secret("Hello World Hello Wold")
+            .token_secret("Hello World Hello Wold")
+            .add_plugin("Sirocco", plugin);
+
+        server::Server::new()
+            .host("127.0.0.1")
+            .port(1845)
+            .run(state);
     }
 }

@@ -33,18 +33,18 @@ pub struct AppState {
 
 /// Builder for the AppState
 pub struct AppStateBuilder {
-    host_name: Option<String>,
-    port_name: Option<u16>,
-    user_name: Option<String>,
-    pass_name: Option<String>,
-    db_name: Option<String>,
-    script_path_dir: Option<String>,
-    token_secret_key: Option<String>,
-    password_secret_key: Option<String>,
+    host: Option<String>,
+    port: Option<u16>,
+    user: Option<String>,
+    pass: Option<String>,
+    db: Option<String>,
+    script_path: Option<String>,
+    token_secret: Option<String>,
+    password_secret: Option<String>,
     jwt_issuer: Option<String>,
     jwt_token_duration: i64,
     jwt_refresh_token_duration: i64,
-    threads: usize,
+    num_threads: usize,
 
     domain_builders: HashMap<String, Box<DomainBuilder>>,
 }
@@ -54,80 +54,80 @@ pub struct AppStateBuilder {
 impl AppStateBuilder {
     pub fn new() -> Self {
         Self {
-            host_name: None,
-            port_name: None,
-            user_name: None,
-            pass_name: None,
-            db_name: None,
-            script_path_dir: None,
-            token_secret_key: None,
-            password_secret_key: None,
+            host: None,
+            port: None,
+            user: None,
+            pass: None,
+            db: None,
+            script_path: None,
+            token_secret: None,
+            password_secret: None,
             jwt_issuer: None,
             jwt_token_duration: 600,
             jwt_refresh_token_duration: 60 * 60 * 24,
-            threads: num_cpus::get(),
+            num_threads: num_cpus::get(),
 
             domain_builders: HashMap::new(),
         }
     }
 
-    pub fn host(mut self, param: &str) -> Self {
-        self.host_name = Some(param.to_string());
+    pub fn host(mut self, host: &str) -> Self {
+        self.host = Some(host.to_string());
         self
     }
 
-    pub fn port(mut self, param: u16) -> Self {
-        self.port_name = Some(param);
+    pub fn port(mut self, port: u16) -> Self {
+        self.port = Some(port);
         self
     }
 
-    pub fn user(mut self, param: &str) -> Self {
-        self.user_name = Some(param.to_string());
+    pub fn user(mut self, user: &str) -> Self {
+        self.user = Some(user.to_string());
         self
     }
 
-    pub fn pass(mut self, param: &str) -> Self {
-        self.pass_name = Some(param.to_string());
+    pub fn pass(mut self, pass: &str) -> Self {
+        self.pass = Some(pass.to_string());
         self
     }
 
-    pub fn db(mut self, param: &str) -> Self {
-        self.db_name = Some(param.to_string());
+    pub fn db(mut self, db: &str) -> Self {
+        self.db = Some(db.to_string());
         self
     }
 
-    pub fn script_path(mut self, script_path_dir: &str) -> Self {
-        self.script_path_dir = Some(script_path_dir.to_string());
+    pub fn script_path(mut self, script_path: &str) -> Self {
+        self.script_path = Some(script_path.to_string());
         self
     }
 
-    pub fn token_secret(mut self, secret: &str) -> Self {
-        self.token_secret_key = Some(secret.to_string());
+    pub fn token_secret(mut self, token_secret: &str) -> Self {
+        self.token_secret = Some(token_secret.to_string());
         self
     }
 
-    pub fn password_secret(mut self, secret: &str) -> Self {
-        self.password_secret_key = Some(secret.to_string());
+    pub fn password_secret(mut self, password_secret: &str) -> Self {
+        self.password_secret = Some(password_secret.to_string());
         self
     }
 
-    pub fn issuer(mut self, iss: &str) -> Self {
-        self.jwt_issuer = Some(iss.to_string());
+    pub fn issuer(mut self, issuer: &str) -> Self {
+        self.jwt_issuer = Some(issuer.to_string());
         self
     }
 
-    pub fn token_duration(mut self, duration: i64) -> Self {
-        self.jwt_token_duration = duration;
+    pub fn token_duration(mut self, token_duration: i64) -> Self {
+        self.jwt_token_duration = token_duration;
         self
     }
 
-    pub fn refresh_token_duration(mut self, duration: i64) -> Self {
-        self.jwt_refresh_token_duration = duration;
+    pub fn refresh_token_duration(mut self, refresh_token_duration: i64) -> Self {
+        self.jwt_refresh_token_duration = refresh_token_duration;
         self
     }
 
-    pub fn num_threads(mut self, threads: usize) -> Self {
-        self.threads = threads;
+    pub fn num_threads(mut self, num_threads: usize) -> Self {
+        self.num_threads = num_threads;
         self
     }
 
@@ -140,11 +140,11 @@ impl AppStateBuilder {
     }
 
     pub fn done(self) -> AppState {
-        let token_secret = self.token_secret_key.clone()
+        let token_secret = self.token_secret.clone()
             .expect("Must specify a token secret");
-        let password_secret = self.password_secret_key.clone()
+        let password_secret = self.password_secret.clone()
             .expect("Must specify a password secret");
-        let threads = self.threads;
+        let threads = self.num_threads;
 
         info!("Staring database connection");
         let connections = SyncArbiter::start(
