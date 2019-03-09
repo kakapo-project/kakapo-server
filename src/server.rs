@@ -1,5 +1,9 @@
+use std::path::PathBuf;
+use std::path::Path;
+
 use actix::prelude::*;
 use actix;
+use actix_web::fs;
 use actix_web::middleware::Logger;
 use actix_web::http;
 use actix_web::middleware::cors::Cors;
@@ -14,13 +18,12 @@ use AppStateBuilder;
 use AppState;
 
 use view::extensions::ProcedureExt;
-use kakapo_postgres::KakapoPostgres;
 
 pub struct Server {
     system: actix::SystemRunner,
     host: String,
     port: u16,
-    //state_builder: AppStateBuilder,
+    frontend_path: Option<PathBuf>,
 }
 
 impl Server {
@@ -29,6 +32,7 @@ impl Server {
             system: actix::System::new("Kakapo"),
             host: "127.0.0.1".to_string(),
             port: 1845,
+            frontend_path: None,
         }
     }
 
@@ -42,6 +46,11 @@ impl Server {
         self
     }
 
+    pub fn frontend_path(mut self, frontend_path: &Path) -> Self {
+        self.frontend_path = Some(frontend_path.to_path_buf());
+        self
+    }
+
     pub fn run(self, state_builder: AppStateBuilder) -> i32 {
 
         let server_addr = (&self.host[..], self.port);
@@ -49,20 +58,45 @@ impl Server {
 
         let state = state_builder.done();
 
+        let frontend_path = self.frontend_path;
+
         let mut server_cfg = actix_web::server::new(move || {
 
-            App::with_state(state.clone())
+            let mut app = App::with_state(state.clone())
                 .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
                 .middleware(Logger::new(r#"Requested [%r] FROM %a "%{User-Agent}i""#))
-                .configure(move |app| Cors::for_app(app)
-                    //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
-                    //.allowed_origin("http://localhost:8080")
-                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-                    .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                    .allowed_header(http::header::CONTENT_TYPE)
-                    .max_age(3600)
-                    .add_routes()
-                    .register())
+                .configure(move |app| {
+                    Cors::for_app(app)
+                        //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
+                        //.allowed_origin("http://localhost:8080")
+                        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+                        .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                        .allowed_header(http::header::CONTENT_TYPE)
+                        .max_age(3600)
+                        .add_routes()
+                        .register()
+                });
+
+            if let Some(ref static_files) = frontend_path {
+
+                let mut index_file = static_files.to_owned();
+                index_file.push("index.html");
+
+                app = app
+                    .resource("/", |r| {
+                        r.method(http::Method::GET).f(move |req| {
+                            fs::NamedFile::open(index_file.to_owned())
+                        })
+                    })
+                    .handler(
+                    "/",
+                    fs::StaticFiles::new(&static_files)
+                        .unwrap()
+                        .show_files_listing());
+            }
+
+            app
+
         });
 
         server_cfg = server_cfg

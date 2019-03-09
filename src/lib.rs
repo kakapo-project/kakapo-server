@@ -49,7 +49,7 @@ mod broker;
 mod server;
 mod state;
 
-mod kakapo_postgres;
+pub mod kakapo_postgres; //TODO: move this outside
 
 pub mod plugins;
 
@@ -66,6 +66,7 @@ pub use connection::AppStateBuilder;
 pub use connection::AppState;
 pub use connection::AppStateLike;
 pub use metastore::setup_admin;
+pub use server::Server;
 
 use actix_web::test::TestApp;
 use env_logger::Builder;
@@ -79,7 +80,6 @@ mod test {
     use super::*;
     use std::net;
     use std::io;
-    use kakapo_postgres::KakapoPostgres;
 
     #[test]
     fn test_run_server() {
@@ -97,14 +97,13 @@ mod test {
             return;
         }
 
-        let plugin = KakapoPostgres::new()
+        let plugin = kakapo_postgres::KakapoPostgres::new()
             .host("localhost")
             .port(5432)
             .user("test")
             .pass("password")
             .db("test");
 
-        let secret = "Hello World";
         let state = AppStateBuilder::new()
             .host("localhost")
             .port(5432)
@@ -115,7 +114,7 @@ mod test {
             .token_secret("Hello World Hello Wold")
             .add_plugin("Sirocco", plugin);
 
-        server::Server::new()
+        Server::new()
             .host("127.0.0.1")
             .port(1845)
             .run(state);
