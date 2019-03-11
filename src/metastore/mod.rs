@@ -1,5 +1,6 @@
 
 pub mod user_management;
+pub mod domain_management;
 pub mod authorization;
 pub mod authentication;
 pub mod pub_sub;
@@ -7,6 +8,7 @@ mod conversion;
 mod dbdata;
 mod schema;
 
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 use diesel::prelude::*;
@@ -31,6 +33,7 @@ use state::ActionState;
 use model::entity::EntityModifierController;
 use model::entity::EntityRetrieverController;
 
+use plugins::v1::Domain;
 
 
 //TODO: put all of this in internal
@@ -51,9 +54,32 @@ pub trait EntityCrudOps
 }
 
 // Meta store helpers
+pub fn sync_domains(database_url: &str, domains: &HashMap<String, Box<Domain>>) -> Result<(), String> {
+    let conn = PgConnection::establish(&database_url)
+        .map_err(|err| {
+            error!("Could not create user, couldn't establish connection: {:?}", &err);
+            err.to_string()
+        })?;
+
+    for (name, domain) in domains.iter() {
+        let _ = diesel::insert_into(schema::domain::table)
+            .values((
+                schema::domain::columns::name.eq(name),
+                schema::domain::columns::type_.eq(domain.domain_type()),
+                schema::domain::columns::description.eq(""),
+            ))
+            .on_conflict(schema::domain::columns::name)
+            .do_nothing()
+            .execute(&conn)
+            .map_err(|err| err.to_string())?;
+    }
+
+    Ok(())
+}
+
 pub fn setup_admin(username: &str, email: &str, display_name: &str, password: &str) -> Result<(), String> {
     let database_url = format!(
-        "postgres://{user}:{pass}@{host}:{port}/{db}",
+        "postgres://{user}:{pass}@{host}:{port}/{db}", //TODO: ...
         user = "test",
         pass = "password",
         host = "localhost",

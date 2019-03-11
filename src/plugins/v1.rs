@@ -17,6 +17,7 @@ pub trait Domain
     where
         Self: Send + Sync,
 {
+    fn domain_type(&self) -> &'static str;
     fn connect_datastore(&self) -> Option<Box<Datastore>>;
     fn connect_query(&self) -> Option<Box<DataQuery>>;
 }

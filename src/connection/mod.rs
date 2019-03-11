@@ -1,5 +1,6 @@
 
 pub mod executor;
+pub mod domain;
 
 use num_cpus;
 

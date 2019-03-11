@@ -5,11 +5,14 @@ use auth::send_mail::EmailError;
 use scripting::error::ScriptError;
 use state::error::BroadcastError;
 use data::error::DatastoreError;
+use state::error::DomainManagementError;
 
 #[derive(Debug, Fail, PartialEq, Eq)]
 pub enum Error {
     #[fail(display = "{}", 0)]
     Entity(EntityError),
+    #[fail(display = "{}", 0)]
+    DomainManagement(DomainManagementError),
     #[fail(display = "{}", 0)]
     Datastore(DatastoreError),
     #[fail(display = "{}", 0)]

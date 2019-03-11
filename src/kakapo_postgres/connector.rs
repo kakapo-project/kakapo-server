@@ -57,6 +57,10 @@ impl DomainBuilder for KakapoPostgres {
 
 impl Domain for KakapoPostgresDone {
 
+    fn domain_type(&self) -> &'static str {
+        "POSTGRES"
+    }
+
     fn connect_datastore(&self) -> Option<Box<Datastore>> {
         info!("connecting to the poo");
         let conn = self.pool.get()

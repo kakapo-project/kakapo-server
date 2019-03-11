@@ -6,6 +6,18 @@ table! {
 }
 
 table! {
+    domain (domain_id) {
+        domain_id -> Int8,
+        name -> Varchar,
+        #[sql_name = "type"]
+        type_ -> Varchar,
+        description -> Varchar,
+        domain_info -> Json,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     entity (entity_id) {
         entity_id -> Int8,
         scope_id -> Int8,
@@ -234,6 +246,7 @@ joinable!(view -> user (modified_by));
 
 allow_tables_to_appear_in_same_query!(
     channel,
+    domain,
     entity,
     entity_tag,
     entity_usage,

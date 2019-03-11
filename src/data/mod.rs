@@ -90,3 +90,12 @@ pub struct Message {
     pub timestamp: chrono::NaiveDateTime,
     //TODO: maybe add the user as well
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct DomainInfo {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub type_info: String,
+    pub description: String,
+    //TODO: maybe add the user as well
+}

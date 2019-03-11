@@ -81,6 +81,12 @@ struct TimeRange {
 pub mod manage {
     use super::*;
 
+    pub fn get_all_domains(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+        Ok(actions::GetAllDomains::<_>::new())
+    }
+
     pub fn get_all_tables(data: Value, query: Value) -> Result<impl Action, Error> {
         let _: NoQuery = from_value(data)?;
         let get_all_entities: GetAllEntities = from_value(query)?;

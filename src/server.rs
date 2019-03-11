@@ -62,7 +62,7 @@ impl Server {
 
         let mut server_cfg = actix_web::server::new(move || {
 
-            let mut app = App::with_state(state.clone())
+            let app = App::with_state(state.clone())
                 .middleware(Logger::new("Responded [%s] %b bytes %Dms"))
                 .middleware(Logger::new(r#"Requested [%r] FROM %a "%{User-Agent}i""#))
                 .configure(move |app| {
@@ -82,8 +82,7 @@ impl Server {
                 let mut index_file = static_files.to_owned();
                 index_file.push("index.html");
 
-                app = app
-                    .resource("/", |r| {
+                app.resource("/", |r| {
                         r.method(http::Method::GET).f(move |req| {
                             fs::NamedFile::open(index_file.to_owned())
                         })
@@ -92,10 +91,10 @@ impl Server {
                     "/",
                     fs::StaticFiles::new(&static_files)
                         .unwrap()
-                        .show_files_listing());
+                        .show_files_listing())
+            } else {
+                app
             }
-
-            app
 
         });
 

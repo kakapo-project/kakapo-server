@@ -10,13 +10,15 @@ use diesel::pg::PgConnection;
 use actix::prelude::*;
 use diesel::{r2d2::ConnectionManager, r2d2::PooledConnection};
 use diesel::r2d2::Pool;
+
 use connection::AppStateBuilder;
+use connection::domain::DomainCollection;
 
 use plugins::v1::Domain;
 use plugins::v1::Datastore;
 use plugins::v1::DataQuery;
 
-#[derive(Debug, Fail, Serialize)]
+#[derive(Debug, Fail, PartialEq, Eq)]
 pub enum DomainError {
     #[fail(display = "domain {} does not exist", 0)]
     DomainNotFound(String),
@@ -41,7 +43,7 @@ pub struct Executor {
     script_path: PathBuf,
     secrets: Secrets,
 
-    domains: HashMap<String, Box<Domain>>,
+    domains: DomainCollection,
 
     pub jwt_issuer: String,
     pub jwt_token_duration: i64,
@@ -90,6 +92,13 @@ impl Executor {
             info.port.clone().unwrap_or_default(),
             info.db.clone().unwrap_or_default(),
         );
+        let mut domains = DomainCollection::new();
+        for (key, value) in info.domain_builders.iter() {
+            domains.insert(key, value.build());
+        }
+        let _ = domains.sync_with_database(&database_url)
+            .expect("Could not setup the domains in the database");
+
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder().build(manager)
             .expect("Could not start connection");
@@ -104,10 +113,6 @@ impl Executor {
             password_secret: info.password_secret.clone().unwrap_or_default(),
         };
 
-        let mut domains = HashMap::new();
-        for (key, value) in info.domain_builders.iter() {
-            domains.insert(key.clone(), value.build());
-        }
 
         Self {
             pool,

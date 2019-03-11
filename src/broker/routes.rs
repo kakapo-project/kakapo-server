@@ -42,6 +42,8 @@ pub fn call_procedure<'a, CB, S, F>(procedure: &str, cb: &mut CB, call_params: &
 {
     //TODO: put this in a macro, we are using this in the routes as well
     match procedure {
+        "getAllDomains" => cb.call(manage::get_all_domains, call_params),
+
         "getAllTables" => cb.call(manage::get_all_tables, call_params),
         "getAllQueries" => cb.call(manage::get_all_queries, call_params),
         "getAllScripts" => cb.call(manage::get_all_scripts, call_params),

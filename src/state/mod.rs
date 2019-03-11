@@ -3,6 +3,7 @@ pub mod error;
 pub mod authentication;
 pub mod authorization;
 pub mod user_management;
+pub mod domain_management;
 
 use serde_json;
 
@@ -33,6 +34,7 @@ use auth::send_mail::EmailOps;
 use state::authorization::AuthorizationOps;
 use state::authentication::AuthenticationOps;
 use state::user_management::UserManagementOps;
+use state::domain_management::DomainManagementOps;
 use state::error::BroadcastError;
 
 use scripting::ScriptFunctions;
@@ -54,7 +56,7 @@ pub struct ActionState {
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
-    pub datastore_conn: Result<Box<Datastore>, DomainError>,
+    pub datastore_conn: Result<Box<Datastore>, DomainError>, //TODO: probably use the domains for this
     pub query_conn: Result<Box<DataQuery>, DomainError>,
     pub jwt_issuer: String,
     pub jwt_duration: i64,
@@ -80,6 +82,7 @@ pub trait StateFunctions<'a>
         Self::EntityModifierFunctions: ModifierFunctions,
         //managementstore
         Self::UserManagement: UserManagementOps,
+        Self::DomainManagement: DomainManagementOps,
         Self::Authorization: AuthorizationOps,
         Self::Authentication: AuthenticationOps,
 {
@@ -92,6 +95,9 @@ pub trait StateFunctions<'a>
 
     type UserManagement; //write user stuff
     fn get_user_management(&'a self) -> Self::UserManagement;
+
+    type DomainManagement;
+    fn get_domain_management(&'a self) -> Self::DomainManagement;
 
     // tables management
     type EntityRetrieverFunctions;
@@ -151,6 +157,13 @@ impl<'a> StateFunctions<'a> for ActionState {
         UserManagement {
             conn: &self.database,
             authentication,
+        }
+    }
+
+    type DomainManagement = DomainManagement<'a>;
+    fn get_domain_management(&'a self) -> Self::DomainManagement {
+        DomainManagement {
+            conn: &self.database,
         }
     }
 
@@ -262,6 +275,10 @@ pub struct Authorization<'a> {
 pub struct UserManagement<'a> {
     pub conn: &'a Conn,
     pub authentication: Authentication<'a>
+}
+
+pub struct DomainManagement<'a> {
+    pub conn: &'a Conn,
 }
 
 pub struct PublishCallback<'a> {

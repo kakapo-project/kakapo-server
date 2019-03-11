@@ -217,6 +217,11 @@ impl<'a> StateFunctions<'a> for MockState {
         self.0.get_user_management()
     }
 
+    type DomainManagement = <ActionState as StateFunctions<'a>>::DomainManagement;
+    fn get_domain_management(&'a self) -> <Self as StateFunctions<'a>>::DomainManagement {
+        self.0.get_domain_management()
+    }
+
 
     type EntityRetrieverFunctions = <ActionState as StateFunctions<'a>>::EntityRetrieverFunctions;
     fn get_entity_retreiver_functions(&'a self) -> <Self as StateFunctions<'a>>::EntityRetrieverFunctions {

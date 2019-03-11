@@ -32,3 +32,15 @@ pub enum BroadcastError {
     #[fail(display = "An unknown error occurred")]
     Unknown,
 }
+
+#[derive(Debug, Fail, PartialEq, Eq)]
+pub enum DomainManagementError {
+    #[fail(display = "Already exists")]
+    AlreadyExists,
+    #[fail(display = "Not found")]
+    NotFound,
+    #[fail(display = "Internal error")]
+    InternalError(String), //returns back the DatabaseError variant of sql error
+    #[fail(display = "An unknown error occurred")]
+    Unknown,
+}

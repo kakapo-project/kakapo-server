@@ -2,6 +2,7 @@
 pub mod results;
 pub mod error;
 mod decorator;
+mod domain_actions;
 mod user_actions;
 mod entity_actions;
 mod table_actions;
@@ -20,6 +21,7 @@ use model::actions::error::Error;
 
 use state::ActionState;
 
+pub use model::actions::domain_actions::*;
 pub use model::actions::user_actions::*;
 pub use model::actions::entity_actions::*;
 pub use model::actions::table_actions::*;

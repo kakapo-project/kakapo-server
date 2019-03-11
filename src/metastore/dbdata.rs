@@ -17,6 +17,7 @@ use metastore::schema::invitation;
 use metastore::schema::session;
 use metastore::schema::channel;
 use metastore::schema::user_channel;
+use metastore::schema::domain;
 use metastore::schema::message;
 
 use data::permissions::Permission;
@@ -355,4 +356,23 @@ pub struct RawMessage {
     pub channel_id: i64,
     pub data: serde_json::Value,
     pub sent_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[table_name = "domain"]
+pub struct NewRawDomainInfo {
+    pub name: String,
+    pub type_: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Queryable, QueryableByName)]
+#[table_name = "domain"]
+pub struct RawDomainInfo {
+    pub domain_id: i64,
+    pub name: String,
+    pub type_: String,
+    pub description: String,
+    pub domain_info: serde_json::Value,
+    pub created_at: chrono::NaiveDateTime,
 }

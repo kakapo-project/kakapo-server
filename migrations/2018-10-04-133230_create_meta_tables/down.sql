@@ -41,3 +41,4 @@ DROP TABLE "invitation";
 
 DROP TABLE "user";
 
+DROP TABLE "domain";

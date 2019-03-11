@@ -1,5 +1,14 @@
 -- Initialize the meta tables
 
+CREATE TABLE "domain" (
+    "domain_id"               BIGSERIAL PRIMARY KEY,
+    "name"                    VARCHAR NOT NULL UNIQUE,
+    "type"                    VARCHAR NOT NULL,
+    "description"             VARCHAR NOT NULL DEFAULT '',
+    "domain_info"             JSON NOT NULL DEFAULT '{}',
+    "created_at"              TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE "user" (
     "user_id"                 BIGSERIAL PRIMARY KEY,
     "username"                VARCHAR NOT NULL UNIQUE,
@@ -29,7 +38,6 @@ CREATE TABLE "session" (
     "created_at"              TIMESTAMP NOT NULL DEFAULT NOW(),
     "expires_at"              TIMESTAMP NOT NULL DEFAULT (NOW() + INTERVAL '1 DAY')
 );
-
 
 CREATE TABLE "scope" (
     "scope_id"                BIGSERIAL PRIMARY KEY,
