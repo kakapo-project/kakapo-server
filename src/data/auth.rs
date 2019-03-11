@@ -59,7 +59,7 @@ pub struct InvitationToken {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[serde(tag = "token_type")]
+#[serde(tag = "tokenType")]
 pub enum SessionToken {
     #[serde(rename_all = "camelCase")]
     Bearer {

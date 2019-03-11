@@ -6,7 +6,9 @@ path = "src/lib.rs"
 
 [dependencies]
 actix = "0.7.7"
-actix-web = { version = "0.7.14", features = ["alpn"] }
+#actix-web = { version = "0.7.14", features = ["alpn"] }
+#TODO: get rid of this once everything is merged
+actix-web = { path = "/home/atta/actix-web", features = ["alpn"] }
 argonautica = { version = "0.1.5", features = ["serde", "simd"] }
 base64 = "0.10.0"
 bcrypt = "0.2.1"

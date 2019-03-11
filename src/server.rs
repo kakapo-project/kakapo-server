@@ -67,8 +67,8 @@ impl Server {
                 .middleware(Logger::new(r#"Requested [%r] FROM %a "%{User-Agent}i""#))
                 .configure(move |app| {
                     Cors::for_app(app)
-                        //.allowed_origin("http://localhost:3000") //TODO: this doesn't work in the current version of cors middleware https://github.com/actix/actix-web/issues/603
-                        //.allowed_origin("http://localhost:8080")
+                        .allowed_origin("http://localhost:3000")
+                        .allowed_origin("http://localhost:1845")
                         .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                         .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                         .allowed_header(http::header::CONTENT_TYPE)

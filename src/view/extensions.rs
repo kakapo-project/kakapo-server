@@ -196,6 +196,7 @@ impl<S> ProcedureExt<S> for TestApp<S>
     fn add_routes(&mut self) -> &mut Self {
         self
             .add_route("/manage/getAllDomains", manage::get_all_domains)
+
             .add_route("/manage/getAllTables", manage::get_all_tables)
             .add_route("/manage/getAllQueries", manage::get_all_queries)
             .add_route("/manage/getAllScripts", manage::get_all_scripts)
