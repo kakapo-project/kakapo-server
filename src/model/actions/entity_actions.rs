@@ -63,13 +63,23 @@ impl<A, T, S> Action<S> for WithFilterListByPermission<A, T, S>
 {
     type Ret = <GetAllEntities<T, S> as Action<S>>::Ret;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
-        let user_permissions = state
-            .get_authorization()
-            .permissions();
 
-        //TODO: check user logged in
+        let authorization = state.get_authorization();
+
+        let is_user_logged_in = authorization.is_logged_in();
+        if !is_user_logged_in {
+            return Err(Error::Unauthorized);
+        }
+
+        let user_permissions = authorization.permissions();
 
         let raw_results = self.action.call(state)?;
+
+        let is_user_admin = authorization.is_admin();
+        if is_user_admin {
+            return Ok(raw_results);
+        }
+
         let raw_results_name = raw_results.get_name();
 
         let GetAllEntitiesResult(inner_results) = raw_results.get_data();

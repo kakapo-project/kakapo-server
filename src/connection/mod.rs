@@ -147,7 +147,7 @@ impl AppStateBuilder {
             .expect("Must specify a password secret");
         let threads = self.num_threads;
 
-        info!("Staring database connection");
+        info!("Starting database connection");
         let connections = SyncArbiter::start(
             threads,
             move || executor::Executor::create(&self));

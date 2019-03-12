@@ -38,3 +38,6 @@ __pycache__
 # intellij
 .idea
 kakapo-server.iml
+
+# the script output, this should really be somewhere else
+local/

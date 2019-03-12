@@ -77,6 +77,7 @@ pub fn build_server() -> TestServer {
             .db("test")
             .script_path("./local")
             .token_secret(TEST_KEY)
+            .password_secret(TEST_KEY)
             .issuer("THE_ISSUER")
             .token_duration(600)
             .refresh_token_duration(60 * 60 * 24 * 7)
@@ -302,7 +303,7 @@ pub fn with_state<F>(f: F)
         Err(DomainError::Unknown),
         Err(DomainError::Unknown),
         "THE_ISSUER".to_string(),
-        500,
+        500, // 10 minutes
         60 * 60 * 24 * 7,
     );
 
