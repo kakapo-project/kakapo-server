@@ -62,7 +62,7 @@ impl Domain for KakapoPostgresDone {
     }
 
     fn connect_datastore(&self) -> Option<Box<Datastore>> {
-        info!("connecting to the pool");
+        debug!("connecting to the pool for datastore");
         let conn = self.pool.get()
             .expect("Could not get connection");
 
@@ -71,7 +71,7 @@ impl Domain for KakapoPostgresDone {
     }
 
     fn connect_query(&self) -> Option<Box<DataQuery>> {
-        info!("connecting to the pool");
+        debug!("connecting to the pool for query");
         let conn = self.pool.get()
             .expect("Could not get connection");
 

@@ -49,6 +49,8 @@ impl<S> Action<S> for Login<S>
 {
     type Ret = SessionToken;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling Login");
+
         let user = state
             .get_user_management() //TODO: this should be the responsibility of the authorization
             .get_user(&self.user_identifier, &self.password)
@@ -89,6 +91,8 @@ impl<S> Action<S> for Refresh<S>
 {
     type Ret = SessionToken;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling Refresh");
+
         let session_token = state
             .get_authentication()
             .refresh_session(self.refresh_token.to_owned())
@@ -123,6 +127,8 @@ impl<S> Action<S> for Logout<S>
 {
     type Ret = ();
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling Logout");
+
         let user_id = state
             .get_authorization()
             .user_id()
@@ -169,6 +175,8 @@ impl<S> Action<S> for GetAllUsers<S>
 {
     type Ret = AllUsersResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling GetAllUsers");
+
         state
             .get_user_management() //TODO: this should be the responsibility of the authorization
             .get_all_users()
@@ -207,6 +215,8 @@ impl<S> Action<S> for AddUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling AddUser");
+
         state
             .get_user_management()
             .add_user(&self.user)
@@ -244,6 +254,8 @@ impl<S> Action<S> for RemoveUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling RemoveUser");
+
         state
             .get_user_management()
             .remove_user(&self.user_identifier)
@@ -288,6 +300,8 @@ impl<S> Action<S> for InviteUser<S>
 {
     type Ret = InvitationResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling InviteUser");
+
         let invitation_token = state
             .get_user_management()
             .create_user_token(&self.email)
@@ -332,6 +346,8 @@ impl<S> Action<S> for SetupUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling SetupUser");
+
         state
             .get_user_management()
             .add_user(&self.user)
@@ -378,6 +394,8 @@ impl<S> Action<S> for SetUserPassword<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling SetUserPassword");
+
         state
             .get_user_management()
             .modify_user_password(&self.user_identifier, &self.password)
@@ -417,6 +435,8 @@ impl<S> Action<S> for AddRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling AddRole");
+
         state
             .get_user_management()
             .add_role(&self.role)
@@ -454,6 +474,8 @@ impl<S> Action<S> for RemoveRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling RemoveRole");
+
         state
             .get_user_management()
             .remove_role(&self.rolename)
@@ -496,6 +518,8 @@ impl<S> Action<S> for GetAllRoles<S>
 {
     type Ret = AllRolesResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling GetAllRoles");
+
         state
             .get_user_management()
             .get_all_roles()
@@ -540,6 +564,8 @@ impl<S> Action<S> for AttachPermissionForRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling AttachPermissionForRole");
+
         state
             .get_user_management()
             .attach_permission_for_role(&self.permission, &self.rolename)
@@ -584,6 +610,8 @@ impl<S> Action<S> for DetachPermissionForRole<S>
 {
     type Ret = RoleResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling DetachPermissionForRole");
+
         state
             .get_user_management()
             .detach_permission_for_role(&self.permission, &self.rolename)
@@ -634,6 +662,8 @@ impl<S> Action<S> for AttachRoleForUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling AttachRoleForUser");
+
         state
             .get_user_management()
             .attach_role_for_user(&self.rolename, &self.user_identifier)
@@ -677,6 +707,8 @@ impl<S> Action<S> for DetachRoleForUser<S>
 {
     type Ret = UserResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling DetachRoleForUser");
+
         state
             .get_user_management()
             .detach_role_for_user(&self.rolename, &self.user_identifier)

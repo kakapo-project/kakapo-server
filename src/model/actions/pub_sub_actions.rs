@@ -36,17 +36,19 @@ impl<S> SubscribeTo<S>
         for<'a> S: StateFunctions<'a>,
 {
     pub fn new(channel: Channels) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+        debug!("new action SubscribeTo");
+
         let permission = channel.required_permission();
         let action = Self {
             channel,
             phantom_data: PhantomData,
         };
 
-        let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, permission);
+        let action = WithTransaction::new(action);
+        let action =
+            WithPermissionRequired::new(action, permission);
 
-        action_with_permission
+        action
     }
 }
 
@@ -56,6 +58,7 @@ impl<S> Action<S> for SubscribeTo<S>
 {
     type Ret = SubscriptionResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling SubscribeTo");
 
         let user_id = state
             .get_authorization()
@@ -81,15 +84,17 @@ impl<S> UnsubscribeFrom<S>
             for<'a> S: StateFunctions<'a>,
 {
     pub fn new(channel: Channels) -> WithLoginRequired<WithTransaction<Self, S>, S> {
+        debug!("new action UnsubscribeFrom");
+
         let action = Self {
             channel,
             phantom_data: PhantomData,
         };
 
-        let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission = WithLoginRequired::new(action_with_transaction);
+        let action = WithTransaction::new(action);
+        let action = WithLoginRequired::new(action);
 
-        action_with_permission
+        action
     }
 }
 
@@ -99,6 +104,7 @@ impl<S> Action<S> for UnsubscribeFrom<S>
 {
     type Ret = SubscriptionResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling UnsubscribeFrom");
 
         let user_id = state
             .get_authorization()
@@ -124,17 +130,19 @@ impl<S> GetSubscribers<S>
             for<'a> S: StateFunctions<'a>,
 {
     pub fn new(channel: Channels) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+        debug!("new action GetSubscribers");
+
         let permission = channel.required_permission();
         let action = Self {
             channel,
             phantom_data: PhantomData,
         };
 
-        let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission =
-            WithPermissionRequired::new(action_with_transaction, permission);
+        let action = WithTransaction::new(action);
+        let action =
+            WithPermissionRequired::new(action, permission);
 
-        action_with_permission
+        action
     }
 }
 
@@ -144,6 +152,8 @@ impl<S> Action<S> for GetSubscribers<S>
 {
     type Ret = Vec<data::auth::User>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling GetSubscribers");
+
         state
             .get_pub_sub()
             .get_subscribers(self.channel.to_owned())
@@ -164,16 +174,18 @@ impl<S> GetMessages<S>
             for<'a> S: StateFunctions<'a>,
 {
     pub fn new(start_time: chrono::NaiveDateTime, end_time: chrono::NaiveDateTime) -> WithLoginRequired<WithTransaction<Self, S>, S> {
+        debug!("new action GetMessages");
+
         let action = Self {
             start_time,
             end_time,
             phantom_data: PhantomData,
         };
 
-        let action_with_transaction = WithTransaction::new(action);
-        let action_with_permission = WithLoginRequired::new(action_with_transaction);
+        let action = WithTransaction::new(action);
+        let action = WithLoginRequired::new(action);
 
-        action_with_permission
+        action
     }
 }
 
@@ -183,6 +195,7 @@ impl<S> Action<S> for GetMessages<S>
 {
     type Ret = Vec<data::Message>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling GetMessages");
 
         let user_id = state
             .get_authorization()

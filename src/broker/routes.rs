@@ -6,39 +6,44 @@ use model::actions::Action;
 use view::routes::manage;
 use view::routes::pubsub;
 
-pub struct CallParams<'a, S, F>
+pub struct CallParams<'a, S, F, EF>
     where
         S: AppStateLike + 'static,
         //TODO: this is really annoying. You can probably fuck around with the lifetimes and generics enough to get this working
         //more generally, but right now we have to pass in a static function, can't be a closure
         for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
+        for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static,
 {
     pub data: serde_json::Value,
     pub params: serde_json::Value,
     pub ctx: &'a mut ws::WebsocketContext<WsClientSession<S>, S>,
     pub on_received: &'static F,
+    pub on_received_error: &'static EF,
 }
 
 
 pub trait CallAction<S> {
-    fn call<'a, PB, A, F>(&mut self, procedure_builder: PB, call_params: &'a mut CallParams<'a, S, F>)
+    fn call<'a, PB, A, F, EF>(&mut self, procedure_builder: PB, call_params: &'a mut CallParams<'a, S, F, EF>)
         where
             PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
             S: AppStateLike + 'static,
             A: Action + 'static,
-            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static;
+            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
+            for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static;
 
-    fn error<'a, F>(&mut self, call_params: &'a mut CallParams<'a, S, F>)
+    fn error<'a, F, EF>(&mut self, call_params: &'a mut CallParams<'a, S, F, EF>)
         where
             S: AppStateLike + 'static,
-            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static;
+            for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
+            for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static;
 }
 
-pub fn call_procedure<'a, CB, S, F>(procedure: &str, cb: &mut CB, call_params: &'a mut CallParams<'a, S, F>)
+pub fn call_procedure<'a, CB, S, F, EF>(procedure: &str, cb: &mut CB, call_params: &'a mut CallParams<'a, S, F, EF>)
     where
         S: AppStateLike + 'static,
         CB: CallAction<S>,
         for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
+        for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static,
 {
     //TODO: put this in a macro, we are using this in the routes as well
     match procedure {

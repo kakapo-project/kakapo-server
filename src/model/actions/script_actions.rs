@@ -53,6 +53,8 @@ impl<S> Action<S> for RunScript<S>
 {
     type Ret = ScriptResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling RunScript");
+
         state
             .get_entity_retreiver_functions()
             .get_one::<data::Script>(&self.script_name)

@@ -54,6 +54,8 @@ impl<S> Action<S> for RunQuery<S>
 {
     type Ret = RunQueryResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling RunQuery");
+
         state
             .get_entity_retreiver_functions()
             .get_one(&self.query_name)

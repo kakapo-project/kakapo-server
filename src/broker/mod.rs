@@ -107,6 +107,11 @@ impl<S> WsClientSession<S>
             });
     }
 
+    fn process_message_when_callback_is_not_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: String) {
+        warn!("Encountered an error when processing message: {:?}", &res);
+        // Do nothing
+    }
+
     fn message_process(&mut self, ctx: &mut ws::WebsocketContext<Self, S>) {
         let lag = chrono::Duration::from_std(MESSAGE_LAG)
             .unwrap_or_else(|err| {
@@ -127,9 +132,11 @@ impl<S> WsClientSession<S>
         {
             let mut call_params = CallParams {
                 data, params, ctx,
-                on_received: &Self::process_message_when_callback_is_ok
+                on_received: &Self::process_message_when_callback_is_ok,
+                on_received_error: &Self::process_message_when_callback_is_not_ok,
             };
 
+            //TODO: refactor this, why is a string getting passed explicitly?
             routes::call_procedure("getMessages", self, &mut call_params);
         }
 
@@ -228,6 +235,11 @@ impl<S> WsClientSession<S>
         ctx.text(message);
     }
 
+    fn callback_when_action_is_not_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: String) {
+        let message = serde_json::to_string(&json!({"error": res})).unwrap_or_default();
+        ctx.text(message)
+    }
+
     fn handle_message(&mut self, ctx: &mut ws::WebsocketContext<Self, S>, input: WsInputData) {
         match input {
             WsInputData::Authenticate { token } => {
@@ -239,6 +251,7 @@ impl<S> WsClientSession<S>
                 let mut call_params = CallParams {
                     data, params, ctx,
                     on_received: &Self::callback_when_action_is_ok,
+                    on_received_error: &Self::callback_when_action_is_not_ok,
                 };
 
                 let result = routes::call_procedure(&procedure, self, &mut call_params);
@@ -252,12 +265,13 @@ impl<S> CallAction<S> for WsClientSession<S>
     where S: AppStateLike
 {
     /// For use by the websockets
-    fn call<'a, PB, A, F>(&mut self, procedure_builder: PB, call_params: &mut CallParams<'a, S, F>)
+    fn call<'a, PB, A, F, EF>(&mut self, procedure_builder: PB, call_params: &mut CallParams<'a, S, F, EF>)
         where
             PB: ProcedureBuilder<S, serde_json::Value, serde_json::Value, A> + Clone + 'static,
             S: AppStateLike + 'static,
             A: Action + 'static,
             for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
+            for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static,
     {
 
         let action = procedure_builder
@@ -270,6 +284,7 @@ impl<S> CallAction<S> for WsClientSession<S>
         }
 
         let on_received = call_params.on_received;
+        let on_received_error = call_params.on_received_error;
 
         call_params
             .ctx
@@ -287,14 +302,12 @@ impl<S> CallAction<S> for WsClientSession<S>
                         },
                         Err(err) => {
                             info!("action message error");
-                            let message = serde_json::to_string(&json!({"error": err.to_string()})).unwrap_or_default();
-                            ctx.text(message)
+                            (&on_received_error)(ctx, err.to_string());
                         }
                     },
                     Err(err) => {
                         error!("websocket error occurred with error message: {:?}", &err);
-                        let message = serde_json::to_string(&json!({"error": err.to_string()})).unwrap_or_default();
-                        ctx.text(message)
+                        (&on_received_error)(ctx, err.to_string());
                     }
                 }
 
@@ -303,10 +316,11 @@ impl<S> CallAction<S> for WsClientSession<S>
             .wait(&mut call_params.ctx); //TODO: is spawn better here?
     }
 
-    fn error<'a, F>(&mut self, call_params: &'a mut CallParams<'a, S, F>)
+    fn error<'a, F, EF>(&mut self, call_params: &'a mut CallParams<'a, S, F, EF>)
         where
             S: AppStateLike + 'static,
             for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
+            for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static,
     {
         let message = serde_json::to_string(&json!({"error": "Did not understand procedure"})).unwrap_or_default();
         call_params.ctx.text(message)

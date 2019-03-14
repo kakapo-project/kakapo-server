@@ -57,6 +57,8 @@ impl<S> Action<S> for QueryTableData<S>
 {
     type Ret = GetTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling QueryTableData");
+
         state
             .get_entity_retreiver_functions()
             .get_one( &self.table_name)
@@ -116,6 +118,8 @@ impl<S> Action<S> for InsertTableData<S>
 {
     type Ret = InsertTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling InsertTableData");
+
         state
             .get_entity_retreiver_functions()
             .get_one(&self.table_name)
@@ -176,6 +180,8 @@ impl<S> Action<S> for ModifyTableData<S>
 {
     type Ret = ModifyTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling ModifyTableData");
+
         state
             .get_entity_retreiver_functions()
             .get_one(&self.table_name)
@@ -235,6 +241,8 @@ impl<S> Action<S> for RemoveTableData<S>
 {
     type Ret = RemoveTableDataResult;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling RemoveTableData");
+
         state
             .get_entity_retreiver_functions()
             .get_one(&self.table_name)
