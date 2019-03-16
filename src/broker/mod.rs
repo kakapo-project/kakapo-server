@@ -96,14 +96,18 @@ impl<S> WsClientSession<S>
     }
 
     fn process_message_when_callback_is_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: serde_json::Value) {
-        let messages = res
+        let action_name = &res["action"];
+        let messages = res["data"]
             .as_array() //Assumes that the getMessages returns an array
             .unwrap_or(&vec![])
             .into_iter()
             .for_each(|message_res| {
-                //TODO: need the action name
-                let message = serde_json::to_string(&message_res).unwrap_or_default();
-                ctx.text(message);
+                let message = json!({
+                    "action": action_name.to_owned(),
+                    "data": message_res,
+                });
+                let message_text = serde_json::to_string(&message).unwrap_or_default();
+                ctx.text(message_text);
             });
     }
 
@@ -297,7 +301,7 @@ impl<S> CallAction<S> for WsClientSession<S>
                     Ok(ok_res) => match ok_res {
                         Ok(res) => {
                             info!("action message ok");
-                            let res_value = serde_json::to_value(&res.get_data()).unwrap_or_default();
+                            let res_value = res.get_tagged_data();
                             (&on_received)(ctx, res_value);
                         },
                         Err(err) => {

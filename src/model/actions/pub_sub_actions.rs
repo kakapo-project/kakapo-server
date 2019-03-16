@@ -69,7 +69,7 @@ impl<S> Action<S> for SubscribeTo<S>
             .get_pub_sub()
             .subscribe(user_id, self.channel.to_owned())
             .map_err(|err| Error::PublishError(err))
-            .and_then(|res| ActionRes::new("UnsubscribeFrom", SubscriptionResult::Subscribed(res)))
+            .and_then(|res| ActionRes::new("SubscribeTo", SubscriptionResult::Subscribed(res)))
     }
 }
 

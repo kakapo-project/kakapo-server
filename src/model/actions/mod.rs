@@ -37,7 +37,7 @@ pub struct OkAction<R> {
 }
 
 impl<R> OkAction<R>
-    where R: Send,
+    where R: Send + Serialize,
 {
 
     pub fn get_name(&self) -> String {
@@ -46,6 +46,16 @@ impl<R> OkAction<R>
 
     pub fn get_data_ref(&self) -> &R {
         &self.data
+    }
+
+    pub fn get_tagged_data(&self) -> serde_json::Value {
+        //TODO: should probably be a result
+        let res_value = serde_json::to_value(self.get_data_ref()).unwrap_or_default();
+
+        json!({
+            "action": self.get_name(),
+            "data": res_value
+        })
     }
 
     pub fn get_data(self) -> R {
