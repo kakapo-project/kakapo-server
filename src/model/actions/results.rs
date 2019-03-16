@@ -96,4 +96,5 @@ pub struct AllRolesResult(pub Vec<data::auth::Role>);
 pub enum SubscriptionResult {
     Subscribed(Subscription),
     Unsubscribed(Subscription),
+    UnsubscribedAll,
 }

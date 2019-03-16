@@ -293,6 +293,8 @@ pub trait PubSubOps {
 
     fn unsubscribe(&self, user_id: i64, channel: Channels) -> Result<Subscription, BroadcastError>;
 
+    fn unsubscribe_all(&self, user_id: i64) -> Result<(), BroadcastError>;
+
     fn get_subscribers(&self, channel: Channels) -> Result<Vec<User>, BroadcastError>;
 
     fn get_messages(

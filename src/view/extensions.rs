@@ -104,6 +104,7 @@ impl<S> ProcedureExt<S> for CorsBuilder<S>
     fn add_routes(&mut self) -> &mut Self {
         self
             .add_route("/manage/getAllDomains", manage::get_all_domains)
+            //TODO: manage domains?
 
             .add_route("/manage/getAllTables", manage::get_all_tables)
             .add_route("/manage/getAllQueries", manage::get_all_queries)
@@ -132,6 +133,8 @@ impl<S> ProcedureExt<S> for CorsBuilder<S>
 
             .add_route("/manage/runQuery", manage::run_query)
             .add_route("/manage/runScript", manage::run_script)
+
+            //TODO: subscriptions maybe?
 
             .add_route("/users/login", users::login)
             .add_route("/users/refresh", users::refresh)

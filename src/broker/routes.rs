@@ -79,6 +79,7 @@ pub fn call_procedure<'a, CB, S, F, EF>(procedure: &str, cb: &mut CB, call_param
 
         "subscribeTo" => cb.call(pubsub::subscribe_to, call_params),
         "unsubscribeFrom" => cb.call(pubsub::unsubscribe_from, call_params),
+        "unsubscribeAll" => cb.call(pubsub::unsubscribe_all, call_params),
         "getSubscribers" => cb.call(pubsub::get_subscribers, call_params),
         "getMessages" => cb.call(pubsub::get_messages, call_params),
 

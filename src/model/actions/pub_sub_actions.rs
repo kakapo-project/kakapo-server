@@ -119,6 +119,52 @@ impl<S> Action<S> for UnsubscribeFrom<S>
     }
 }
 
+
+#[derive(Debug)]
+pub struct UnsubscribeAll<S = ActionState>  {
+    pub phantom_data: PhantomData<(S)>,
+}
+
+impl<S> UnsubscribeAll<S>
+    where
+            for<'a> S: StateFunctions<'a>,
+{
+    pub fn new() -> WithLoginRequired<WithTransaction<Self, S>, S> {
+        debug!("new action UnsubscribeFrom");
+
+        let action = Self {
+            phantom_data: PhantomData,
+        };
+
+        let action = WithTransaction::new(action);
+        let action = WithLoginRequired::new(action);
+
+        action
+    }
+}
+
+impl<S> Action<S> for UnsubscribeAll<S>
+    where
+            for<'a> S: StateFunctions<'a>,
+{
+    type Ret = SubscriptionResult;
+    fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        debug!("Calling UnsubscribeAll");
+
+        let user_id = state
+            .get_authorization()
+            .user_id()
+            .ok_or_else(|| Error::Unauthorized)?;
+
+        state
+            .get_pub_sub()
+            .unsubscribe_all(user_id)
+            .map_err(|err| Error::PublishError(err))
+            .and_then(|res| ActionRes::new("unsubscribeFrom", SubscriptionResult::UnsubscribedAll))
+    }
+}
+
+
 #[derive(Debug)]
 pub struct GetSubscribers<S = ActionState>  {
     pub channel: Channels,

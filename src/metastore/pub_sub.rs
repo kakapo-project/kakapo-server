@@ -74,6 +74,16 @@ impl<'a> PubSubOps for PublishCallback<'a> {
         Ok(Subscription { user, channel })
     }
 
+    fn unsubscribe_all(&self, user_id: i64) -> Result<(), BroadcastError> {
+        info!("unsubscribing user channels");
+
+        let raw_user = get_user(self.conn, user_id)?;
+        remove_user_from_all_channels(self.conn, raw_user.user_id)?;
+        //TODO: if it's the last user subscribing to the channel, delete channel
+
+        Ok(())
+    }
+
     fn get_subscribers(&self, channel: Channels) -> Result<Vec<User>, BroadcastError> {
         info!("getting all subscribers from channels: {:?}", &channel);
 
@@ -228,12 +238,26 @@ fn create_user_channel(conn: &Conn, user_id: i64, channel_id: i64) -> Result<dbd
 }
 
 fn remove_user_channel(conn: &Conn, user_id: i64, channel_id: i64) -> Result<dbdata::RawUserChannel, BroadcastError> {
-    let user_channel_value = dbdata::NewRawUserChannel { user_id, channel_id, };
 
     diesel::delete(schema::user_channel::table)
         .filter(schema::user_channel::columns::user_id.eq(&user_id))
         .filter(schema::user_channel::columns::channel_id.eq(&channel_id))
         .get_result::<dbdata::RawUserChannel>(conn)
+        .map_err(|err| match err {
+            DbError::NotFound => {
+                BroadcastError::NotSubscribed
+            },
+            _ => {
+                BroadcastError::InternalError(err.to_string())
+            }
+        })
+}
+
+fn remove_user_from_all_channels(conn: &Conn, user_id: i64) -> Result<Vec<dbdata::RawUserChannel>, BroadcastError> {
+
+    diesel::delete(schema::user_channel::table)
+        .filter(schema::user_channel::columns::user_id.eq(&user_id))
+        .get_results::<dbdata::RawUserChannel>(conn)
         .map_err(|err| match err {
             DbError::NotFound => {
                 BroadcastError::NotSubscribed

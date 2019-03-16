@@ -66,7 +66,25 @@ impl<S> Actor for WsClientSession<S>
         self.start_message_process(ctx);
     }
 
-    fn stopped(&mut self, _ctx: &mut Self::Context) {
+    fn stopped(&mut self, ctx: &mut Self::Context) {
+
+        // unsubscribing from all
+        // TODO: maybe this should be dependent on what has been subscribed during this session
+        let data = json!({});
+        let params = json!({});
+
+        {
+            let mut call_params = CallParams {
+                data, params, ctx,
+                on_received: &Self::do_nothing_for_unsubscribe,
+                on_received_error: &Self::do_nothing_for_unsubscribe_err,
+            };
+
+            //TODO: refactor this, why is a string getting passed explicitly?
+            routes::call_procedure("unsubscribeAll", self, &mut call_params);
+        }
+
+
         info!("WsSession[{}] closed ", &self.id.to_hyphenated_ref());
     }
 }
@@ -93,6 +111,14 @@ impl<S> WsClientSession<S>
     fn start_message_process(&mut self, ctx: &mut <Self as Actor>::Context) {
 
         ctx.run_later(MESSAGE_INTERVAL, Self::message_process);
+    }
+
+    fn do_nothing_for_unsubscribe(ctx: &mut ws::WebsocketContext<Self, S>, res: serde_json::Value) {
+        debug!("User unsubscribed from all channels {:?}", &res);
+    }
+
+    fn do_nothing_for_unsubscribe_err(ctx: &mut ws::WebsocketContext<Self, S>, res: String) {
+        debug!("User wasn't able to unsubscribed from all channels {:?}", &res);
     }
 
     fn process_message_when_callback_is_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: serde_json::Value) {
@@ -326,8 +352,9 @@ impl<S> CallAction<S> for WsClientSession<S>
             for<'b> F: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, serde_json::Value) -> () + 'static,
             for<'b> EF: Fn(&'b mut ws::WebsocketContext<WsClientSession<S>, S>, String) -> () + 'static,
     {
-        let message = serde_json::to_string(&json!({"error": "Did not understand procedure"})).unwrap_or_default();
-        call_params.ctx.text(message)
+        let message = "Did not understand procedure".to_string();
+        let on_received_error = call_params.on_received_error;
+        (&on_received_error)(call_params.ctx, message);
     }
 }
 

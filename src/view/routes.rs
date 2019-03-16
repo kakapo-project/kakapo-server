@@ -231,6 +231,13 @@ pub mod pubsub {
         Ok(actions::UnsubscribeFrom::<_>::new(channel))
     }
 
+    pub fn unsubscribe_all(data: Value, query: Value) -> Result<impl Action, Error> {
+        let _: NoQuery = from_value(data)?;
+        let _: NoQuery = from_value(query)?;
+
+        Ok(actions::UnsubscribeAll::<_>::new())
+    }
+
     pub fn get_subscribers(data: Value, query: Value) -> Result<impl Action, Error> {
         let channel: data::channels::Channels = from_value(data)?;
         let _: NoQuery = from_value(query)?;
