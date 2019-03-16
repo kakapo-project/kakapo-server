@@ -70,6 +70,6 @@ impl<S> Action<S> for RunQuery<S>
                     .run_query(&query, &self.params, &self.format)
                     .map_err(|err| Error::Datastore(err))
             })
-            .and_then(|res| ActionRes::new("RunQuery", RunQueryResult(res)))
+            .and_then(|res| ActionRes::new("runQuery", RunQueryResult(res)))
     }
 }

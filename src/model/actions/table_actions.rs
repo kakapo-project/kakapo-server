@@ -75,7 +75,7 @@ impl<S> Action<S> for QueryTableData<S>
                     .query(&table)
                     .map_err(|err| Error::Datastore(err))
             })
-            .and_then(|res| ActionRes::new("QueryTableData", GetTableDataResult(res)))
+            .and_then(|res| ActionRes::new("queryTableData", GetTableDataResult(res)))
     }
 }
 
@@ -138,7 +138,7 @@ impl<S> Action<S> for InsertTableData<S>
                     OnDuplicate::Fail => table_controller.insert_row(&table, &self.data, true)
                 }.or_else(|err| Err(Error::Datastore(err)))
             })
-            .and_then(|res| ActionRes::new("InsertTableData", InsertTableDataResult(res)))
+            .and_then(|res| ActionRes::new("insertTableData", InsertTableDataResult(res)))
     }
 }
 
@@ -199,7 +199,7 @@ impl<S> Action<S> for ModifyTableData<S>
                     OnNotFound::Fail => table_controller.update_row(&table, &self.keyed_data, true)
                 }.or_else(|err| Err(Error::Datastore(err)))
             })
-            .and_then(|res| ActionRes::new("ModifyTableData", ModifyTableDataResult(res)))
+            .and_then(|res| ActionRes::new("modifyTableData", ModifyTableDataResult(res)))
     }
 }
 
@@ -260,7 +260,7 @@ impl<S> Action<S> for RemoveTableData<S>
                     OnNotFound::Fail => table_controller.delete_row(&table, &self.keys, true)
                 }.or_else(|err| Err(Error::Datastore(err)))
             })
-            .and_then(|res| ActionRes::new("RemoveTableData", RemoveTableDataResult(res)))
+            .and_then(|res| ActionRes::new("removeTableData", RemoveTableDataResult(res)))
     }
 }
 

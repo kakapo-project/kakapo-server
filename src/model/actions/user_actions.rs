@@ -61,7 +61,7 @@ impl<S> Action<S> for Login<S>
             .create_session(user)
             .map_err(Error::UserManagement)?;
 
-        ActionRes::new("Login", session_token)
+        ActionRes::new("login", session_token)
     }
 }
 
@@ -98,7 +98,7 @@ impl<S> Action<S> for Refresh<S>
             .refresh_session(self.refresh_token.to_owned())
             .map_err(Error::UserManagement)?;
 
-        ActionRes::new("Refresh", session_token)
+        ActionRes::new("refresh", session_token)
     }
 }
 
@@ -141,7 +141,7 @@ impl<S> Action<S> for Logout<S>
             .delete_session(user_id)
             .map_err(Error::UserManagement)?;
 
-        ActionRes::new("Logout", ())
+        ActionRes::new("logout", ())
     }
 }
 
@@ -181,7 +181,7 @@ impl<S> Action<S> for GetAllUsers<S>
             .get_user_management() //TODO: this should be the responsibility of the authorization
             .get_all_users()
             .map_err(Error::UserManagement)
-            .and_then(|res| ActionRes::new("GetAllUsers", AllUsersResult(res)))
+            .and_then(|res| ActionRes::new("getAllUsers", AllUsersResult(res)))
     }
 }
 
@@ -221,7 +221,7 @@ impl<S> Action<S> for AddUser<S>
             .get_user_management()
             .add_user(&self.user)
             .map_err(Error::UserManagement)
-            .and_then(|res| ActionRes::new("AddUser", UserResult(res)))
+            .and_then(|res| ActionRes::new("addUser", UserResult(res)))
     }
 }
 
@@ -267,7 +267,7 @@ impl<S> Action<S> for RemoveUser<S>
                     .map_err(Error::PublishError)?;
                 Ok(res)
             })
-            .and_then(|res| ActionRes::new("RemoveUser", UserResult(res)))
+            .and_then(|res| ActionRes::new("removeUser", UserResult(res)))
     }
 }
 
@@ -312,7 +312,7 @@ impl<S> Action<S> for InviteUser<S>
             .send_email(invitation_token)
             .map_err(Error::EmailError)?;
 
-        ActionRes::new("InviteUser", InvitationResult(invitation))
+        ActionRes::new("inviteUser", InvitationResult(invitation))
     }
 }
 
@@ -352,7 +352,7 @@ impl<S> Action<S> for SetupUser<S>
             .get_user_management()
             .add_user(&self.user)
             .map_err(Error::UserManagement)
-            .and_then(|res| ActionRes::new("SetupUser", UserResult(res)))
+            .and_then(|res| ActionRes::new("setupUser", UserResult(res)))
     }
 }
 
@@ -400,7 +400,7 @@ impl<S> Action<S> for SetUserPassword<S>
             .get_user_management()
             .modify_user_password(&self.user_identifier, &self.password)
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("SetUserPassword", UserResult(res)))
+            .and_then(|res| ActionRes::new("setUserPassword", UserResult(res)))
     }
 }
 
@@ -441,7 +441,7 @@ impl<S> Action<S> for AddRole<S>
             .get_user_management()
             .add_role(&self.role)
             .map_err(Error::UserManagement)
-            .and_then(|res| ActionRes::new("AddRole", RoleResult(res)))
+            .and_then(|res| ActionRes::new("addRole", RoleResult(res)))
     }
 }
 
@@ -487,7 +487,7 @@ impl<S> Action<S> for RemoveRole<S>
                     .map_err(Error::PublishError)?;
                 Ok(res)
             })
-            .and_then(|res| ActionRes::new("RemoveRole", RoleResult(res)))
+            .and_then(|res| ActionRes::new("removeRole", RoleResult(res)))
     }
 }
 
@@ -524,7 +524,7 @@ impl<S> Action<S> for GetAllRoles<S>
             .get_user_management()
             .get_all_roles()
             .or_else(|err| Err(Error::UserManagement(err)))
-            .and_then(|res| ActionRes::new("GetAllRoles", AllRolesResult(res)))
+            .and_then(|res| ActionRes::new("getAllRoles", AllRolesResult(res)))
     }
 }
 
@@ -570,7 +570,7 @@ impl<S> Action<S> for AttachPermissionForRole<S>
             .get_user_management()
             .attach_permission_for_role(&self.permission, &self.rolename)
             .map_err(Error::UserManagement)
-            .and_then(|res| ActionRes::new("AttachPermissionForRole", RoleResult(res)))
+            .and_then(|res| ActionRes::new("attachPermissionForRole", RoleResult(res)))
     }
 }
 
@@ -623,7 +623,7 @@ impl<S> Action<S> for DetachPermissionForRole<S>
                     .map_err(Error::PublishError)?;
                 Ok(res)
             })
-            .and_then(|res| ActionRes::new("DetachPermissionForRole", RoleResult(res)))
+            .and_then(|res| ActionRes::new("detachPermissionForRole", RoleResult(res)))
     }
 }
 
@@ -668,7 +668,7 @@ impl<S> Action<S> for AttachRoleForUser<S>
             .get_user_management()
             .attach_role_for_user(&self.rolename, &self.user_identifier)
             .map_err(Error::UserManagement)
-            .and_then(|res| ActionRes::new("AttachRoleForUser", UserResult(res)))
+            .and_then(|res| ActionRes::new("attachRoleForUser", UserResult(res)))
     }
 }
 
@@ -720,7 +720,7 @@ impl<S> Action<S> for DetachRoleForUser<S>
                     .map_err(Error::PublishError)?;
                 Ok(res)
             })
-            .and_then(|res| ActionRes::new("DetachRoleForUser", UserResult(res)))
+            .and_then(|res| ActionRes::new("detachRoleForUser", UserResult(res)))
     }
 }
 

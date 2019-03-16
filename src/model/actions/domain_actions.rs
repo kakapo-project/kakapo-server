@@ -61,7 +61,7 @@ impl<S> Action<S> for GetAllDomains<S>
             .get_all_domains()
             .map_err(|err| Error::DomainManagement(err))?;
 
-        ActionRes::new("GetAllEntities", data)
+        ActionRes::new("getAllDomains", data)
     }
 }
 
@@ -91,6 +91,6 @@ impl<S> Action<S> for ModifyDomain<S>
     type Ret = Option<i32>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
         //TODO: fix this
-        ActionRes::new("ModifyDomain", None)
+        ActionRes::new("modifyDomain", None)
     }
 }

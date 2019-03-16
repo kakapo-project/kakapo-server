@@ -69,7 +69,7 @@ impl<S> Action<S> for RunScript<S>
                     .run(&script, &self.param)
                     .map_err(Error::Script)
             })
-            .and_then(|res| ActionRes::new("RunScript", res))
+            .and_then(|res| ActionRes::new("runScript", res))
     }
 }
 

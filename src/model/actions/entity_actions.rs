@@ -135,7 +135,7 @@ impl<T, S> Action<S> for GetAllEntities<T, S>
             .get_entity_retreiver_functions()
             .get_all()
             .or_else(|err| Err(Error::Entity(err)))?;
-        ActionRes::new("GetAllEntities", GetAllEntitiesResult::<T>(entities))
+        ActionRes::new("getAllEntities", GetAllEntitiesResult::<T>(entities)) //TODO: the action name must be table, script or query
     }
 }
 
@@ -180,7 +180,7 @@ impl<T, S> Action<S> for GetEntity<T, S>
             .or_else(|err| Err(Error::Entity(err)))?;
 
         match maybe_entity {
-            Some(entity) => ActionRes::new("GetEntity", GetEntityResult::<T>(entity)),
+            Some(entity) => ActionRes::new("getEntity", GetEntityResult::<T>(entity)), //TODO: the action name must be table, script or query
             None => Err(Error::NotFound),
         }
     }
@@ -257,8 +257,8 @@ impl<T, S> Action<S> for CreateEntity<T, S>
                     .and_then(|res| {
                         info!("upsert result: {:?}", &res);
                         match res {
-                            Upserted::Update { old, new } => ActionRes::new("CreateEntity", CreateEntityResult::Updated { old, new }),
-                            Upserted::Create { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created { new }),
+                            Upserted::Update { old, new } => ActionRes::new("createEntity", CreateEntityResult::Updated { old, new }),
+                            Upserted::Create { new } => ActionRes::new("createEntity", CreateEntityResult::Created { new }),
                         }
                     })
             },
@@ -270,8 +270,8 @@ impl<T, S> Action<S> for CreateEntity<T, S>
                     .and_then(|res| {
                         info!("create result: {:?}", &res);
                         match res {
-                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created { new }),
-                            Created::Fail { existing } => ActionRes::new("CreateEntity", CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
+                            Created::Success { new } => ActionRes::new("createEntity", CreateEntityResult::Created { new }),
+                            Created::Fail { existing } => ActionRes::new("createEntity", CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
                         }
                     })
 
@@ -284,7 +284,7 @@ impl<T, S> Action<S> for CreateEntity<T, S>
                     .and_then(|res| {
                         info!("create result: {:?}", &res);
                         match res {
-                            Created::Success { new } => ActionRes::new("CreateEntity", CreateEntityResult::Created { new }),
+                            Created::Success { new } => ActionRes::new("createEntity", CreateEntityResult::Created { new }),
                             Created::Fail { .. } => Err(Error::AlreadyExists),
                         }
                     })
@@ -346,9 +346,9 @@ impl<T, S> Action<S> for UpdateEntity<T, S>
                         info!("update result: {:?}", &res);
                         match res {
                             Updated::Success { old, new } =>
-                                ActionRes::new("UpdateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new("updateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail =>
-                                ActionRes::new("UpdateEntity", UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
+                                ActionRes::new("updateEntity", UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
                         }
                     })
 
@@ -362,7 +362,7 @@ impl<T, S> Action<S> for UpdateEntity<T, S>
                         info!("update result: {:?}", &res);
                         match res {
                             Updated::Success { old, new } =>
-                                ActionRes::new("UpdateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new("updateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail => Err(Error::NotFound),
                         }
                     })
@@ -422,8 +422,8 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
                         info!("delete result: {:?}", &res);
                         match res {
                             Deleted::Success { old } =>
-                                ActionRes::new("DeleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
-                            Deleted::Fail => ActionRes::new("DeleteEntity", DeleteEntityResult::NotFound { id: self.name.to_owned() }),
+                                ActionRes::new("deleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                            Deleted::Fail => ActionRes::new("deleteEntity", DeleteEntityResult::NotFound { id: self.name.to_owned() }),
                         }
                     })
 
@@ -437,7 +437,7 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
                         info!("delete result: {:?}", &res);
                         match res {
                             Deleted::Success { old } =>
-                                ActionRes::new("DeleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                                ActionRes::new("deleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
                             Deleted::Fail => Err(Error::NotFound),
                         }
                     })
