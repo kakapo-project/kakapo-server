@@ -195,7 +195,7 @@ impl<'a> CrudTableOps for CrudTable<'a> {
             let values: Vec<Value> = key.values().map(|x| x.to_owned().into_value()).collect();
 
             let query = format!(
-                "DELETE {name} WHERE {id} RETURNING *", //"DELETE table WHERE id = my_id"
+                "DELETE FROM {name} WHERE {id} RETURNING *", //"DELETE table WHERE id = my_id"
                 name=&self.table.name,
                 id=key_names.iter().enumerate()
                     .map(|(i, x)| format!("{} = ${}", x, i+1))
