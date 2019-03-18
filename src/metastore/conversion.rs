@@ -172,6 +172,8 @@ impl GenerateRaw<data::View> for dbdata::NewRawView {
 
 impl RawEntityTypes for data::DataStoreEntity {
     const TYPE_NAME: &'static str = "table";
+    const TYPE_NAME_PLURAL: &'static str = "tables";
+
     type Data = RawTable;
     type NewData = NewRawTable;
 
@@ -179,6 +181,8 @@ impl RawEntityTypes for data::DataStoreEntity {
 
 impl RawEntityTypes for data::DataQueryEntity {
     const TYPE_NAME: &'static str = "query";
+    const TYPE_NAME_PLURAL: &'static str = "queries";
+
     type Data = RawQuery;
     type NewData = NewRawQuery;
 
@@ -186,6 +190,8 @@ impl RawEntityTypes for data::DataQueryEntity {
 
 impl RawEntityTypes for data::Script {
     const TYPE_NAME: &'static str = "script";
+    const TYPE_NAME_PLURAL: &'static str = "scripts";
+
     type Data = RawScript;
     type NewData = NewRawScript;
 
@@ -193,6 +199,8 @@ impl RawEntityTypes for data::Script {
 
 impl RawEntityTypes for data::View {
     const TYPE_NAME: &'static str = "view";
+    const TYPE_NAME_PLURAL: &'static str = "views";
+
     type Data = RawView;
     type NewData = NewRawView;
 

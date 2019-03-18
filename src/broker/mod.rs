@@ -375,7 +375,10 @@ impl<S> WsClientSession<S>
                 let bearer_token = to_bearer_token(token); //need it to be a bearer token for the action wrapper to handle it
                 self.auth_header = Some(bearer_token.as_bytes().to_vec());
 
-                let message = json!("authenticated");
+                let message = json!({
+                    "action": "authenticated",
+                    "data": {}
+                });
                 let message = serde_json::to_string(&message).unwrap_or_default();
                 ctx.text(message);
             },

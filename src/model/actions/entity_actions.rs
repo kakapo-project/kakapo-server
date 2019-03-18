@@ -8,6 +8,8 @@ use data::Named;
 use data::channels::Channels;
 use data::permissions::*;
 
+use inflector::Inflector;
+
 use model::actions::results::*;
 use model::actions::error::Error;
 use model::actions::decorator::*;
@@ -135,7 +137,9 @@ impl<T, S> Action<S> for GetAllEntities<T, S>
             .get_entity_retreiver_functions()
             .get_all()
             .or_else(|err| Err(Error::Entity(err)))?;
-        ActionRes::new("getAllEntities", GetAllEntitiesResult::<T>(entities)) //TODO: the action name must be table, script or query
+
+        let action_name =  format!("getAll{}", T::TYPE_NAME_PLURAL.to_pascal_case());
+        ActionRes::new(&action_name, GetAllEntitiesResult::<T>(entities))
     }
 }
 
@@ -179,8 +183,10 @@ impl<T, S> Action<S> for GetEntity<T, S>
             .get_one(&self.name)
             .or_else(|err| Err(Error::Entity(err)))?;
 
+        let action_name = format!("get{}", T::TYPE_NAME.to_pascal_case());
+
         match maybe_entity {
-            Some(entity) => ActionRes::new("getEntity", GetEntityResult::<T>(entity)), //TODO: the action name must be table, script or query
+            Some(entity) => ActionRes::new(&action_name, GetEntityResult::<T>(entity)),
             None => Err(Error::NotFound),
         }
     }
@@ -248,6 +254,9 @@ impl<T, S> Action<S> for CreateEntity<T, S>
 {
     type Ret = CreateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        let action_name = format!("create{}", T::TYPE_NAME.to_pascal_case());
+        let action_name_update =  format!("update{}", T::TYPE_NAME.to_pascal_case());
+
         match &self.on_duplicate {
             OnDuplicate::Update => {
                 state
@@ -257,8 +266,8 @@ impl<T, S> Action<S> for CreateEntity<T, S>
                     .and_then(|res| {
                         info!("upsert result: {:?}", &res);
                         match res {
-                            Upserted::Update { old, new } => ActionRes::new("createEntity", CreateEntityResult::Updated { old, new }),
-                            Upserted::Create { new } => ActionRes::new("createEntity", CreateEntityResult::Created { new }),
+                            Upserted::Update { old, new } => ActionRes::new(&action_name_update, CreateEntityResult::Updated { old, new }),
+                            Upserted::Create { new } => ActionRes::new(&action_name, CreateEntityResult::Created { new }),
                         }
                     })
             },
@@ -270,8 +279,8 @@ impl<T, S> Action<S> for CreateEntity<T, S>
                     .and_then(|res| {
                         info!("create result: {:?}", &res);
                         match res {
-                            Created::Success { new } => ActionRes::new("createEntity", CreateEntityResult::Created { new }),
-                            Created::Fail { existing } => ActionRes::new("createEntity", CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
+                            Created::Success { new } => ActionRes::new(&action_name, CreateEntityResult::Created { new }),
+                            Created::Fail { existing } => ActionRes::new(&action_name, CreateEntityResult::AlreadyExists { existing, requested: self.data.clone() } ),
                         }
                     })
 
@@ -284,7 +293,7 @@ impl<T, S> Action<S> for CreateEntity<T, S>
                     .and_then(|res| {
                         info!("create result: {:?}", &res);
                         match res {
-                            Created::Success { new } => ActionRes::new("createEntity", CreateEntityResult::Created { new }),
+                            Created::Success { new } => ActionRes::new(&action_name, CreateEntityResult::Created { new }),
                             Created::Fail { .. } => Err(Error::AlreadyExists),
                         }
                     })
@@ -336,6 +345,8 @@ impl<T, S> Action<S> for UpdateEntity<T, S>
 {
     type Ret = UpdateEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        let action_name =  format!("update{}", T::TYPE_NAME.to_pascal_case());
+
         match &self.on_not_found {
             OnNotFound::Ignore => {
                 state
@@ -346,9 +357,9 @@ impl<T, S> Action<S> for UpdateEntity<T, S>
                         info!("update result: {:?}", &res);
                         match res {
                             Updated::Success { old, new } =>
-                                ActionRes::new("updateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new(&action_name, UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail =>
-                                ActionRes::new("updateEntity", UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
+                                ActionRes::new(&action_name, UpdateEntityResult::NotFound { id: self.name.to_owned(), requested: self.data.clone() }),
                         }
                     })
 
@@ -362,7 +373,7 @@ impl<T, S> Action<S> for UpdateEntity<T, S>
                         info!("update result: {:?}", &res);
                         match res {
                             Updated::Success { old, new } =>
-                                ActionRes::new("updateEntity", UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
+                                ActionRes::new(&action_name, UpdateEntityResult::Updated { id: self.name.to_owned(), old, new }),
                             Updated::Fail => Err(Error::NotFound),
                         }
                     })
@@ -412,6 +423,8 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
 {
     type Ret = DeleteEntityResult<T>;
     fn call(&self, state: &S) -> ActionResult<Self::Ret> {
+        let action_name =  format!("delete{}", T::TYPE_NAME.to_pascal_case());
+
         match &self.on_not_found {
             OnNotFound::Ignore => {
                 state
@@ -422,8 +435,8 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
                         info!("delete result: {:?}", &res);
                         match res {
                             Deleted::Success { old } =>
-                                ActionRes::new("deleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
-                            Deleted::Fail => ActionRes::new("deleteEntity", DeleteEntityResult::NotFound { id: self.name.to_owned() }),
+                                ActionRes::new(&action_name, DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                            Deleted::Fail => ActionRes::new(&action_name, DeleteEntityResult::NotFound { id: self.name.to_owned() }),
                         }
                     })
 
@@ -437,7 +450,7 @@ impl<T, S> Action<S> for DeleteEntity<T, S>
                         info!("delete result: {:?}", &res);
                         match res {
                             Deleted::Success { old } =>
-                                ActionRes::new("deleteEntity", DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
+                                ActionRes::new(&action_name, DeleteEntityResult::Deleted { id: self.name.to_owned(), old } ),
                             Deleted::Fail => Err(Error::NotFound),
                         }
                     })

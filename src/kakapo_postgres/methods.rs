@@ -131,7 +131,42 @@ impl RawTableData {
 
 impl KeyedTableData {
     pub fn normalize(&self) -> (ObjectKeys, ObjectValues) {
-        unimplemented!()
+        match self {
+            KeyedTableData::Simplified(map) => {
+                unimplemented!()
+            },
+            KeyedTableData::Data(data) => {
+                unimplemented!()
+            },
+            KeyedTableData::FlatData(table_data) => {
+                let RawTableData { columns, data } = table_data;
+
+                let RawTableDataColumns { keys, values } = columns;
+                let key_names = keys;
+                let value_names = values;
+
+                let mut key_list = vec![];
+                let mut value_list = vec![];
+
+                for row in data {
+                    let RawTableDataData { keys, values } = row;
+
+                    let mut object_keys_hash_map = LinkedHashMap::new();
+                    for (key_name, key_item) in key_names.iter().zip(keys) {
+                        object_keys_hash_map.insert(key_name.to_owned(), key_item.to_owned());
+                    }
+                    key_list.push(object_keys_hash_map);
+
+                    let mut object_values_hash_map = LinkedHashMap::new();
+                    for (value_name, value_item) in value_names.iter().zip(values) {
+                        object_values_hash_map.insert(value_name.to_owned(), value_item.to_owned());
+                    }
+                    value_list.push(object_values_hash_map);
+                }
+
+                (ObjectKeys(key_list), ObjectValues(value_list))
+            },
+        }
     }
 }
 

@@ -38,6 +38,8 @@ pub trait RawEntityTypes
         Self: GetEntityChannel,
 {
     const TYPE_NAME: &'static str;
+    const TYPE_NAME_PLURAL: &'static str;
+
     type Data;
     type NewData;
 }

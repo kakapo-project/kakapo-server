@@ -17,6 +17,7 @@ extern crate env_logger;
 #[macro_use]
 extern crate failure;
 extern crate futures;
+extern crate inflector;
 extern crate json;
 extern crate jsonwebtoken;
 extern crate linked_hash_map;

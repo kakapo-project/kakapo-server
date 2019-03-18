@@ -29,7 +29,7 @@ pub enum Error {
     AlreadyExists,
     #[fail(display = "{}", 0)]
     SerializationError(String),
-    #[fail(display = "Could not publish {:?}", 0)]
+    #[fail(display = "{}", 0)]
     PublishError(BroadcastError),
     #[fail(display = "An unknown error occurred")]
     Unknown,
