@@ -82,7 +82,7 @@ impl Domain for KakapoPostgresDone {
 
 // All of this is just boilerplate -__-
 impl Datastore for KakapoPostgresConnection {
-    fn retrieve(&self, data_store: &DataStoreEntity) -> Result<serde_json::Value, DatastoreError> {
+    fn retrieve(&self, data_store: &DataStoreEntity, _: &serde_json::Value) -> Result<serde_json::Value, DatastoreError> {
         let table: Result<Table, DatastoreError> = data_store.into();
         let table = table?;
 

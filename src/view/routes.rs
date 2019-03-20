@@ -178,9 +178,9 @@ pub mod manage {
     }
 
     pub fn query_table_data(data: Value, query: Value) -> Result<impl Action, Error> {
-        let _: NoQuery = from_value(data)?;
+        let table_query: Value = data;
         let get_table: GetEntity = from_value(query)?;
-        Ok(actions::QueryTableData::<_>::new(get_table.name))
+        Ok(actions::QueryTableData::<_>::new(get_table.name, table_query))
     }
 
     pub fn insert_table_data(data: Value, query: Value) -> Result<impl Action, Error> {

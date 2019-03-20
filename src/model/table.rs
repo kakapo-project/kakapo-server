@@ -13,7 +13,7 @@ pub struct DatastoreAction<'a> {
 }
 
 pub trait DatastoreActionOps {
-    fn query(&self, table: &data::DataStoreEntity) -> Result<serde_json::Value, DatastoreError>;
+    fn query(&self, table: &data::DataStoreEntity, query: &serde_json::Value) -> Result<serde_json::Value, DatastoreError>;
 
     fn insert_row(&self, table: &data::DataStoreEntity, data: &serde_json::Value, fail_on_duplicate: bool) -> Result<serde_json::Value, DatastoreError>;
 
@@ -36,9 +36,9 @@ impl From<&DomainError> for DatastoreError {
 }
 
 impl<'a> DatastoreActionOps for DatastoreAction<'a> {
-    fn query(&self, table: &data::DataStoreEntity) -> Result<serde_json::Value, DatastoreError> {
+    fn query(&self, table: &data::DataStoreEntity, query: &serde_json::Value) -> Result<serde_json::Value, DatastoreError> {
         match self.conn {
-            Ok(conn) => conn.retrieve(table), //TODO: should be able to query
+            Ok(conn) => conn.retrieve(table, query),
             Err(err) => Err(err.into())
         }
     }

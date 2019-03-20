@@ -24,6 +24,8 @@ extern crate linked_hash_map;
 #[macro_use]
 extern crate log;
 extern crate num_cpus;
+extern crate r2d2;
+extern crate r2d2_redis;
 extern crate rand;
 extern crate serde;
 #[macro_use]
@@ -51,6 +53,7 @@ mod server;
 mod state;
 
 pub mod kakapo_postgres; //TODO: move this outside
+pub mod kakapo_redis; //TODO: move this outside
 
 pub mod plugins;
 

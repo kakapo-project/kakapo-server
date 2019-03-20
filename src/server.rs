@@ -77,6 +77,7 @@ impl Server {
                         .register()
                 });
 
+
             if let Some(ref static_files) = frontend_path {
 
                 let mut index_file = static_files.to_owned();

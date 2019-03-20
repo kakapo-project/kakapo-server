@@ -48,7 +48,7 @@ pub trait Datastore:
     fn retrieve(&self) -> Self::Dataset;
     */
 
-    fn retrieve(&self, data_store: &DataStoreEntity) -> Result<Dataset, DatastoreError>;
+    fn retrieve(&self, data_store: &DataStoreEntity, query: &serde_json::Value) -> Result<Dataset, DatastoreError>;
     fn insert(&self, data_store: &DataStoreEntity, rows: &Rows) -> Result<Dataset, DatastoreError>;
     fn upsert(&self, data_store: &DataStoreEntity, rows: &Rows) -> Result<Dataset, DatastoreError>;
     fn update(&self, data_store: &DataStoreEntity, key_values: &KeyValues) -> Result<Dataset, DatastoreError>;

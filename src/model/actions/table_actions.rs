@@ -28,6 +28,7 @@ use state::StateFunctions;
 #[derive(Debug)]
 pub struct QueryTableData<S = ActionState> {
     pub table_name: String,
+    pub query: serde_json::Value,
     pub format: serde_json::Value,
     pub phantom_data: PhantomData<(S)>,
 }
@@ -36,9 +37,10 @@ impl<S> QueryTableData<S>
     where
         for<'a> S: StateFunctions<'a>,
 {
-    pub fn new(table_name: String) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
+    pub fn new(table_name: String, query: serde_json::Value) -> WithPermissionRequired<WithTransaction<Self, S>, S> {
         let action = Self {
             table_name: table_name.to_owned(),
+            query,
             format: json!({}), //TODO:...
             phantom_data: PhantomData,
         };
@@ -72,7 +74,7 @@ impl<S> Action<S> for QueryTableData<S>
             .and_then(|table| {
                 state
                     .get_table_controller()
-                    .query(&table)
+                    .query(&table, &self.query)
                     .map_err(|err| Error::Datastore(err))
             })
             .and_then(|res| ActionRes::new("queryTableData", GetTableDataResult(res)))
