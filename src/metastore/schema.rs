@@ -21,6 +21,7 @@ table! {
     entity (entity_id) {
         entity_id -> Int8,
         scope_id -> Int8,
+        domain_id -> Int8,
         created_at -> Timestamp,
         created_by -> Int8,
     }
@@ -219,6 +220,7 @@ table! {
     }
 }
 
+joinable!(entity -> domain (domain_id));
 joinable!(entity -> scope (scope_id));
 joinable!(entity -> user (created_by));
 joinable!(entity_tag -> entity (entity_id));

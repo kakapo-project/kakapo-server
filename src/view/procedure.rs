@@ -46,14 +46,14 @@ pub trait ProcedureBuilder<S, JP, QP, A>
     ///
     /// # Returns
     /// an Action
-    fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error>;
+    fn build(self, json_param: JP, query_params: QP) -> Result<(Option<String>, A), serde_json::Error>;
 
 }
 
 /// can use lambdas instead of procedure builder
 impl<S, JP, QP, A, F> ProcedureBuilder<S, JP, QP, A> for F
     where
-        F: FnOnce(JP, QP) -> Result<A, serde_json::Error> + Clone,
+        F: FnOnce(JP, QP) -> Result<(Option<String>, A), serde_json::Error> + Clone,
         JP: Debug,
         QP: Debug,
         Json<JP>: FromRequest<S>,
@@ -61,7 +61,7 @@ impl<S, JP, QP, A, F> ProcedureBuilder<S, JP, QP, A> for F
         A: Action + 'static,
         S: AppStateLike,
 {
-    fn build(self, json_param: JP, query_params: QP) -> Result<A, serde_json::Error> {
+    fn build(self, json_param: JP, query_params: QP) -> Result<(Option<String>, A), serde_json::Error> {
         self(json_param, query_params)
     }
 }
@@ -110,7 +110,7 @@ pub fn procedure_handler_function<S, JP, QP, PB, A>(
     procedure_handler: ProcedureHandler<S, JP, QP, PB, A>,
     req: HttpRequest<S>,
     json_params: Json<JP>,
-    query_params: Query<QP>
+    query_params: Query<QP>,
 ) -> AsyncResponse
     where
         Executor: Handler<ActionWrapper<A>>,

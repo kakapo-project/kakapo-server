@@ -77,19 +77,11 @@ pub fn sync_domains(database_url: &str, domains: &HashMap<String, Box<Domain>>) 
     Ok(())
 }
 
-pub fn setup_admin(username: &str, email: &str, display_name: &str, password: &str) -> Result<(), String> {
-    let database_url = format!(
-        "postgres://{user}:{pass}@{host}:{port}/{db}", //TODO: ...
-        user = "test",
-        pass = "password",
-        host = "localhost",
-        port = 5432,
-        db = "test",
-    );
+pub fn setup_admin(database_url: &str, username: &str, email: &str, display_name: &str, password: &str) -> Result<(), String> {
 
     let id = ADMIN_USER_ID;
 
-    let conn = PgConnection::establish(&database_url)
+    let conn = PgConnection::establish(database_url)
         .map_err(|err| {
             error!("Could not create user, couldn't establish connection: {:?}", &err);
             err.to_string()
@@ -110,7 +102,7 @@ pub fn setup_admin(username: &str, email: &str, display_name: &str, password: &s
 
     let result = diesel::insert_into(schema::user::table)
         .values((
-            schema::user::columns::user_id.eq(1),
+            schema::user::columns::user_id.eq(id),
             schema::user::columns::username.eq(username),
             schema::user::columns::email.eq(email),
             schema::user::columns::display_name.eq(display_name),
@@ -150,6 +142,24 @@ fn get_user_id(controller: &EntityModifierController) -> Option<i64> {
     }
 }
 
+fn get_domain_id(controller: &EntityModifierController) -> Option<i64> {
+    let domain_name = match controller.get_domain_name() {
+        Some(x) => x,
+        None => return None,
+    };
+
+    let domain = schema::domain::table
+        .filter(schema::domain::columns::name.eq(&domain_name))
+        .get_result::<dbdata::RawDomainInfo>(controller.conn)
+        .map_err(|err| {
+            error!("get_domain_id error: {:?}", &err);
+            err
+        })
+        .ok();
+
+    domain.map(|x| x.domain_id)
+}
+
 
 macro_rules! make_crud_ops {
     ($entity:ident, $EntityType:ty) => (
@@ -167,13 +177,15 @@ macro_rules! make_crud_ops {
             fn create(state: &EntityModifierController, object: $EntityType) -> Result<Created<$EntityType>, EntityError> {
                 info!("create object: {:?}", &object);
                 let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
-                $entity::create::<$EntityType>(state.conn, user_id, object)
+                let domain_id = get_domain_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::create::<$EntityType>(state.conn, user_id, domain_id, object)
             }
 
             fn upsert(state: &EntityModifierController, object: $EntityType) -> Result<Upserted<$EntityType>, EntityError> {
                 info!("upsert object: {:?}", &object);
                 let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
-                $entity::upsert::<$EntityType>(state.conn, user_id, object)
+                let domain_id = get_domain_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::upsert::<$EntityType>(state.conn, user_id, domain_id, object)
             }
 
             fn update(state: &EntityModifierController, name_object: (&str, $EntityType)) -> Result<Updated<$EntityType>, EntityError> {
@@ -210,9 +222,13 @@ macro_rules! implement_retriever_and_modifier {
                     SELECT m.*, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_at DESC) AS rn
                     FROM {} AS m
                 )
-                SELECT * FROM entity_list
-                WHERE rn = 1 AND is_deleted = false AND name = $1
-                ORDER BY name ASC;
+                SELECT entity_list.* FROM entity_list
+                INNER JOIN entity
+                    ON entity_list.entity_id = entity.entity_id
+                INNER JOIN domain
+                    ON entity.domain_id = domain.domain_id
+                WHERE rn = 1 AND is_deleted = false AND entity_list.name = $1
+                ORDER BY entity_list.name ASC;
                 "#, stringify!($data_table));
 
             let result = diesel::sql_query(query)
@@ -233,9 +249,13 @@ macro_rules! implement_retriever_and_modifier {
                     SELECT m.*, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_at DESC) AS rn
                     FROM {} AS m
                 )
-                SELECT * FROM entity_list
+                SELECT entity_list.* FROM entity_list
+                INNER JOIN entity
+                    ON entity_list.entity_id = entity.entity_id
+                INNER JOIN domain
+                    ON entity.domain_id = domain.domain_id
                 WHERE rn = 1 {}
-                ORDER BY name ASC;
+                ORDER BY entity_list.name ASC;
                 "#, stringify!($data_table), if show_deleted { "" } else { "AND is_deleted = false" });
 
             let result = diesel::sql_query(query)
@@ -281,6 +301,7 @@ macro_rules! implement_retriever_and_modifier {
         fn create_internal<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             object: O,
         ) -> Result<RD, EntityError>
             where
@@ -290,6 +311,7 @@ macro_rules! implement_retriever_and_modifier {
         {
             let new_raw_entity = NewRawEntity {
                 scope_id: 1, //TODO: right now scopes haven't been implemented
+                domain_id,
                 created_by: user_id,
             };
             let entity: RawEntity = diesel::insert_into(schema::entity::table)
@@ -350,6 +372,7 @@ macro_rules! implement_retriever_and_modifier {
         pub fn create<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             object: O,
         ) -> Result<Created<O>, EntityError>
         where
@@ -369,7 +392,7 @@ macro_rules! implement_retriever_and_modifier {
                 },
                 None => {
                     debug!("no object found, putting object: {:?}", &object);
-                    let new_val = create_internal(conn, user_id, object)?;
+                    let new_val = create_internal(conn, user_id, domain_id, object)?;
                     let converted = new_val.convert();
                     Ok(Created::Success {
                         new: converted,
@@ -381,6 +404,7 @@ macro_rules! implement_retriever_and_modifier {
         pub fn upsert<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             object: O,
         ) -> Result<Upserted<O>, EntityError>
         where
@@ -399,7 +423,7 @@ macro_rules! implement_retriever_and_modifier {
                     })
                 },
                 None => {
-                    let new_val = create_internal(conn, user_id, object)?;
+                    let new_val = create_internal(conn, user_id, domain_id, object)?;
                     Ok(Upserted::Create {
                         new: new_val.convert(),
                     })

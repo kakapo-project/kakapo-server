@@ -262,11 +262,14 @@ impl<S> WsClientSession<S>
     fn callback_when_action_is_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: serde_json::Value) {
         //TODO: need the action name
         let message = serde_json::to_string(&res).unwrap_or_default();
+        debug!("action ok: {:?}", &message);
+
         ctx.text(message);
     }
 
     fn callback_when_action_is_not_ok(ctx: &mut ws::WebsocketContext<Self, S>, res: String) {
         let message = serde_json::to_string(&json!({"error": res})).unwrap_or_default();
+        warn!("an error occurred in callback when action is not ok: {:?}", &message);
         ctx.text(message)
     }
 

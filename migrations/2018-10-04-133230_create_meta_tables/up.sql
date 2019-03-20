@@ -70,6 +70,7 @@ CREATE TABLE "message" (
 CREATE TABLE "entity" (
     "entity_id"               BIGSERIAL PRIMARY KEY,
     "scope_id"                BIGINT REFERENCES "scope" NOT NULL,
+    "domain_id"               BIGINT REFERENCES "domain" NOT NULL,
     "created_at"              TIMESTAMP NOT NULL DEFAULT NOW(),
     "created_by"              BIGINT REFERENCES "user" NOT NULL
 );

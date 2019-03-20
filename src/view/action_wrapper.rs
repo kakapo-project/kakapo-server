@@ -22,6 +22,7 @@ pub struct ActionWrapper<A>
 {
     action: Result<A, serde_json::Error>,
     auth_header: Option<Vec<u8>>,
+    domain_name: Option<String>,
 }
 
 impl<A> fmt::Debug for ActionWrapper<A>
@@ -35,10 +36,29 @@ impl<A> fmt::Debug for ActionWrapper<A>
 impl<A> ActionWrapper<A>
     where A: Action + Send
 {
-    pub fn new(action: Result<A, serde_json::Error>) -> Self {
-        Self {
-            action,
-            auth_header: None,
+    pub fn new(action: Result<(Option<String>, A), serde_json::Error>) -> Self {
+        match action {
+            Ok((Some(domain_name), action)) => {
+                Self {
+                    action: Ok(action),
+                    auth_header: None,
+                    domain_name: Some(domain_name),
+                }
+            },
+            Ok((None, action)) => {
+                Self {
+                    action: Ok(action),
+                    auth_header: None,
+                    domain_name: None,
+                }
+            },
+            Err(err) => {
+                Self {
+                    action: Err(err),
+                    auth_header: None,
+                    domain_name: None,
+                }
+            }
         }
     }
 
@@ -46,10 +66,21 @@ impl<A> ActionWrapper<A>
         Self {
             action: self.action,
             auth_header: Some(auth.to_owned()),
+            domain_name: self.domain_name,
         }
     }
 
+    pub fn with_domain_name(self, domain_name: &str) -> Self {
+        Self {
+            action: self.action,
+            auth_header: self.auth_header,
+            domain_name: Some(domain_name.to_owned()),
+        }
+    }
 
+    fn get_domain_name(&self) -> Option<String> {
+        self.domain_name.to_owned()
+    }
 
     fn decode_token(&self, token_secret: String) -> Option<AuthClaims> {
         let auth_header = self.auth_header.to_owned();
@@ -98,6 +129,8 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
     fn handle(&mut self, msg: ActionWrapper<A>, _: &mut Self::Context) -> Self::Result {
 
         let auth_claims = msg.decode_token(self.get_token_secret());
+        let domain_name = msg.get_domain_name();
+        info!("Request for domain: {:?}", &domain_name);
 
         // Unauthorized has priority over serialization failed
         let action_req = match msg.get_action() {
@@ -114,8 +147,9 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
         let action_req = action_req?;
         let conn = self.get_connection();
 
-        let datastore_conn = self.get_datastore_conn("Sirocco");
-        let query_conn = self.get_query_conn("Sirocco");
+        let domain_name_unwrapped = domain_name.to_owned().unwrap_or_default();
+        let datastore_conn = self.get_datastore_conn(&domain_name_unwrapped);
+        let query_conn = self.get_query_conn(&domain_name_unwrapped);
 
         let scripting = Scripting::new(self.get_scripts_path());
         let secrets = self.get_secrets();
@@ -126,6 +160,7 @@ impl<A: Action + Send> Handler<ActionWrapper<A>> for Executor
             scripting,
             auth_claims,
             secrets,
+            domain_name,
             datastore_conn,
             query_conn,
             self.jwt_issuer.to_owned(),
@@ -177,7 +212,7 @@ mod test {
 
             let f = executor
                 .connect()
-                .send(ActionWrapper::new(Ok(action)))
+                .send(ActionWrapper::new(Ok((Some("some_domain".to_string()), action))))
                 .map_err(|_| ())
                 .map(|res| {
                     assert_eq!(res.unwrap().get_data(), "Hello World!");

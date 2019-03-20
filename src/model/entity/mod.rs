@@ -64,6 +64,7 @@ pub struct EntityModifierController<'a> {
     pub claims: &'a Option<AuthClaims>,
     pub scripting: &'a Scripting,
     pub user_management: UserManagement<'a>, //Entities need to get access to user management for updating data
+    pub domain_name: &'a Option<String>,
 }
 
 impl<'a> EntityModifierController<'a> {
@@ -73,6 +74,11 @@ impl<'a> EntityModifierController<'a> {
             .and_then(|claim| {
                 claim.get_role()
             })
+    }
+
+    pub fn get_domain_name(&self) -> Option<String> {
+        self.domain_name
+            .to_owned()
     }
 }
 

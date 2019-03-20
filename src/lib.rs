@@ -95,7 +95,15 @@ mod test {
             .filter_module("actix_web", LevelFilter::Info)
             .init();
 
-        let result = setup_admin("admin", "admin@example.com", "Admin", "password");
+        let database_url = format!(
+            "postgres://{user}:{pass}@{host}:{port}/{db}", //TODO: ...
+            user = "test",
+            pass = "password",
+            host = "localhost",
+            port = 5432,
+            db = "test",
+        );
+        let result = setup_admin(&database_url, "admin", "admin@example.com", "Admin", "password");
         if let Err(error) = result {
             panic!();
             return;

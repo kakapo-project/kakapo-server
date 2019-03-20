@@ -56,6 +56,7 @@ pub struct ActionState {
     pub scripting: Scripting,
     pub claims: Option<AuthClaims>,
     pub secrets: Secrets,
+    pub domain_name: Option<String>,
     pub datastore_conn: Result<Box<Datastore>, DomainError>, //TODO: probably use the domains for this
     pub query_conn: Result<Box<DataQuery>, DomainError>,
     pub jwt_issuer: String,
@@ -185,6 +186,7 @@ impl<'a> StateFunctions<'a> for ActionState {
             claims: &self.claims,
             scripting: &self.scripting,
             user_management,
+            domain_name: &self.domain_name,
         }
     }
 
@@ -238,6 +240,7 @@ impl ActionState {
         scripting: Scripting,
         claims: Option<AuthClaims>,
         secrets: Secrets,
+        domain_name: Option<String>,
         datastore_conn: Result<Box<Datastore>, DomainError>,
         query_conn: Result<Box<DataQuery>, DomainError>,
         jwt_issuer: String,
@@ -249,6 +252,7 @@ impl ActionState {
             scripting,
             claims,
             secrets,
+            domain_name,
             datastore_conn,
             query_conn,
             jwt_issuer, //TODO: put these in config

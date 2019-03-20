@@ -29,6 +29,7 @@ use data::Named;
 pub struct RawEntity {
     pub entity_id: i64,
     pub scope_id: i64,
+    pub domain_id: i64,
     pub created_at: NaiveDateTime,
     pub created_by: i64,
 }
@@ -37,6 +38,7 @@ pub struct RawEntity {
 #[table_name = "entity"]
 pub struct NewRawEntity {
     pub scope_id: i64,
+    pub domain_id: i64,
     pub created_by: i64,
 }
 
