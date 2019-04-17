@@ -160,6 +160,25 @@ fn get_domain_id(controller: &EntityModifierController) -> Option<i64> {
     domain.map(|x| x.domain_id)
 }
 
+fn get_controller_domain_id(controller: &EntityRetrieverController) -> Option<i64> { //TODO: this is a duplicate of the last function
+    let domain_name = match controller.get_domain_name() {
+        Some(x) => x,
+        None => return None,
+    };
+
+    let domain = schema::domain::table
+        .filter(schema::domain::columns::name.eq(&domain_name))
+        .get_result::<dbdata::RawDomainInfo>(controller.conn)
+        .map_err(|err| {
+            error!("get_domain_id error: {:?}", &err);
+            err
+        })
+        .ok();
+
+    domain.map(|x| x.domain_id)
+}
+
+
 
 macro_rules! make_crud_ops {
     ($entity:ident, $EntityType:ty) => (
@@ -167,11 +186,13 @@ macro_rules! make_crud_ops {
         impl EntityCrudOps for $EntityType {
 
             fn get_all(state: &EntityRetrieverController) -> Result<Vec<$EntityType>, EntityError> {
-                $entity::get_all::<$EntityType>(state.conn)
+                let domain_id = get_controller_domain_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::get_all::<$EntityType>(state.conn, domain_id)
             }
 
             fn get_one(state: &EntityRetrieverController, name: &str) -> Result<Option<$EntityType>, EntityError> {
-                $entity::get_one::<$EntityType>(state.conn, name)
+                let domain_id = get_controller_domain_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::get_one::<$EntityType>(state.conn, domain_id, name)
             }
 
             fn create(state: &EntityModifierController, object: $EntityType) -> Result<Created<$EntityType>, EntityError> {
@@ -191,13 +212,15 @@ macro_rules! make_crud_ops {
             fn update(state: &EntityModifierController, name_object: (&str, $EntityType)) -> Result<Updated<$EntityType>, EntityError> {
                 info!("update object: {:?}", &name_object);
                 let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
-                $entity::update::<$EntityType>(state.conn, user_id, name_object)
+                let domain_id = get_domain_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::update::<$EntityType>(state.conn, user_id, domain_id, name_object)
             }
 
             fn delete(state: &EntityModifierController, name: &str) -> Result<Deleted<$EntityType>, EntityError> {
                 info!("delete object: {:?}", &name);
                 let user_id = get_user_id(state).ok_or_else(|| EntityError::Unknown)?;
-                $entity::delete::<$EntityType>(state.conn, user_id, name)
+                let domain_id = get_domain_id(state).ok_or_else(|| EntityError::Unknown)?;
+                $entity::delete::<$EntityType>(state.conn, user_id, domain_id, name)
             }
         }
     );
@@ -216,7 +239,7 @@ macro_rules! implement_retriever_and_modifier {
         type RD = <$DataEntityType as RawEntityTypes>::Data;
         type NRD = <$DataEntityType as RawEntityTypes>::NewData;
 
-        fn query_entities_by_name(conn: &Conn, name: String) -> Result<Option<RD>, EntityError> {
+        fn query_entities_by_name(conn: &Conn, domain_id: i64, name: String) -> Result<Option<RD>, EntityError> {
             let query = format!(r#"
                 WITH entity_list AS (
                     SELECT m.*, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_at DESC) AS rn
@@ -227,11 +250,12 @@ macro_rules! implement_retriever_and_modifier {
                     ON entity_list.entity_id = entity.entity_id
                 INNER JOIN domain
                     ON entity.domain_id = domain.domain_id
-                WHERE rn = 1 AND is_deleted = false AND entity_list.name = $1
+                WHERE rn = 1 AND domain_id = $1 AND is_deleted = false AND entity_list.name = $2 AND
                 ORDER BY entity_list.name ASC;
                 "#, stringify!($data_table));
 
             let result = diesel::sql_query(query)
+                .bind::<diesel::sql_types::BigInt, _>(domain_id)
                 .bind::<diesel::sql_types::Text, _>(name)
                 .load(conn)
                 .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
@@ -243,7 +267,7 @@ macro_rules! implement_retriever_and_modifier {
             Ok(result.first().map(|x: &RD| x.to_owned()))
         }
 
-        fn query_all_entities(conn: &Conn, show_deleted: bool) -> Result<Vec<RD>, EntityError> {
+        fn query_all_entities(conn: &Conn, domain_id: i64, show_deleted: bool) -> Result<Vec<RD>, EntityError> {
             let query = format!(r#"
                 WITH entity_list AS (
                     SELECT m.*, ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_at DESC) AS rn
@@ -254,11 +278,12 @@ macro_rules! implement_retriever_and_modifier {
                     ON entity_list.entity_id = entity.entity_id
                 INNER JOIN domain
                     ON entity.domain_id = domain.domain_id
-                WHERE rn = 1 {}
+                WHERE rn = 1 AND domain_id = $1 {}
                 ORDER BY entity_list.name ASC;
                 "#, stringify!($data_table), if show_deleted { "" } else { "AND is_deleted = false" });
 
             let result = diesel::sql_query(query)
+                .bind::<diesel::sql_types::BigInt, _>(domain_id)
                 .load(conn)
                 .or_else(|err| Err(EntityError::InternalError(err.description().to_string())))?;
 
@@ -267,13 +292,17 @@ macro_rules! implement_retriever_and_modifier {
 
         pub fn get_all<O>(
             conn: &Conn,
+            domain_id: i64,
         ) -> Result<Vec<O>, EntityError>
         where
             RD: ConvertRaw<O>,
         {
-            let entities: Vec<RD> = query_all_entities(conn, false)?;
+            let entities: Vec<RD> = query_all_entities(conn, domain_id, false)?;
 
-            let ok_result = entities.into_iter()
+            unimplemented!(); //TODO: should filter by the domain name
+
+            let ok_result = entities
+                .into_iter()
                 .map(|entity| entity.convert())
                 .collect();
 
@@ -282,12 +311,13 @@ macro_rules! implement_retriever_and_modifier {
 
         pub fn get_one<O>(
             conn: &Conn,
+            domain_id: i64,
             name: &str,
         ) -> Result<Option<O>, EntityError>
         where
             RD: ConvertRaw<O>,
         {
-            let entities: Option<RD> = query_entities_by_name(conn, name.to_string())?;
+            let entities: Option<RD> = query_entities_by_name(conn, domain_id, name.to_string())?;
 
             let ok_result = match entities {
                 Some(entity) => Some(entity.convert()),
@@ -331,6 +361,7 @@ macro_rules! implement_retriever_and_modifier {
         fn update_internal<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             entity_id: i64,
             object: O,
         ) -> Result<RD, EntityError>
@@ -351,6 +382,7 @@ macro_rules! implement_retriever_and_modifier {
         fn delete_internal<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             entity_id: i64,
             entity_name: String,
         ) -> Result<(), EntityError>
@@ -381,7 +413,7 @@ macro_rules! implement_retriever_and_modifier {
             RD: ConvertRaw<O>,
         {
             debug!("string to create entity: \"name\": {}", object.my_name());
-            let entities: Option<RD> = query_entities_by_name(conn, object.my_name().to_owned())?;
+            let entities: Option<RD> = query_entities_by_name(conn, domain_id, object.my_name().to_owned())?;
 
             match entities {
                 Some(entity) => {
@@ -412,11 +444,11 @@ macro_rules! implement_retriever_and_modifier {
             NRD: GenerateRaw<O>,
             RD: ConvertRaw<O>,
         {
-            let entities: Option<RD> = query_entities_by_name(conn, object.my_name().to_owned())?;
+            let entities: Option<RD> = query_entities_by_name(conn, domain_id, object.my_name().to_owned())?;
 
             match entities {
                 Some(entity) => {
-                    let new_val = update_internal(conn, user_id, entity.entity_id, object)?;
+                    let new_val = update_internal(conn, user_id, domain_id, entity.entity_id, object)?;
                     Ok(Upserted::Update {
                         old: entity.convert(),
                         new: new_val.convert(),
@@ -434,6 +466,7 @@ macro_rules! implement_retriever_and_modifier {
         pub fn update<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             name_object: (&str, O),
         ) -> Result<Updated<O>, EntityError>
         where
@@ -442,11 +475,11 @@ macro_rules! implement_retriever_and_modifier {
             RD: ConvertRaw<O>,
         {
             let (object_name, object) = name_object;
-            let entities: Option<RD> = query_entities_by_name(conn, object_name.to_string())?;
+            let entities: Option<RD> = query_entities_by_name(conn, domain_id, object_name.to_string())?;
 
             match entities {
                 Some(entity) => {
-                    let new_val = update_internal(conn, user_id, entity.entity_id, object)?;
+                    let new_val = update_internal(conn, user_id, domain_id, entity.entity_id, object)?;
                     Ok(Updated::Success {
                         old: entity.convert(),
                         new: new_val.convert(),
@@ -461,6 +494,7 @@ macro_rules! implement_retriever_and_modifier {
         pub fn delete<O>(
             conn: &Conn,
             user_id: i64,
+            domain_id: i64,
             name: &str,
         ) -> Result<Deleted<O>, EntityError>
         where
@@ -468,11 +502,11 @@ macro_rules! implement_retriever_and_modifier {
             NRD: GenerateRaw<O>,
             RD: ConvertRaw<O>,
         {
-            let entities: Option<RD> = query_entities_by_name(conn, name.to_string())?;
+            let entities: Option<RD> = query_entities_by_name(conn, domain_id, name.to_string())?;
 
             match entities {
                 Some(entity) => {
-                    delete_internal::<O>(conn, user_id, entity.entity_id, name.to_string())?;
+                    delete_internal::<O>(conn, user_id, domain_id, entity.entity_id, name.to_string())?;
                     Ok(Deleted::Success {
                         old: entity.convert(),
                     })

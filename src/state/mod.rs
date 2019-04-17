@@ -173,6 +173,7 @@ impl<'a> StateFunctions<'a> for ActionState {
         EntityRetrieverController {
             conn: &self.database,
             claims: &self.claims,
+            domain_name: &self.domain_name,
         }
     }
 
